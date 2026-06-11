@@ -1409,9 +1409,7 @@ function SideNav({
   return (
     <aside className="side-nav" aria-label="เมนูหลัก">
       <div className="brand-logo" aria-label="Precious Rental">
-        <strong>PRECIOUS</strong>
-        <div className="divider-line" />
-        <span>RENTAL</span>
+        <img src="/web-logo.png" alt="Precious Rental" style={{ width: '100%', maxWidth: '160px', height: 'auto', display: 'block', margin: '0 auto' }} />
       </div>
       <nav>
         {items.map(({ id, label, icon: Icon }) => (
