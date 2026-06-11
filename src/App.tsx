@@ -1480,7 +1480,6 @@ function App() {
 
                 <div className="customer-table" role="table" aria-label="รายชื่อลูกค้า">
                   <div className="table-row table-head" role="row">
-                    <span></span>
                     <span>รหัสลูกค้า</span>
                     <span>ชื่อ</span>
                     <span>โทรศัพท์</span>
@@ -1495,9 +1494,6 @@ function App() {
                       type="button"
                       onClick={() => setSelectedCustomerId(customer.id)}
                     >
-                      <div className="row-selector">
-                        <div className="selector-dot" />
-                      </div>
                       <strong>{customer.customerCode}</strong>
                       <span>{customer.fullName}</span>
                       <span>{customer.phoneNormalized}</span>

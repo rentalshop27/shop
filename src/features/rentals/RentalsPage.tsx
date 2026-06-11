@@ -307,8 +307,7 @@ export function RentalsPage({
           </div>
 
           <div className="customer-table" role="table" aria-label="รายการออเดอร์เช่าชุด">
-            <div className="table-row table-head" role="row" style={{ gridTemplateColumns: '40px 105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}>
-              <span></span>
+            <div className="table-row table-head" role="row" style={{ gridTemplateColumns: '105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}>
               <span>รหัสออเดอร์</span>
               <span>ลูกค้า</span>
               <span>ช่วงเช่า</span>
@@ -324,11 +323,8 @@ export function RentalsPage({
                 role="row"
                 type="button"
                 onClick={() => setSelectedRentalId(rental.id)}
-                style={{ gridTemplateColumns: '40px 105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}
+                style={{ gridTemplateColumns: '105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}
               >
-                <div className="row-selector">
-                  <div className="selector-dot" />
-                </div>
                 <strong>{rental.orderCode}</strong>
                 <span>
                   {rental.customer.fullName}
