@@ -1183,6 +1183,18 @@ h1 {
   border-color: rgba(223, 183, 80, 0.58);
 }
 
+.icon-action-button.danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fda4af;
+}
+
+.icon-action-button.danger:hover {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(248, 113, 113, 0.52);
+  color: #fecdd3;
+}
+
 .icon-action-button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
@@ -3014,5 +3026,4 @@ h1 {
     transform: rotate(360deg);
   }
 }
-
 

@@ -46,6 +46,7 @@ import type { AuditLog } from './features/audit/auditRemote'
 import {
   archiveRemoteCustomer,
   createRemoteCustomer,
+  deleteRemoteCustomerDocuments,
   loadCustomers,
   loadOwnerShopId,
   updateRemoteCustomer,
@@ -54,8 +55,10 @@ import {
   uploadRemoteCustomerDocuments,
 } from './features/customers/customerRemote'
 import {
+  countRemoteRentalsForStockSku,
   loadStockItems,
   createRemoteStockItem,
+  deleteRemoteStockItem,
   updateRemoteStockItem,
   updateShopSettings,
   loadShopSettings,
@@ -245,12 +248,15 @@ function App() {
   const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [draft, setDraft] = useState<CustomerDraft>(emptyDraft)
   const [draftDocuments, setDraftDocuments] = useState<Array<{ id: string; file: File; previewUrl: string }>>([])
+  const [existingDocuments, setExistingDocuments] = useState<CustomerDocument[]>([])
+  const [deletedDocumentIds, setDeletedDocumentIds] = useState<string[]>([])
+  const [isSaving, setIsSaving] = useState(false)
 
   async function addDraftDocuments(files: FileList | null) {
     if (!files?.length) return
 
     const incomingFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
-    const remainingSlots = 5 - draftDocuments.length
+    const remainingSlots = 5 - existingDocuments.length - draftDocuments.length
 
     if (remainingSlots <= 0) {
       window.alert('รูปเอกสารเต็ม 5 รูปแล้ว')
@@ -694,6 +700,55 @@ function App() {
     setPreviewImageIndex(0)
   }
 
+  async function handleDeleteStockItem(item: StockItem) {
+    try {
+      let relatedRentalCount = rentals.filter(
+        (rental) => rental.costume.id === item.id || rental.costume.sku === item.sku,
+      ).length
+
+      if (supabase && isAuthenticated) {
+        relatedRentalCount = await countRemoteRentalsForStockSku(supabase, item.sku)
+      }
+
+      if (relatedRentalCount > 0) {
+        window.alert(`ยังลบชุด ${item.sku} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงชุดนี้อยู่ ${relatedRentalCount} รายการ`)
+        return
+      }
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+      return
+    }
+
+    const confirmed = window.confirm(
+      `คุณต้องการลบชุด "${item.productName}" (${item.sku}) ใช่หรือไม่?\n\nข้อมูลชุดและรูปภาพของชุดนี้จะถูกลบออกจากระบบ`
+    )
+    if (!confirmed) return
+
+    setStockFormError('')
+    setIsSaving(true)
+
+    try {
+      if (supabase && isAuthenticated) {
+        await deleteRemoteStockItem(supabase, item.id, item.imageUrls)
+        handleLoadAuditLogs()
+      }
+
+      setStockItems((current) => current.filter((stockItem) => stockItem.id !== item.id))
+
+      if (editingStockId === item.id) {
+        closeStockForm()
+      }
+
+      if (previewStockId === item.id) {
+        closeStockPreview()
+      }
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function createCustomerCode() {
     const maxCode = customers.reduce((max, customer) => {
       const match = customer.customerCode.match(/PR-C(\d+)/)
@@ -719,6 +774,8 @@ function App() {
       heightCm: customer.heightCm !== undefined ? String(customer.heightCm) : '',
     })
     setDraftDocuments([])
+    setExistingDocuments(customer.documents || [])
+    setDeletedDocumentIds([])
     setIsFormOpen(true)
   }
 
@@ -743,9 +800,20 @@ function App() {
       return
     }
 
-    if (editingCustomerId) {
-      if (supabase) {
-        try {
+    setIsSaving(true)
+    try {
+      if (editingCustomerId) {
+        let docsPendingDelete: CustomerDocument[] = []
+        if (supabase) {
+          if (deletedDocumentIds.length > 0) {
+            const originalCustomer = customers.find((c) => c.id === editingCustomerId)
+            if (originalCustomer) {
+              docsPendingDelete = originalCustomer.documents.filter((doc) =>
+                deletedDocumentIds.includes(doc.id)
+              )
+            }
+          }
+
           const updatedCustomer = await updateRemoteCustomer(supabase, editingCustomerId, draft)
           if (draftDocuments.length > 0) {
             await uploadRemoteCustomerDocuments(
@@ -753,78 +821,81 @@ function App() {
               updatedCustomer,
               draftDocuments.map((d) => d.file),
             )
-            const loadedCustomers = await loadCustomers(supabase)
-            setCustomers(loadedCustomers)
-            setSelectedCustomerId(updatedCustomer.id)
-          } else {
-            setCustomers((current) =>
-              current.map((customer) =>
-                customer.id === editingCustomerId ? updatedCustomer : customer
-              )
-            )
-            setSelectedCustomerId(updatedCustomer.id)
           }
+          if (docsPendingDelete.length > 0) {
+            const pathsToDelete = docsPendingDelete.map((doc) => doc.storagePath).filter(Boolean)
+            await deleteRemoteCustomerDocuments(supabase, docsPendingDelete.map((doc) => doc.id), pathsToDelete)
+          }
+
+          const loadedCustomers = await loadCustomers(supabase)
+          setCustomers(loadedCustomers)
+          setSelectedCustomerId(updatedCustomer.id)
+
           setDraft(emptyDraft)
           setDraftDocuments([])
+          setExistingDocuments([])
+          setDeletedDocumentIds([])
           setEditingCustomerId(null)
           setIsFormOpen(false)
-        } catch (error) {
-          setFormError(getErrorMessage(error))
+          return
         }
-        return
-      }
 
-      const now = new Date().toISOString()
-      const existingCustomer = customers.find((c) => c.id === editingCustomerId)
-      if (!existingCustomer) return
+        const now = new Date().toISOString()
+        const existingCustomer = customers.find((c) => c.id === editingCustomerId)
+        if (!existingCustomer) return
 
-      const newDocsFromDraft = draftDocuments.map((doc, index) => ({
-        id: doc.id,
-        customerId: editingCustomerId,
-        storagePath: `customer-documents/demo/${doc.file.name}`,
-        previewUrl: doc.previewUrl,
-        sortOrder: existingCustomer.documents.length + index + 1,
-        createdAt: now,
-      }))
+        const newDocsFromDraft = draftDocuments.map((doc, index) => ({
+          id: doc.id,
+          customerId: editingCustomerId,
+          storagePath: `customer-documents/demo/${doc.file.name}`,
+          previewUrl: doc.previewUrl,
+          sortOrder: existingCustomer.documents.length + index + 1,
+          createdAt: now,
+        }))
 
-      const updatedCustomer: Customer = {
-        ...existingCustomer,
-        fullName: draft.fullName.trim(),
-        lineAccount: draft.lineAccount.trim(),
-        phone: draft.phone.trim(),
-        phoneNormalized: normalizeThaiPhone(draft.phone),
-        currentAddress: draft.currentAddress.trim(),
-        notes: draft.notes.trim(),
-        profileStatus: draft.profileStatus,
-        riskFlag: draft.riskFlag,
-        bustIn: parseOptionalNumber(draft.bustIn),
-        waistIn: parseOptionalNumber(draft.waistIn),
-        hipIn: parseOptionalNumber(draft.hipIn),
-        heightCm: parseOptionalNumber(draft.heightCm),
-        documents: [...existingCustomer.documents, ...newDocsFromDraft],
-        updatedAt: now,
-      }
-
-      setCustomers((current) =>
-        current.map((customer) =>
-          customer.id === editingCustomerId ? updatedCustomer : customer
+        const remainingExistingDocs = existingCustomer.documents.filter(
+          (doc) => !deletedDocumentIds.includes(doc.id)
         )
-      )
-      setSelectedCustomerId(updatedCustomer.id)
-      setDraft(emptyDraft)
-      setDraftDocuments([])
-      setEditingCustomerId(null)
-      setIsFormOpen(false)
-      return
-    }
 
-    if (supabase) {
-      if (!shopId) {
-        setFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
+        const updatedCustomer: Customer = {
+          ...existingCustomer,
+          fullName: draft.fullName.trim(),
+          lineAccount: draft.lineAccount.trim(),
+          phone: draft.phone.trim(),
+          phoneNormalized: normalizeThaiPhone(draft.phone),
+          currentAddress: draft.currentAddress.trim(),
+          notes: draft.notes.trim(),
+          profileStatus: draft.profileStatus,
+          riskFlag: draft.riskFlag,
+          bustIn: parseOptionalNumber(draft.bustIn),
+          waistIn: parseOptionalNumber(draft.waistIn),
+          hipIn: parseOptionalNumber(draft.hipIn),
+          heightCm: parseOptionalNumber(draft.heightCm),
+          documents: [...remainingExistingDocs, ...newDocsFromDraft],
+          updatedAt: now,
+        }
+
+        setCustomers((current) =>
+          current.map((customer) =>
+            customer.id === editingCustomerId ? updatedCustomer : customer
+          )
+        )
+        setSelectedCustomerId(updatedCustomer.id)
+        setDraft(emptyDraft)
+        setDraftDocuments([])
+        setExistingDocuments([])
+        setDeletedDocumentIds([])
+        setEditingCustomerId(null)
+        setIsFormOpen(false)
         return
       }
 
-      try {
+      if (supabase) {
+        if (!shopId) {
+          setFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
+          return
+        }
+
         const newCustomer = await createRemoteCustomer(supabase, shopId, draft)
         if (draftDocuments.length > 0) {
           await uploadRemoteCustomerDocuments(
@@ -841,47 +912,53 @@ function App() {
         }
         setDraft(emptyDraft)
         setDraftDocuments([])
+        setExistingDocuments([])
+        setDeletedDocumentIds([])
         setIsFormOpen(false)
-      } catch (error) {
-        setFormError(getErrorMessage(error))
+        return
       }
-      return
-    }
 
-    const now = new Date().toISOString()
-    const newCustomer: Customer = {
-      id: crypto.randomUUID(),
-      shopId: 'shop_demo',
-      customerCode: createCustomerCode(),
-      fullName: draft.fullName.trim(),
-      lineAccount: draft.lineAccount.trim(),
-      phone: draft.phone.trim(),
-      phoneNormalized: normalizeThaiPhone(draft.phone),
-      currentAddress: draft.currentAddress.trim(),
-      notes: draft.notes.trim(),
-      profileStatus: draft.profileStatus,
-      riskFlag: draft.riskFlag,
-      bustIn: parseOptionalNumber(draft.bustIn),
-      waistIn: parseOptionalNumber(draft.waistIn),
-      hipIn: parseOptionalNumber(draft.hipIn),
-      heightCm: parseOptionalNumber(draft.heightCm),
-      documents: draftDocuments.map((doc, index) => ({
-        id: doc.id,
-        customerId: '',
-        storagePath: `customer-documents/demo/${doc.file.name}`,
-        previewUrl: doc.previewUrl,
-        sortOrder: index + 1,
+      const now = new Date().toISOString()
+      const newCustomer: Customer = {
+        id: crypto.randomUUID(),
+        shopId: 'shop_demo',
+        customerCode: createCustomerCode(),
+        fullName: draft.fullName.trim(),
+        lineAccount: draft.lineAccount.trim(),
+        phone: draft.phone.trim(),
+        phoneNormalized: normalizeThaiPhone(draft.phone),
+        currentAddress: draft.currentAddress.trim(),
+        notes: draft.notes.trim(),
+        profileStatus: draft.profileStatus,
+        riskFlag: draft.riskFlag,
+        bustIn: parseOptionalNumber(draft.bustIn),
+        waistIn: parseOptionalNumber(draft.waistIn),
+        hipIn: parseOptionalNumber(draft.hipIn),
+        heightCm: parseOptionalNumber(draft.heightCm),
+        documents: draftDocuments.map((doc, index) => ({
+          id: doc.id,
+          customerId: '',
+          storagePath: `customer-documents/demo/${doc.file.name}`,
+          previewUrl: doc.previewUrl,
+          sortOrder: index + 1,
+          createdAt: now,
+        })),
         createdAt: now,
-      })),
-      createdAt: now,
-      updatedAt: now,
-    }
+        updatedAt: now,
+      }
 
-    setCustomers((current) => [newCustomer, ...current])
-    setSelectedCustomerId(newCustomer.id)
-    setDraft(emptyDraft)
-    setDraftDocuments([])
-    setIsFormOpen(false)
+      setCustomers((current) => [newCustomer, ...current])
+      setSelectedCustomerId(newCustomer.id)
+      setDraft(emptyDraft)
+      setDraftDocuments([])
+      setExistingDocuments([])
+      setDeletedDocumentIds([])
+      setIsFormOpen(false)
+    } catch (error) {
+      setFormError(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   async function handleSaveStockItem() {
@@ -892,14 +969,9 @@ function App() {
       return
     }
 
-    if (
-      stockItems.some(
-        (item) =>
-          item.id !== editingStockId &&
-          item.sku.toLowerCase() === stockDraft.sku.trim().toLowerCase(),
-      )
-    ) {
-      setStockFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
+    const setCount = Number(stockDraft.setCount)
+    if (!Number.isInteger(setCount) || setCount < 1) {
+      setStockFormError('จำนวนชุดต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป')
       return
     }
 
@@ -908,42 +980,93 @@ function App() {
       return
     }
 
-    const setCount = Number(stockDraft.setCount)
-    if (!Number.isInteger(setCount) || setCount < 1) {
-      setStockFormError('จำนวนชุดต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป')
-      return
+    // Determine base SKU and serial number
+    let baseSku = stockDraft.sku.trim()
+    const suffixRegex = /-(\d{2,})$/
+    if (!editingStockId && setCount > 1) {
+      const match = baseSku.match(suffixRegex)
+      if (match) {
+        baseSku = baseSku.replace(suffixRegex, '')
+      }
+    }
+
+    let baseSerial = stockDraft.serialNumber.trim()
+    if (!editingStockId && setCount > 1 && baseSerial) {
+      const match = baseSerial.match(suffixRegex)
+      if (match) {
+        baseSerial = baseSerial.replace(suffixRegex, '')
+      }
+    }
+
+    // Check for duplicate SKUs
+    if (editingStockId) {
+      if (
+        stockItems.some(
+          (item) =>
+            item.id !== editingStockId &&
+            item.sku.toLowerCase() === stockDraft.sku.trim().toLowerCase(),
+        )
+      ) {
+        setStockFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
+        return
+      }
+    } else {
+      if (setCount > 1) {
+        const duplicatedSkus: string[] = []
+        for (let i = 1; i <= setCount; i++) {
+          const suffix = String(i).padStart(2, '0')
+          const itemSku = `${baseSku}-${suffix}`
+          if (stockItems.some((item) => item.sku.toLowerCase() === itemSku.toLowerCase())) {
+            duplicatedSkus.push(itemSku)
+          }
+        }
+        if (duplicatedSkus.length > 0) {
+          setStockFormError(`SKU ต่อไปนี้มีอยู่ในระบบแล้ว: ${duplicatedSkus.join(', ')}`)
+          return
+        }
+      } else {
+        if (
+          stockItems.some(
+            (item) =>
+              item.sku.toLowerCase() === stockDraft.sku.trim().toLowerCase(),
+          )
+        ) {
+          setStockFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
+          return
+        }
+      }
     }
 
     const existingItem = editingStockId
       ? stockItems.find((item) => item.id === editingStockId)
       : undefined
 
-    const draftItem: Omit<StockItem, 'id' | 'createdAt'> = {
-      sku: stockDraft.sku.trim(),
-      serialNumber: stockDraft.serialNumber.trim(),
-      productName: stockDraft.productName.trim(),
-      brand: stockDraft.brand.trim(),
-      category: stockDraft.category.trim(),
-      size: stockDraft.size.trim(),
-      primaryColor: stockDraft.primaryColor.trim(),
-      publicDescription: stockDraft.publicDescription.trim(),
-      setCount,
-      rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-      lateFeeRule: stockDraft.lateFeeRule.trim(),
-      depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-      imageUrls: stockDraft.imageUrls,
-    }
+    setIsSaving(true)
+    try {
+      if (supabase && isAuthenticated) {
+        if (!shopId) {
+          setStockFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
+          setIsSaving(false)
+          return
+        }
 
-    if (supabase && isAuthenticated) {
-      if (!shopId) {
-        setStockFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
-        return
-      }
-
-      try {
-        let savedItem: StockItem
         if (editingStockId) {
-          savedItem = await updateRemoteStockItem(
+          const draftItem: Omit<StockItem, 'id' | 'createdAt'> = {
+            sku: stockDraft.sku.trim(),
+            serialNumber: stockDraft.serialNumber.trim(),
+            productName: stockDraft.productName.trim(),
+            brand: stockDraft.brand.trim(),
+            category: stockDraft.category.trim(),
+            size: stockDraft.size.trim(),
+            primaryColor: stockDraft.primaryColor.trim(),
+            publicDescription: stockDraft.publicDescription.trim(),
+            setCount,
+            rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
+            lateFeeRule: stockDraft.lateFeeRule.trim(),
+            depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
+            imageUrls: stockDraft.imageUrls,
+          }
+          const savedItem = await updateRemoteStockItem(
             supabase,
             shopId,
             editingStockId,
@@ -954,31 +1077,141 @@ function App() {
             current.map((item) => (item.id === editingStockId ? savedItem : item))
           )
         } else {
-          savedItem = await createRemoteStockItem(supabase, shopId, draftItem)
-          setStockItems((current) => [savedItem, ...current])
+          if (setCount > 1) {
+            for (let i = 1; i <= setCount; i++) {
+              const suffix = String(i).padStart(2, '0')
+              const itemSku = `${baseSku}-${suffix}`
+              const itemSerial = baseSerial ? `${baseSerial}-${suffix}` : ''
+
+              const itemDraft: Omit<StockItem, 'id' | 'createdAt'> = {
+                sku: itemSku,
+                serialNumber: itemSerial,
+                productName: stockDraft.productName.trim(),
+                brand: stockDraft.brand.trim(),
+                category: stockDraft.category.trim(),
+                size: stockDraft.size.trim(),
+                primaryColor: stockDraft.primaryColor.trim(),
+                publicDescription: stockDraft.publicDescription.trim(),
+                setCount: 1,
+                rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
+                lateFeeRule: stockDraft.lateFeeRule.trim(),
+                depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
+                imageUrls: stockDraft.imageUrls,
+              }
+              await createRemoteStockItem(supabase, shopId, itemDraft)
+            }
+            const loadedStock = await loadStockItems(supabase)
+            setStockItems(loadedStock)
+          } else {
+            const itemDraft: Omit<StockItem, 'id' | 'createdAt'> = {
+              sku: stockDraft.sku.trim(),
+              serialNumber: stockDraft.serialNumber.trim(),
+              productName: stockDraft.productName.trim(),
+              brand: stockDraft.brand.trim(),
+              category: stockDraft.category.trim(),
+              size: stockDraft.size.trim(),
+              primaryColor: stockDraft.primaryColor.trim(),
+              publicDescription: stockDraft.publicDescription.trim(),
+              setCount: 1,
+              rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
+              lateFeeRule: stockDraft.lateFeeRule.trim(),
+              depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
+              imageUrls: stockDraft.imageUrls,
+            }
+            const savedItem = await createRemoteStockItem(supabase, shopId, itemDraft)
+            setStockItems((current) => [savedItem, ...current])
+          }
         }
-        
+
         handleLoadAuditLogs()
         closeStockForm()
-      } catch (err) {
-        setStockFormError(getErrorMessage(err))
+      } else {
+        // Local Storage Fallback
+        if (editingStockId) {
+          const draftItem: StockItem = {
+            sku: stockDraft.sku.trim(),
+            serialNumber: stockDraft.serialNumber.trim(),
+            productName: stockDraft.productName.trim(),
+            brand: stockDraft.brand.trim(),
+            category: stockDraft.category.trim(),
+            size: stockDraft.size.trim(),
+            primaryColor: stockDraft.primaryColor.trim(),
+            publicDescription: stockDraft.publicDescription.trim(),
+            setCount,
+            rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
+            lateFeeRule: stockDraft.lateFeeRule.trim(),
+            depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
+            imageUrls: stockDraft.imageUrls,
+            id: editingStockId,
+            createdAt: existingItem?.createdAt ?? new Date().toISOString(),
+          }
+          setStockItems((current) =>
+            current.map((item) => (item.id === editingStockId ? draftItem : item))
+          )
+        } else {
+          const savedItemsList: StockItem[] = []
+          if (setCount > 1) {
+            for (let i = 1; i <= setCount; i++) {
+              const suffix = String(i).padStart(2, '0')
+              const itemSku = `${baseSku}-${suffix}`
+              const itemSerial = baseSerial ? `${baseSerial}-${suffix}` : ''
+
+              const savedItem: StockItem = {
+                sku: itemSku,
+                serialNumber: itemSerial,
+                productName: stockDraft.productName.trim(),
+                brand: stockDraft.brand.trim(),
+                category: stockDraft.category.trim(),
+                size: stockDraft.size.trim(),
+                primaryColor: stockDraft.primaryColor.trim(),
+                publicDescription: stockDraft.publicDescription.trim(),
+                setCount: 1,
+                rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
+                lateFeeRule: stockDraft.lateFeeRule.trim(),
+                depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
+                imageUrls: stockDraft.imageUrls,
+                id: crypto.randomUUID(),
+                createdAt: new Date().toISOString(),
+              }
+              savedItemsList.push(savedItem)
+            }
+            setStockItems((current) => [...savedItemsList, ...current])
+          } else {
+            const savedItem: StockItem = {
+              sku: stockDraft.sku.trim(),
+              serialNumber: stockDraft.serialNumber.trim(),
+              productName: stockDraft.productName.trim(),
+              brand: stockDraft.brand.trim(),
+              category: stockDraft.category.trim(),
+              size: stockDraft.size.trim(),
+              primaryColor: stockDraft.primaryColor.trim(),
+              publicDescription: stockDraft.publicDescription.trim(),
+              setCount: 1,
+              rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
+              lateFeeRule: stockDraft.lateFeeRule.trim(),
+              depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
+              imageUrls: stockDraft.imageUrls,
+              id: crypto.randomUUID(),
+              createdAt: new Date().toISOString(),
+            }
+            setStockItems((current) => [savedItem, ...current])
+          }
+        }
+        closeStockForm()
       }
-      return
+    } catch (err) {
+      if (supabase && isAuthenticated) {
+        try {
+          const loadedStock = await loadStockItems(supabase)
+          setStockItems(loadedStock)
+        } catch (reloadError) {
+          console.warn('Failed to reload stock after save error:', reloadError)
+        }
+      }
+      setStockFormError(getErrorMessage(err))
+    } finally {
+      setIsSaving(false)
     }
-
-    // Local Storage Fallback
-    const savedItem: StockItem = {
-      ...draftItem,
-      id: editingStockId ?? crypto.randomUUID(),
-      createdAt: existingItem?.createdAt ?? new Date().toISOString(),
-    }
-
-    setStockItems((current) =>
-      editingStockId
-        ? current.map((item) => (item.id === editingStockId ? savedItem : item))
-        : [savedItem, ...current],
-    )
-    closeStockForm()
   }
 
   async function updateSelectedStatus(profileStatus: CustomerProfileStatus) {
@@ -1180,9 +1413,11 @@ function App() {
             isEditing={Boolean(editingStockId)}
             draft={stockDraft}
             formError={stockFormError}
+            isSaving={isSaving}
             onOpenForm={openCreateStockForm}
             onCloseForm={closeStockForm}
             onEdit={openEditStockForm}
+            onDelete={handleDeleteStockItem}
             onPreview={openStockPreview}
             onDraftChange={updateStockDraft}
             onResetDraft={() => setStockDraft(emptyStockDraft)}
@@ -1318,13 +1553,13 @@ function App() {
                       <p className="eyebrow">Customer Profile</p>
                       <h2>{editingCustomerId ? 'แก้ไขข้อมูลลูกค้า' : 'เพิ่มลูกค้าใหม่'}</h2>
                     </div>
-                    <button className="ghost-button" type="button" onClick={() => { setIsFormOpen(false); setDraft(emptyDraft); setDraftDocuments([]); setFormError(''); setEditingCustomerId(null); }}>
+                    <button className="ghost-button" type="button" onClick={() => { setIsFormOpen(false); setDraft(emptyDraft); setDraftDocuments([]); setExistingDocuments([]); setDeletedDocumentIds([]); setFormError(''); setEditingCustomerId(null); setIsSaving(false); }} disabled={isSaving}>
                       ปิด
                     </button>
                   </div>
 
                   <div className="form-grid">
-                    <TextField label="ชื่อ-นามสกุล" value={draft.fullName} onChange={(value) => updateDraft('fullName', value)} required />
+                    <TextField label="ชื่อ-นามสกุล" value={draft.fullName} onChange={(value) => updateDraft('fullName', value)} required disabled={isSaving} />
                     <TextField
                       label="เบอร์โทรศัพท์"
                       value={draft.phone}
@@ -1337,11 +1572,12 @@ function App() {
                       inputMode="numeric"
                       maxLength={10}
                       required
+                      disabled={isSaving}
                     />
-                    <TextField label="ชื่อแอคเคา/LINE" value={draft.lineAccount} onChange={(value) => updateDraft('lineAccount', value)} />
+                    <TextField label="ชื่อแอคเคา/LINE" value={draft.lineAccount} onChange={(value) => updateDraft('lineAccount', value)} disabled={isSaving} />
                     <label className="field">
                       <span>สถานะโปรไฟล์</span>
-                      <select value={draft.profileStatus} onChange={(event) => updateDraft('profileStatus', event.target.value)}>
+                      <select value={draft.profileStatus} onChange={(event) => updateDraft('profileStatus', event.target.value)} disabled={isSaving}>
                         <option value="incomplete">ข้อมูลไม่ครบ</option>
                         <option value="pending_review">รอตรวจ</option>
                         <option value="verified">ตรวจแล้ว</option>
@@ -1350,19 +1586,19 @@ function App() {
                     </label>
                     <label className="field wide">
                       <span>ที่อยู่ปัจจุบัน</span>
-                      <textarea value={draft.currentAddress} onChange={(event) => updateDraft('currentAddress', event.target.value)} rows={3} />
+                      <textarea value={draft.currentAddress} onChange={(event) => updateDraft('currentAddress', event.target.value)} rows={3} disabled={isSaving} />
                     </label>
                     <label className="field wide">
                       <span>หมายเหตุ</span>
-                      <textarea value={draft.notes} onChange={(event) => updateDraft('notes', event.target.value)} rows={3} />
+                      <textarea value={draft.notes} onChange={(event) => updateDraft('notes', event.target.value)} rows={3} disabled={isSaving} />
                     </label>
-                    <TextField label='รอบอก (นิ้ว)' value={draft.bustIn} onChange={(value) => updateDraft('bustIn', value)} inputMode="decimal" />
-                    <TextField label='รอบเอว (นิ้ว)' value={draft.waistIn} onChange={(value) => updateDraft('waistIn', value)} inputMode="decimal" />
-                    <TextField label='สะโพก (นิ้ว)' value={draft.hipIn} onChange={(value) => updateDraft('hipIn', value)} inputMode="decimal" />
-                    <TextField label="ส่วนสูง (ซม.)" value={draft.heightCm} onChange={(value) => updateDraft('heightCm', value)} inputMode="decimal" />
+                    <TextField label='รอบอก (นิ้ว)' value={draft.bustIn} onChange={(value) => updateDraft('bustIn', value)} inputMode="decimal" disabled={isSaving} />
+                    <TextField label='รอบเอว (นิ้ว)' value={draft.waistIn} onChange={(value) => updateDraft('waistIn', value)} inputMode="decimal" disabled={isSaving} />
+                    <TextField label='สะโพก (นิ้ว)' value={draft.hipIn} onChange={(value) => updateDraft('hipIn', value)} inputMode="decimal" disabled={isSaving} />
+                    <TextField label="ส่วนสูง (ซม.)" value={draft.heightCm} onChange={(value) => updateDraft('heightCm', value)} inputMode="decimal" disabled={isSaving} />
                     <label className="field">
                       <span>สัญญาณความเสี่ยง</span>
-                      <select value={draft.riskFlag} onChange={(event) => updateDraft('riskFlag', event.target.value)}>
+                      <select value={draft.riskFlag} onChange={(event) => updateDraft('riskFlag', event.target.value)} disabled={isSaving}>
                         <option value="none">ไม่มี</option>
                         <option value="has_risk">มี</option>
                       </select>
@@ -1372,27 +1608,49 @@ function App() {
                   <div className="customer-document-section" style={{ marginTop: '20px' }}>
                     <div className="section-title-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>เอกสารยืนยันตัวตน (สูงสุด 5 รูป)</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>{draftDocuments.length}/5 รูป</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                        {existingDocuments.length + draftDocuments.length}/5 รูป
+                      </span>
                     </div>
-                    <label className="upload-box">
-                      <Camera size={20} />
-                      เพิ่มรูปเอกสาร/บัตรประชาชน (เลือกพร้อมกันได้หลายรูป)
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(event) => addDraftDocuments(event.target.files)}
-                      />
-                    </label>
-                    {draftDocuments.length > 0 && (
+
+                    {(existingDocuments.length + draftDocuments.length) < 5 ? (
+                      <label
+                        className="upload-box"
+                        style={{ opacity: isSaving ? 0.6 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}
+                      >
+                        <Camera size={20} />
+                        เพิ่มรูปเอกสาร/บัตรประชาชน (เลือกพร้อมกันได้หลายรูป)
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          disabled={isSaving}
+                          onChange={(event) => addDraftDocuments(event.target.files)}
+                        />
+                      </label>
+                    ) : (
+                      <div
+                        className="upload-box"
+                        style={{ opacity: 0.5, cursor: 'not-allowed', borderColor: 'rgba(255, 255, 255, 0.1)' }}
+                      >
+                        <Camera size={20} style={{ color: 'var(--text-muted)' }} />
+                        <span style={{ color: 'var(--text-muted)' }}>รูปเอกสารเต็มขีดจำกัด (5 รูป) แล้ว</span>
+                      </div>
+                    )}
+
+                    {(existingDocuments.length > 0 || draftDocuments.length > 0) && (
                        <div className="document-grid" style={{ marginTop: '12px' }}>
-                         {draftDocuments.map((doc, index) => (
+                         {existingDocuments.map((doc, index) => (
                            <figure key={doc.id} style={{ position: 'relative', margin: 0 }}>
-                             <img src={doc.previewUrl} alt={`เอกสารร่างที่ ${index + 1}`} />
+                             <img src={doc.previewUrl} alt={`เอกสารเดิมที่ ${index + 1}`} />
                              <button
                                type="button"
-                               onClick={() => removeDraftDocument(doc.id)}
-                               aria-label={`ลบรูปเอกสารที่ ${index + 1}`}
+                               disabled={isSaving}
+                               onClick={() => {
+                                 setExistingDocuments((current) => current.filter((d) => d.id !== doc.id))
+                                 setDeletedDocumentIds((current) => [...current, doc.id])
+                               }}
+                               aria-label={`ลบรูปเอกสารเดิมที่ ${index + 1}`}
                                style={{
                                  position: 'absolute',
                                  top: '8px',
@@ -1406,12 +1664,44 @@ function App() {
                                  height: '28px',
                                  alignItems: 'center',
                                  justifyContent: 'center',
-                                 cursor: 'pointer',
+                                 cursor: isSaving ? 'not-allowed' : 'pointer',
+                                 opacity: isSaving ? 0.5 : 1,
                                }}
                              >
                                <X size={16} />
                              </button>
-                             <figcaption>รูปที่ {index + 1}</figcaption>
+                             <figcaption>รูปเดิมที่ {index + 1}</figcaption>
+                           </figure>
+                         ))}
+
+                         {draftDocuments.map((doc, index) => (
+                           <figure key={doc.id} style={{ position: 'relative', margin: 0 }}>
+                             <img src={doc.previewUrl} alt={`เอกสารร่างที่ ${index + 1}`} />
+                             <button
+                               type="button"
+                               disabled={isSaving}
+                               onClick={() => removeDraftDocument(doc.id)}
+                               aria-label={`ลบรูปเอกสารร่างที่ ${index + 1}`}
+                               style={{
+                                 position: 'absolute',
+                                 top: '8px',
+                                 right: '8px',
+                                 background: 'rgba(7, 10, 18, 0.86)',
+                                 border: '1px solid rgba(255, 255, 255, 0.14)',
+                                 borderRadius: '999px',
+                                 color: 'var(--text-bright)',
+                                 display: 'flex',
+                                 width: '28px',
+                                 height: '28px',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 cursor: isSaving ? 'not-allowed' : 'pointer',
+                                 opacity: isSaving ? 0.5 : 1,
+                               }}
+                             >
+                               <X size={16} />
+                             </button>
+                             <figcaption>รูปใหม่ที่ {index + 1}</figcaption>
                            </figure>
                          ))}
                        </div>
@@ -1425,6 +1715,7 @@ function App() {
                       <button
                         className="secondary-button"
                         type="button"
+                        disabled={isSaving}
                         onClick={() => {
                           const customer = customers.find((c) => c.id === editingCustomerId)
                           if (customer) {
@@ -1442,18 +1733,20 @@ function App() {
                               heightCm: customer.heightCm !== undefined ? String(customer.heightCm) : '',
                             })
                             setDraftDocuments([])
+                            setExistingDocuments(customer.documents || [])
+                            setDeletedDocumentIds([])
                           }
                         }}
                       >
                         รีเซ็ตค่าเดิม
                       </button>
                     ) : (
-                      <button className="secondary-button" type="button" onClick={() => { setDraft(emptyDraft); setDraftDocuments([]); }}>
+                      <button className="secondary-button" type="button" disabled={isSaving} onClick={() => { setDraft(emptyDraft); setDraftDocuments([]); setExistingDocuments([]); setDeletedDocumentIds([]); }}>
                         ล้างฟอร์ม
                       </button>
                     )}
-                    <button className="primary-button" type="button" onClick={handleSaveCustomer}>
-                      {editingCustomerId ? 'บันทึกการแก้ไข' : 'บันทึกลูกค้า'}
+                    <button className="primary-button" type="button" onClick={handleSaveCustomer} disabled={isSaving}>
+                      {isSaving ? 'กำลังบันทึก...' : (editingCustomerId ? 'บันทึกการแก้ไข' : 'บันทึกลูกค้า')}
                     </button>
                   </div>
                 </section>
@@ -1550,9 +1843,11 @@ function InventoryPage({
   isEditing,
   draft,
   formError,
+  isSaving,
   onOpenForm,
   onCloseForm,
   onEdit,
+  onDelete,
   onPreview,
   onDraftChange,
   onResetDraft,
@@ -1575,9 +1870,11 @@ function InventoryPage({
   isEditing: boolean
   draft: StockDraft
   formError: string
+  isSaving: boolean
   onOpenForm: () => void
   onCloseForm: () => void
   onEdit: (item: StockItem) => void
+  onDelete: (item: StockItem) => void
   onPreview: (item: StockItem, index?: number) => void
   onDraftChange: (field: keyof StockDraft, value: string) => void
   onResetDraft: () => void
@@ -1724,6 +2021,14 @@ function InventoryPage({
                   >
                     <Pencil size={16} />
                   </button>
+                  <button
+                    className="icon-action-button compact danger"
+                    type="button"
+                    onClick={() => onDelete(item)}
+                    aria-label={`ลบ ${item.sku}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1797,6 +2102,15 @@ function InventoryPage({
                   >
                     <Pencil size={16} />
                   </button>
+                  <button
+                    className="icon-action-button compact danger"
+                    type="button"
+                    onClick={() => onDelete(item)}
+                    aria-label={`ลบ ${item.sku}`}
+                    title="ลบชุด"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1860,7 +2174,7 @@ function InventoryPage({
                 <p className="eyebrow">Stock Item</p>
                 <h2>{isEditing ? 'แก้ไขสินค้าในคลังชุด' : 'เพิ่มสินค้าเข้าคลังชุด'}</h2>
               </div>
-              <button className="ghost-button" type="button" onClick={onCloseForm}>
+              <button className="ghost-button" type="button" onClick={onCloseForm} disabled={isSaving}>
                 ปิด
               </button>
             </div>
@@ -1986,6 +2300,7 @@ function InventoryPage({
                   onChange={(value) => onDraftChange('sku', value)}
                   placeholder="เช่น PR-4791"
                   required
+                  disabled={isSaving}
                 />
                 <TextField
                   label="จำนวนชุด"
@@ -1993,14 +2308,58 @@ function InventoryPage({
                   onChange={(value) => onDraftChange('setCount', value)}
                   inputMode="numeric"
                   type="number"
+                  disabled={isSaving}
                 />
                 <TextField
                   label="หมายเลขซีเรียล"
                   value={draft.serialNumber}
                   onChange={(value) => onDraftChange('serialNumber', value)}
                   placeholder="หมายเลขซีเรียลจากผู้ผลิต"
+                  disabled={isSaving}
                 />
               </div>
+              {!isEditing && Number(draft.setCount) > 1 && draft.sku.trim() && (() => {
+                const count = Number(draft.setCount)
+                let baseSku = draft.sku.trim()
+                const suffixRegex = /-(\d{2,})$/
+                const match = baseSku.match(suffixRegex)
+                if (match) baseSku = baseSku.replace(suffixRegex, '')
+                const skus = Array.from({ length: Math.min(count, 20) }, (_, i) => `${baseSku}-${String(i + 1).padStart(2, '0')}`)
+                return (
+                  <div className="sub-sku-preview" style={{
+                    marginTop: '12px',
+                    padding: '12px 16px',
+                    background: 'rgba(223, 183, 80, 0.06)',
+                    border: '1px solid rgba(223, 183, 80, 0.2)',
+                    borderRadius: '10px',
+                  }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>⚡</span> ระบบจะสร้าง {count} รายการแยก Sub-SKU อัตโนมัติ
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {skus.map((sku) => (
+                        <span key={sku} style={{
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          background: 'rgba(223, 183, 80, 0.12)',
+                          border: '1px solid rgba(223, 183, 80, 0.25)',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: 'var(--text-gold)',
+                          fontFamily: 'monospace',
+                        }}>{sku}</span>
+                      ))}
+                      {count > 20 && (
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '4px 6px' }}>...และอีก {count - 20} รายการ</span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
+                      แต่ละชุดจะมีสถานะเช่าแยกกัน สามารถติดตามได้ว่าชุดไหนว่าง ชุดไหนมีคนเช่าอยู่
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="stock-form-section">
@@ -2031,11 +2390,16 @@ function InventoryPage({
             {formError && <p className="form-error">{formError}</p>}
 
             <div className="modal-actions">
-              <button className="secondary-button" type="button" onClick={onResetDraft}>
+              <button className="secondary-button" type="button" onClick={onResetDraft} disabled={isSaving}>
                 ล้างฟอร์ม
               </button>
-              <button className="primary-button" type="button" onClick={onSave}>
-                {isEditing ? 'บันทึกการแก้ไข' : 'บันทึกสต๊อก'}
+              <button className="primary-button" type="button" onClick={onSave} disabled={isSaving}>
+                {isSaving
+                  ? 'กำลังบันทึก...'
+                  : !isEditing && Number(draft.setCount) > 1
+                    ? `บันทึก ${draft.setCount} ชุด`
+                    : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกสต๊อก'
+                }
               </button>
             </div>
           </section>
@@ -2301,6 +2665,7 @@ function TextField({
   type = 'text',
   placeholder,
   maxLength,
+  disabled,
 }: {
   label: string
   value: string
@@ -2310,6 +2675,7 @@ function TextField({
   type?: InputHTMLAttributes<HTMLInputElement>['type']
   placeholder?: string
   maxLength?: number
+  disabled?: boolean
 }) {
   return (
     <label className="field">
@@ -2323,6 +2689,7 @@ function TextField({
         type={type}
         placeholder={placeholder}
         maxLength={maxLength}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>

@@ -248,6 +248,44 @@ export async function updateRemoteStockItem(
   return mapStockItemRow(supabase, data as StockItemRow)
 }
 
+export async function deleteRemoteStockItem(
+  supabase: SupabaseClient,
+  stockId: string,
+  imageUrls: string[]
+): Promise<void> {
+  const imagePaths = imageUrls
+    .map((url) => getPathFromUrl(url))
+    .filter(Boolean) as string[]
+
+  const { error } = await supabase
+    .from('stock_items')
+    .delete()
+    .eq('id', stockId)
+
+  if (error) throw error
+
+  if (imagePaths.length > 0) {
+    try {
+      await supabase.storage.from('stock-images').remove(imagePaths)
+    } catch (storageError) {
+      console.warn('Failed to delete stock images:', imagePaths, storageError)
+    }
+  }
+}
+
+export async function countRemoteRentalsForStockSku(
+  supabase: SupabaseClient,
+  stockSku: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('rentals')
+    .select('id', { count: 'exact', head: true })
+    .eq('stock_item_sku', stockSku)
+
+  if (error) throw error
+  return count ?? 0
+}
+
 export async function updateShopSettings(
   supabase: SupabaseClient,
   shopId: string,
