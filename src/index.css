@@ -2854,3 +2854,165 @@ h1 {
   box-shadow: 0 2px 10px rgba(223, 183, 80, 0.2);
 }
 
+/* PWA Update Popup Styles */
+.pwa-update-popup-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  animation: pwaSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 420px;
+  width: calc(100vw - 48px);
+}
+
+.pwa-update-popup-card {
+  background: rgba(15, 23, 42, 0.85); /* Sleek slate dark background */
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(223, 183, 80, 0.25); /* Subtle gold border */
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  padding: 20px 40px 20px 20px;
+  display: flex;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle glow effect on the left border */
+.pwa-update-popup-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--text-gold);
+}
+
+.pwa-update-popup-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(223, 183, 80, 0.1);
+  border: 1px solid rgba(223, 183, 80, 0.2);
+  color: var(--text-gold);
+  flex-shrink: 0;
+}
+
+.pwa-update-popup-icon {
+  width: 22px;
+  height: 22px;
+  animation: pwaSpin 8s linear infinite;
+}
+
+.pwa-update-popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pwa-update-popup-title {
+  color: var(--text-bright);
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.pwa-update-popup-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pwa-update-popup-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pwa-update-btn-confirm {
+  background: var(--text-gold);
+  color: #000000;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(223, 183, 80, 0.15);
+}
+
+.pwa-update-btn-confirm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(223, 183, 80, 0.25);
+  filter: brightness(1.05);
+}
+
+.pwa-update-btn-cancel {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pwa-update-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-bright);
+}
+
+.pwa-update-popup-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.pwa-update-popup-close-btn:hover {
+  color: var(--text-bright);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes pwaSlideIn {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pwaSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+

@@ -36,6 +36,7 @@ import { RentalsPage } from './features/rentals/RentalsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { AuditLogPage } from './features/audit/AuditLogPage'
+import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
@@ -1495,6 +1496,7 @@ function App() {
           </div>
         )}
       </main>
+      <UpdatePrompt />
     </div>
   )
 }
