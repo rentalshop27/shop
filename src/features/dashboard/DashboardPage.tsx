@@ -55,7 +55,7 @@ export function DashboardPage({
   onNavigateToRentals: () => void
 }) {
   // --- DYNAMIC CALCULATIONS FROM SHARED STATE ---
-  const [extraRevenue, setExtraRevenue] = useState<number>(12.0) // baseline
+  const [extraRevenue, setExtraRevenue] = useState<number>(0) // baseline
   
   const dynamicRevenue = rentals
     .filter((r) => r.status === 'active' || r.status === 'returned' || r.status === 'overdue')
@@ -114,24 +114,7 @@ export function DashboardPage({
     })
 
   // Bank slips state
-  const [slips, setSlips] = useState<BankSlip[]>([
-    {
-      id: 'slip_1',
-      customerName: 'คุณวิสาขา (wee)',
-      amount: 1200.0,
-      time: '11 มิ.ย. 2569 - 10:15 น.',
-      slipUrl: '/thai_bank_slip.png',
-      refNo: 'BTN123456789'
-    },
-    {
-      id: 'slip_2',
-      customerName: 'คุณปัญญลักษณ์ (pun)',
-      amount: 3500.0,
-      time: '11 มิ.ย. 2569 - 15:40 น.',
-      slipUrl: '/thai_bank_slip.png',
-      refNo: 'BTN987654321'
-    }
-  ])
+  const [slips, setSlips] = useState<BankSlip[]>([])
 
   // Modals management
   const [activeSlipToReview, setActiveSlipToReview] = useState<BankSlip | null>(null)
