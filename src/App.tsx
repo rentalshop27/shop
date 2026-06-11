@@ -1318,8 +1318,10 @@ function SideNav({
 
   return (
     <aside className="side-nav" aria-label="เมนูหลัก">
-      <div className="brand-logo" aria-label="Precious Rental" style={{ padding: '24px 0', display: 'flex', justifyContent: 'center' }}>
-        <img src="/logo.png" alt="Precious Rental" style={{ width: '140px', height: '140px', objectFit: 'contain', borderRadius: '50%' }} />
+      <div className="brand-logo" aria-label="Precious Rental">
+        <strong>PRECIOUS</strong>
+        <div className="divider-line" />
+        <span>RENTAL</span>
       </div>
       <nav>
         {items.map(({ id, label, icon: Icon }) => (
@@ -1927,9 +1929,6 @@ function LoginScreen() {
   return (
     <main className="auth-shell">
       <section className="modal-panel auth-panel">
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-          <img src="/logo.png" alt="Precious Rental" style={{ width: '120px', height: '120px', objectFit: 'contain', borderRadius: '50%' }} />
-        </div>
         <p className="eyebrow">Precious Shop</p>
         <h1>เข้าสู่ระบบหลังร้าน</h1>
         <p className="subtitle">ใช้บัญชีเจ้าของร้านจาก Supabase Auth</p>
