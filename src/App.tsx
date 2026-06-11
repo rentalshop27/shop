@@ -28,16 +28,20 @@ import {
   Trash2,
   UserRound,
   X,
+  History,
 } from 'lucide-react'
 import './index.css'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { RentalsPage } from './features/rentals/RentalsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
+import { AuditLogPage } from './features/audit/AuditLogPage'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
 import { demoCustomers } from './features/customers/customerSeed'
+import { loadAuditLogs, demoAuditLogs } from './features/audit/auditRemote'
+import type { AuditLog } from './features/audit/auditRemote'
 import {
   archiveRemoteCustomer,
   createRemoteCustomer,
@@ -79,7 +83,7 @@ const emptyDraft: CustomerDraft = {
   heightCm: '',
 }
 
-type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings'
+type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit'
 
 export type StockItem = {
   id: string
@@ -336,6 +340,9 @@ function App() {
     setColors((current) => current.filter((c) => c !== color))
   }
 
+  // Audit Logs State
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(demoAuditLogs)
+  const [loadingAudit, setLoadingAudit] = useState(false)
 
   // Shared Rentals State with LocalStorage sync
   const [rentals, setRentals] = useState<RentalOrder[]>(() => {
@@ -437,6 +444,28 @@ function App() {
       .catch((error: unknown) => {
         setRemoteError(getErrorMessage(error))
       })
+  }, [isAuthenticated])
+
+  async function handleLoadAuditLogs() {
+    if (!supabase || !isAuthenticated) return
+    try {
+      setLoadingAudit(true)
+      const logs = await loadAuditLogs(supabase)
+      setAuditLogs(logs)
+    } catch (error) {
+      console.warn('Failed to load audit logs from Supabase, using demo logs:', error)
+      setAuditLogs(demoAuditLogs)
+    } finally {
+      setLoadingAudit(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!supabase || !isAuthenticated) {
+      setAuditLogs(demoAuditLogs)
+      return
+    }
+    handleLoadAuditLogs()
   }, [isAuthenticated])
 
   const activeCustomers = customers.filter((customer) => !customer.archivedAt)
@@ -1329,7 +1358,15 @@ function App() {
           />
         )}
 
-        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'settings' && (
+        {activeTab === 'audit' && (
+          <AuditLogPage
+            auditLogs={auditLogs}
+            loading={loadingAudit}
+            onRefresh={handleLoadAuditLogs}
+          />
+        )}
+
+        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && (
           <div style={{ padding: '80px 40px', textAlign: 'center', color: '#c7bfb9' }}>
             <p className="eyebrow" style={{ marginBottom: '16px' }}>Precious Shop</p>
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: '#fff7ef', marginBottom: '12px' }}>
@@ -1359,6 +1396,7 @@ function SideNav({
     { id: 'rentals', label: 'เช่า/คืน', icon: CalendarCheck },
     { id: 'calendar', label: 'ปฏิทิน', icon: CalendarDays },
     { id: 'settings', label: 'ตั้งค่า', icon: Settings },
+    { id: 'audit', label: 'ประวัติระบบ', icon: History },
   ]
 
   return (
