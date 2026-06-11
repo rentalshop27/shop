@@ -87,6 +87,38 @@ export async function createRemoteCustomer(
   return mapCustomerRow(supabase, data as CustomerRow)
 }
 
+export async function updateRemoteCustomer(
+  supabase: SupabaseClient,
+  customerId: string,
+  draft: CustomerDraft,
+) {
+  const payload = {
+    full_name: draft.fullName.trim(),
+    line_account: draft.lineAccount.trim(),
+    phone: draft.phone.trim(),
+    phone_normalized: normalizeThaiPhone(draft.phone),
+    current_address: draft.currentAddress.trim(),
+    notes: draft.notes.trim(),
+    profile_status: draft.profileStatus,
+    risk_flag: draft.riskFlag,
+    bust_in: parseOptionalNumber(draft.bustIn),
+    waist_in: parseOptionalNumber(draft.waistIn),
+    hip_in: parseOptionalNumber(draft.hipIn),
+    height_cm: parseOptionalNumber(draft.heightCm),
+    updated_at: new Date().toISOString(),
+  }
+
+  const { data, error } = await supabase
+    .from('customers')
+    .update(payload)
+    .eq('id', customerId)
+    .select('*, customer_documents(*)')
+    .single()
+
+  if (error) throw error
+  return mapCustomerRow(supabase, data as CustomerRow)
+}
+
 export async function updateRemoteCustomerStatus(
   supabase: SupabaseClient,
   customerId: string,

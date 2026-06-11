@@ -15,7 +15,6 @@ import {
   Images,
   ImagePlus,
   LayoutDashboard,
-  LockKeyhole,
   Menu,
   MessageSquare,
   Pencil,
@@ -24,6 +23,7 @@ import {
   Search,
   Settings,
   ShieldAlert,
+  Trash2,
   UserRound,
   X,
 } from 'lucide-react'
@@ -40,6 +40,7 @@ import {
   createRemoteCustomer,
   loadCustomers,
   loadOwnerShopId,
+  updateRemoteCustomer,
   updateRemoteCustomerRisk,
   updateRemoteCustomerStatus,
   uploadRemoteCustomerDocuments,
@@ -191,6 +192,7 @@ function App() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isStockFormOpen, setIsStockFormOpen] = useState(false)
   const [editingStockId, setEditingStockId] = useState<string | null>(null)
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [previewStockId, setPreviewStockId] = useState<string | null>(null)
   const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [draft, setDraft] = useState<CustomerDraft>(emptyDraft)
@@ -361,7 +363,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!hasSupabaseConfig)
   const [shopId, setShopId] = useState<string | null>(null)
   const [remoteError, setRemoteError] = useState('')
-  const [isLoadingRemote, setIsLoadingRemote] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -392,7 +393,6 @@ function App() {
 
     Promise.resolve()
       .then(() => {
-        setIsLoadingRemote(true)
         setRemoteError('')
         return Promise.all([loadOwnerShopId(client), loadCustomers(client)])
       })
@@ -407,7 +407,6 @@ function App() {
       .catch((error: unknown) => {
         setRemoteError(getErrorMessage(error))
       })
-      .finally(() => setIsLoadingRemote(false))
   }, [isAuthenticated])
 
   const activeCustomers = customers.filter((customer) => !customer.archivedAt)
@@ -563,7 +562,26 @@ function App() {
     return `PR-C${String(maxCode + 1).padStart(3, '0')}`
   }
 
-  async function handleCreateCustomer() {
+  function openEditCustomerForm(customer: Customer) {
+    setEditingCustomerId(customer.id)
+    setDraft({
+      fullName: customer.fullName,
+      lineAccount: customer.lineAccount,
+      phone: customer.phone,
+      currentAddress: customer.currentAddress,
+      notes: customer.notes,
+      profileStatus: customer.profileStatus,
+      riskFlag: customer.riskFlag,
+      bustIn: customer.bustIn !== undefined ? String(customer.bustIn) : '',
+      waistIn: customer.waistIn !== undefined ? String(customer.waistIn) : '',
+      hipIn: customer.hipIn !== undefined ? String(customer.hipIn) : '',
+      heightCm: customer.heightCm !== undefined ? String(customer.heightCm) : '',
+    })
+    setDraftDocuments([])
+    setIsFormOpen(true)
+  }
+
+  async function handleSaveCustomer() {
     setFormError('')
 
     if (!draft.fullName.trim()) {
@@ -576,11 +594,86 @@ function App() {
       return
     }
 
-    const duplicate = findPhoneDuplicate(customers, draft.phone)
+    const duplicate = findPhoneDuplicate(customers, draft.phone, editingCustomerId ?? undefined)
 
     if (duplicate.kind === 'phone') {
       setSelectedCustomerId(duplicate.customer.id)
       setFormError(`เบอร์นี้มีอยู่แล้วในลูกค้า ${duplicate.customer.customerCode}`)
+      return
+    }
+
+    if (editingCustomerId) {
+      if (supabase) {
+        try {
+          const updatedCustomer = await updateRemoteCustomer(supabase, editingCustomerId, draft)
+          if (draftDocuments.length > 0) {
+            await uploadRemoteCustomerDocuments(
+              supabase,
+              updatedCustomer,
+              draftDocuments.map((d) => d.file),
+            )
+            const loadedCustomers = await loadCustomers(supabase)
+            setCustomers(loadedCustomers)
+            setSelectedCustomerId(updatedCustomer.id)
+          } else {
+            setCustomers((current) =>
+              current.map((customer) =>
+                customer.id === editingCustomerId ? updatedCustomer : customer
+              )
+            )
+            setSelectedCustomerId(updatedCustomer.id)
+          }
+          setDraft(emptyDraft)
+          setDraftDocuments([])
+          setEditingCustomerId(null)
+          setIsFormOpen(false)
+        } catch (error) {
+          setFormError(getErrorMessage(error))
+        }
+        return
+      }
+
+      const now = new Date().toISOString()
+      const existingCustomer = customers.find((c) => c.id === editingCustomerId)
+      if (!existingCustomer) return
+
+      const newDocsFromDraft = draftDocuments.map((doc, index) => ({
+        id: doc.id,
+        customerId: editingCustomerId,
+        storagePath: `customer-documents/demo/${doc.file.name}`,
+        previewUrl: doc.previewUrl,
+        sortOrder: existingCustomer.documents.length + index + 1,
+        createdAt: now,
+      }))
+
+      const updatedCustomer: Customer = {
+        ...existingCustomer,
+        fullName: draft.fullName.trim(),
+        lineAccount: draft.lineAccount.trim(),
+        phone: draft.phone.trim(),
+        phoneNormalized: normalizeThaiPhone(draft.phone),
+        currentAddress: draft.currentAddress.trim(),
+        notes: draft.notes.trim(),
+        profileStatus: draft.profileStatus,
+        riskFlag: draft.riskFlag,
+        bustIn: parseOptionalNumber(draft.bustIn),
+        waistIn: parseOptionalNumber(draft.waistIn),
+        hipIn: parseOptionalNumber(draft.hipIn),
+        heightCm: parseOptionalNumber(draft.heightCm),
+        documents: [...existingCustomer.documents, ...newDocsFromDraft],
+        updatedAt: now,
+      }
+
+      setCustomers((current) =>
+        current.map((customer) =>
+          customer.id === editingCustomerId ? updatedCustomer : customer
+        )
+      )
+      setSelectedCustomerId(updatedCustomer.id)
+      setDraft(emptyDraft)
+      setDraftDocuments([])
+      setEditingCustomerId(null)
+      setIsFormOpen(false)
       return
     }
 
@@ -764,6 +857,11 @@ function App() {
   async function archiveSelectedCustomer() {
     if (!selectedCustomer) return
 
+    const confirmed = window.confirm(
+      `คุณต้องการลบข้อมูลลูกค้ารายนี้ใช่หรือไม่?\n\nข้อมูลลูกค้า ${selectedCustomer.fullName} (${selectedCustomer.customerCode}) จะถูกลบ/ซ่อนออกจากระบบ`
+    )
+    if (!confirmed) return
+
     if (supabase) {
       try {
         await archiveRemoteCustomer(supabase, selectedCustomer.id)
@@ -930,29 +1028,7 @@ function App() {
               <MetricCard label="มีสัญญาณความเสี่ยง" value={`${summary.risk}`} icon={<ShieldAlert />} type="risk" unit="ราย" />
             </section>
 
-            {!hasSupabaseConfig && (
-              <section className="config-note">
-                <div className="note-content">
-                  <LockKeyhole size={18} />
-                  <span>โหมดตัวอย่าง: ใส่ 'VITE_SUPABASE_URL' และ 'VITE_SUPABASE_ANON_KEY' เพื่อเชื่อม Supabase จริง</span>
-                </div>
-                <ChevronRight size={18} />
-              </section>
-            )}
 
-            {hasSupabaseConfig && (
-              <section className="config-note">
-                <div className="note-content">
-                  <LockKeyhole size={18} />
-                  <span>
-                    {isLoadingRemote
-                      ? 'กำลังโหลดข้อมูลจาก Supabase...'
-                      : 'เชื่อม Supabase แล้ว ใช้ private storage และ RLS'}
-                  </span>
-                </div>
-                <ChevronRight size={18} />
-              </section>
-            )}
 
             {remoteError && <section className="remote-error">{remoteError}</section>}
 
@@ -1037,6 +1113,7 @@ function App() {
                   onRiskChange={updateSelectedRisk}
                   onArchive={archiveSelectedCustomer}
                   onDocumentUpload={addDocuments}
+                  onEdit={() => openEditCustomerForm(selectedCustomer)}
                 />
               )}
             </section>
@@ -1047,9 +1124,9 @@ function App() {
                   <div className="modal-header">
                     <div>
                       <p className="eyebrow">Customer Profile</p>
-                      <h2>เพิ่มลูกค้าใหม่</h2>
+                      <h2>{editingCustomerId ? 'แก้ไขข้อมูลลูกค้า' : 'เพิ่มลูกค้าใหม่'}</h2>
                     </div>
-                    <button className="ghost-button" type="button" onClick={() => { setIsFormOpen(false); setDraft(emptyDraft); setDraftDocuments([]); setFormError(''); }}>
+                    <button className="ghost-button" type="button" onClick={() => { setIsFormOpen(false); setDraft(emptyDraft); setDraftDocuments([]); setFormError(''); setEditingCustomerId(null); }}>
                       ปิด
                     </button>
                   </div>
@@ -1152,11 +1229,39 @@ function App() {
                   {formError && <p className="form-error">{formError}</p>}
 
                   <div className="modal-actions">
-                    <button className="secondary-button" type="button" onClick={() => { setDraft(emptyDraft); setDraftDocuments([]); }}>
-                      ล้างฟอร์ม
-                    </button>
-                    <button className="primary-button" type="button" onClick={handleCreateCustomer}>
-                      บันทึกลูกค้า
+                    {editingCustomerId ? (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => {
+                          const customer = customers.find((c) => c.id === editingCustomerId)
+                          if (customer) {
+                            setDraft({
+                              fullName: customer.fullName,
+                              lineAccount: customer.lineAccount,
+                              phone: customer.phone,
+                              currentAddress: customer.currentAddress,
+                              notes: customer.notes,
+                              profileStatus: customer.profileStatus,
+                              riskFlag: customer.riskFlag,
+                              bustIn: customer.bustIn !== undefined ? String(customer.bustIn) : '',
+                              waistIn: customer.waistIn !== undefined ? String(customer.waistIn) : '',
+                              hipIn: customer.hipIn !== undefined ? String(customer.hipIn) : '',
+                              heightCm: customer.heightCm !== undefined ? String(customer.heightCm) : '',
+                            })
+                            setDraftDocuments([])
+                          }
+                        }}
+                      >
+                        รีเซ็ตค่าเดิม
+                      </button>
+                    ) : (
+                      <button className="secondary-button" type="button" onClick={() => { setDraft(emptyDraft); setDraftDocuments([]); }}>
+                        ล้างฟอร์ม
+                      </button>
+                    )}
+                    <button className="primary-button" type="button" onClick={handleSaveCustomer}>
+                      {editingCustomerId ? 'บันทึกการแก้ไข' : 'บันทึกลูกค้า'}
                     </button>
                   </div>
                 </section>
@@ -1213,10 +1318,8 @@ function SideNav({
 
   return (
     <aside className="side-nav" aria-label="เมนูหลัก">
-      <div className="brand-logo" aria-label="Precious Rental">
-        <strong>PRECIOUS</strong>
-        <div className="divider-line" />
-        <span>RENTAL</span>
+      <div className="brand-logo" aria-label="Precious Rental" style={{ padding: '24px 0', display: 'flex', justifyContent: 'center' }}>
+        <img src="/logo.png" alt="Precious Rental" style={{ width: '140px', height: '140px', objectFit: 'contain', borderRadius: '50%' }} />
       </div>
       <nav>
         {items.map(({ id, label, icon: Icon }) => (
@@ -1644,12 +1747,14 @@ function CustomerDetail({
   onRiskChange,
   onArchive,
   onDocumentUpload,
+  onEdit,
 }: {
   customer: Customer
   onStatusChange: (status: CustomerProfileStatus) => void
   onRiskChange: (riskFlag: RiskFlag) => void
   onArchive: () => void
   onDocumentUpload: (files: FileList | null) => void
+  onEdit: () => void
 }) {
   const rentalGuard = canCreateRentalForCustomer(customer)
 
@@ -1781,10 +1886,16 @@ function CustomerDetail({
           ))}
         </div>
       </section>
-      <button className="archive-button" type="button" onClick={onArchive}>
-        <Archive size={18} />
-        Archive ลูกค้า
-      </button>
+      <div className="detail-action-buttons" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px' }}>
+        <button className="secondary-button" type="button" onClick={onEdit} style={{ minHeight: '44px', width: '100%', gap: '8px' }}>
+          <Pencil size={18} />
+          แก้ไขข้อมูล
+        </button>
+        <button className="archive-button" type="button" onClick={onArchive} style={{ minHeight: '44px', width: '100%', gap: '8px', marginTop: 0 }}>
+          <Trash2 size={18} />
+          ลบลูกค้า
+        </button>
+      </div>
     </aside>
   )
 }
@@ -1816,6 +1927,9 @@ function LoginScreen() {
   return (
     <main className="auth-shell">
       <section className="modal-panel auth-panel">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+          <img src="/logo.png" alt="Precious Rental" style={{ width: '120px', height: '120px', objectFit: 'contain', borderRadius: '50%' }} />
+        </div>
         <p className="eyebrow">Precious Shop</p>
         <h1>เข้าสู่ระบบหลังร้าน</h1>
         <p className="subtitle">ใช้บัญชีเจ้าของร้านจาก Supabase Auth</p>
