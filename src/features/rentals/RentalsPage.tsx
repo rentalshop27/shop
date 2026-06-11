@@ -26,6 +26,7 @@ interface RentalsPageProps {
   onFormOpenChange?: (open: boolean) => void
   externalPickupDate?: string
   externalReturnDate?: string
+  onClearExternalDates?: () => void
 }
 
 export function RentalsPage({
@@ -42,14 +43,18 @@ export function RentalsPage({
   externalIsFormOpen,
   onFormOpenChange,
   externalPickupDate,
-  externalReturnDate
+  externalReturnDate,
+  onClearExternalDates
 }: RentalsPageProps) {
   // Navigation / Selected rental
   const [localSelectedRentalId, setLocalSelectedRentalId] = useState<string>('')
-  const selectedRentalId = externalSelectedRentalId !== undefined ? externalSelectedRentalId : localSelectedRentalId
+  const selectedRentalId = onSelectRental ? (externalSelectedRentalId || '') : localSelectedRentalId
   const setSelectedRentalId = (id: string) => {
-    setLocalSelectedRentalId(id)
-    if (onSelectRental) onSelectRental(id)
+    if (onSelectRental) {
+      onSelectRental(id)
+    } else {
+      setLocalSelectedRentalId(id)
+    }
   }
   
   // Search & Filter
@@ -76,23 +81,32 @@ export function RentalsPage({
   const [formError, setFormError] = useState('')
   
   const [localIsFormOpen, setLocalIsFormOpen] = useState(false)
-  const isFormOpen = externalIsFormOpen !== undefined ? externalIsFormOpen : localIsFormOpen
+  const isFormOpen = onFormOpenChange ? (externalIsFormOpen || false) : localIsFormOpen
   const setIsFormOpen = (open: boolean) => {
-    setLocalIsFormOpen(open)
-    if (onFormOpenChange) onFormOpenChange(open)
+    if (onFormOpenChange) {
+      onFormOpenChange(open)
+    } else {
+      setLocalIsFormOpen(open)
+    }
   }
 
   // Effect to prefill dates when form opens externally
   useEffect(() => {
     if (isFormOpen) {
+      let consumed = false
       if (externalPickupDate) {
         setPickupDate(externalPickupDate)
+        consumed = true
       }
       if (externalReturnDate) {
         setReturnDate(externalReturnDate)
+        consumed = true
+      }
+      if (consumed && onClearExternalDates) {
+        onClearExternalDates()
       }
     }
-  }, [isFormOpen, externalPickupDate, externalReturnDate])
+  }, [isFormOpen, externalPickupDate, externalReturnDate, onClearExternalDates])
 
   // Autocomplete Suggestions
   const filteredCustomersSuggestions = useMemo(() => {
@@ -503,9 +517,9 @@ export function RentalsPage({
                   onClick={() => {
                     const nextStatusMap: Record<RentalStatus, RentalStatus> = {
                       booked: 'active',
-                      active: 'returned',
-                      returned: 'overdue',
-                      overdue: 'booked'
+                      active: 'overdue',
+                      overdue: 'returned',
+                      returned: 'booked'
                     }
                     onUpdateRentalStatus(selectedRental.id, nextStatusMap[selectedRental.status])
                   }}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +29,13 @@ const thaiMonths = [
 
 const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
 
+function toLocalDateStr(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const date = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${date}`
+}
+
 export function CalendarPage({
   rentals,
   onUpdateRentalStatus,
@@ -38,10 +45,17 @@ export function CalendarPage({
   // Calendar View states
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
-    return new Date().toISOString().split('T')[0]
+    return toLocalDateStr(new Date())
   })
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'list'>('month')
   const [searchQuery, setSearchQuery] = useState('')
+  const [listCurrentPage, setListCurrentPage] = useState(1)
+  const listPageSize = 10
+
+  // Reset list page to 1 on search query change
+  useEffect(() => {
+    setListCurrentPage(1)
+  }, [searchQuery])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -50,7 +64,7 @@ export function CalendarPage({
   const handleGoToToday = () => {
     const today = new Date()
     setCurrentDate(today)
-    setSelectedDateStr(today.toISOString().split('T')[0])
+    setSelectedDateStr(toLocalDateStr(today))
   }
 
   // Prev month
@@ -65,12 +79,16 @@ export function CalendarPage({
 
   // Prev week
   const handlePrevWeek = () => {
-    setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))
+    const d = new Date(currentDate.getTime())
+    d.setDate(d.getDate() - 7)
+    setCurrentDate(d)
   }
 
   // Next week
   const handleNextWeek = () => {
-    setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))
+    const d = new Date(currentDate.getTime())
+    d.setDate(d.getDate() + 7)
+    setCurrentDate(d)
   }
 
   // Format Date for UI e.g., "11 มิถุนายน 2569"
@@ -99,7 +117,7 @@ export function CalendarPage({
       const prevMonthDate = new Date(year, month - 1, d)
       days.push({
         date: prevMonthDate,
-        dateStr: prevMonthDate.toISOString().split('T')[0],
+        dateStr: toLocalDateStr(prevMonthDate),
         dayNumber: d,
         isCurrentMonth: false
       })
@@ -110,7 +128,7 @@ export function CalendarPage({
       const currDate = new Date(year, month, d)
       days.push({
         date: currDate,
-        dateStr: currDate.toISOString().split('T')[0],
+        dateStr: toLocalDateStr(currDate),
         dayNumber: d,
         isCurrentMonth: true
       })
@@ -122,7 +140,7 @@ export function CalendarPage({
       const nextMonthDate = new Date(year, month + 1, d)
       days.push({
         date: nextMonthDate,
-        dateStr: nextMonthDate.toISOString().split('T')[0],
+        dateStr: toLocalDateStr(nextMonthDate),
         dayNumber: d,
         isCurrentMonth: false
       })
@@ -144,20 +162,53 @@ export function CalendarPage({
       wDate.setDate(sunday.getDate() + i)
       days.push({
         date: wDate,
-        dateStr: wDate.toISOString().split('T')[0],
+        dateStr: toLocalDateStr(wDate),
         dayName: thaiDays[i]
       })
     }
     return days
   }, [currentDate])
 
-  // Filter and index rentals by date
+  // Calculate the bounds of the visible range for performance optimization
+  const visibleRange = useMemo(() => {
+    let startStr = ''
+    let endStr = ''
+    
+    if (viewMode === 'month' && calendarDays.length > 0) {
+      startStr = calendarDays[0].dateStr
+      endStr = calendarDays[calendarDays.length - 1].dateStr
+    } else if (viewMode === 'week' && currentWeekDays.length > 0) {
+      startStr = currentWeekDays[0].dateStr
+      endStr = currentWeekDays[currentWeekDays.length - 1].dateStr
+    } else {
+      // List view or fallback: cover the current date's month range
+      const firstDay = new Date(year, month - 1, 1)
+      const lastDay = new Date(year, month + 2, 0)
+      startStr = toLocalDateStr(firstDay)
+      endStr = toLocalDateStr(lastDay)
+    }
+
+    // Ensure selectedDateStr is also covered
+    if (selectedDateStr) {
+      if (!startStr || selectedDateStr < startStr) startStr = selectedDateStr
+      if (!endStr || selectedDateStr > endStr) endStr = selectedDateStr
+    }
+
+    return { startStr, endStr }
+  }, [viewMode, calendarDays, currentWeekDays, selectedDateStr, year, month])
+
+  // Filter and index rentals by date (within visible bounds for performance)
   const rentalsByDate = useMemo(() => {
     const index: Record<string, { pickups: RentalOrder[]; returns: RentalOrder[]; ongoing: RentalOrder[] }> = {}
+    const { startStr, endStr } = visibleRange
     
+    const isDateInRange = (dateStr: string) => {
+      return dateStr >= startStr && dateStr <= endStr
+    }
+
     rentals.forEach((rental) => {
       // Pickups
-      if (rental.pickupDate) {
+      if (rental.pickupDate && isDateInRange(rental.pickupDate)) {
         if (!index[rental.pickupDate]) {
           index[rental.pickupDate] = { pickups: [], returns: [], ongoing: [] }
         }
@@ -165,7 +216,7 @@ export function CalendarPage({
       }
       
       // Returns
-      if (rental.returnDate) {
+      if (rental.returnDate && isDateInRange(rental.returnDate)) {
         if (!index[rental.returnDate]) {
           index[rental.returnDate] = { pickups: [], returns: [], ongoing: [] }
         }
@@ -174,24 +225,35 @@ export function CalendarPage({
 
       // Ongoing range (days strictly between pickup and return)
       if (rental.pickupDate && rental.returnDate) {
-        let current = new Date(rental.pickupDate)
-        const end = new Date(rental.returnDate)
-        
-        // increment by 1 day
-        current.setDate(current.getDate() + 1)
-        while (current < end) {
-          const dateStr = current.toISOString().split('T')[0]
-          if (!index[dateStr]) {
-            index[dateStr] = { pickups: [], returns: [], ongoing: [] }
+        if (rental.pickupDate < endStr && rental.returnDate > startStr) {
+          const overlapStart = rental.pickupDate > startStr ? rental.pickupDate : startStr
+          const overlapEnd = rental.returnDate < endStr ? rental.returnDate : endStr
+          
+          let current = new Date(overlapStart)
+          const end = new Date(overlapEnd)
+          
+          if (toLocalDateStr(current) === rental.pickupDate) {
+            current.setDate(current.getDate() + 1)
           }
-          index[dateStr].ongoing.push(rental)
-          current.setDate(current.getDate() + 1)
+          
+          while (current < end) {
+            const dateStr = toLocalDateStr(current)
+            if (dateStr === rental.returnDate) break
+            
+            if (isDateInRange(dateStr)) {
+              if (!index[dateStr]) {
+                index[dateStr] = { pickups: [], returns: [], ongoing: [] }
+              }
+              index[dateStr].ongoing.push(rental)
+            }
+            current.setDate(current.getDate() + 1)
+          }
         }
       }
     })
 
     return index
-  }, [rentals])
+  }, [rentals, visibleRange])
 
   // Find selected day rentals
   const selectedDayRentals = useMemo(() => {
@@ -221,6 +283,14 @@ export function CalendarPage({
     })
   }, [rentals, searchQuery])
 
+  // Paginated rentals for timeline schedule list view
+  const paginatedListRentals = useMemo(() => {
+    const startIndex = (listCurrentPage - 1) * listPageSize
+    return filteredTimelineRentals.slice(startIndex, startIndex + listPageSize)
+  }, [filteredTimelineRentals, listCurrentPage])
+
+  const listTotalPages = Math.ceil(filteredTimelineRentals.length / listPageSize) || 1
+
   // Get status tag mapping
   const getStatusBadge = (status: RentalStatus) => {
     switch (status) {
@@ -246,12 +316,12 @@ export function CalendarPage({
     
     onNavigateToCreateRental(
       dateStr,
-      returnDt.toISOString().split('T')[0]
+      toLocalDateStr(returnDt)
     )
   }
 
   const isToday = (dateStr: string) => {
-    return dateStr === new Date().toISOString().split('T')[0]
+    return dateStr === toLocalDateStr(new Date())
   }
 
   return (
@@ -268,11 +338,7 @@ export function CalendarPage({
             <button
               className={`toggle-btn ${viewMode === 'month' ? 'active' : ''}`}
               onClick={() => setViewMode('month')}
-              style={{
-                background: viewMode === 'month' ? 'var(--text-gold)' : 'transparent',
-                color: viewMode === 'month' ? '#000' : 'var(--text-muted)',
-                border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '14px', fontWeight: 600, transition: 'all 0.2s'
-              }}
+              aria-pressed={viewMode === 'month'}
             >
               <CalendarIcon size={16} style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline' }} />
               รายเดือน
@@ -280,11 +346,7 @@ export function CalendarPage({
             <button
               className={`toggle-btn ${viewMode === 'week' ? 'active' : ''}`}
               onClick={() => setViewMode('week')}
-              style={{
-                background: viewMode === 'week' ? 'var(--text-gold)' : 'transparent',
-                color: viewMode === 'week' ? '#000' : 'var(--text-muted)',
-                border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '14px', fontWeight: 600, transition: 'all 0.2s'
-              }}
+              aria-pressed={viewMode === 'week'}
             >
               <RefreshCw size={16} style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline' }} />
               รายสัปดาห์
@@ -292,11 +354,7 @@ export function CalendarPage({
             <button
               className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
               onClick={() => setViewMode('list')}
-              style={{
-                background: viewMode === 'list' ? 'var(--text-gold)' : 'transparent',
-                color: viewMode === 'list' ? '#000' : 'var(--text-muted)',
-                border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '14px', fontWeight: 600, transition: 'all 0.2s'
-              }}
+              aria-pressed={viewMode === 'list'}
             >
               <ListTodo size={16} style={{ marginRight: '6px', verticalAlign: 'middle', display: 'inline' }} />
               รายการทั้งหมด
@@ -306,7 +364,7 @@ export function CalendarPage({
           <button
             className="primary-button"
             type="button"
-            onClick={() => triggerCreateRentalForDate(selectedDateStr || new Date().toISOString().split('T')[0])}
+            onClick={() => triggerCreateRentalForDate(selectedDateStr || toLocalDateStr(new Date()))}
             style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}
           >
             <Plus size={20} />
@@ -401,25 +459,26 @@ export function CalendarPage({
                     const isDaySelected = selectedDateStr === dateStr
                     const isDayToday = isToday(dateStr)
 
+                    const displayedCount = Math.min(filteredPickups.length, 2) + Math.min(filteredReturns.length, 2)
+                    const totalCount = filteredPickups.length + filteredReturns.length
+                    const overflowCount = totalCount - displayedCount
+
+                    const ariaLabelText = `วันที่ ${dayNumber} ${isCurrentMonth ? thaiMonths[month] : ''} ${isDayToday ? '(วันนี้)' : ''}${filteredPickups.length > 0 ? `, รับชุด ${filteredPickups.length} รายการ` : ''}${filteredReturns.length > 0 ? `, คืนชุด ${filteredReturns.length} รายการ` : ''}${dayEvents.ongoing.length > 0 ? `, อยู่ระหว่างเช่า ${dayEvents.ongoing.length} รายการ` : ''}`
+
                     return (
                       <div
                         key={dateStr}
                         onClick={() => setSelectedDateStr(dateStr)}
                         className={`calendar-cell ${isCurrentMonth ? 'curr-month' : 'other-month'} ${isDaySelected ? 'selected' : ''} ${isDayToday ? 'today' : ''}`}
-                        style={{
-                          background: isDaySelected 
-                            ? 'rgba(223, 183, 80, 0.04)' 
-                            : isCurrentMonth 
-                              ? 'var(--bg-card)' 
-                              : '#080c14',
-                          padding: '8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          cursor: 'pointer',
-                          position: 'relative',
-                          transition: 'all 0.15s ease',
-                          border: isDayToday ? '1px solid var(--border-gold)' : isDaySelected ? '1px solid #dfb750' : 'none',
-                          minHeight: '110px'
+                        tabIndex={0}
+                        role="button"
+                        aria-label={ariaLabelText}
+                        aria-pressed={isDaySelected}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setSelectedDateStr(dateStr)
+                            e.preventDefault()
+                          }
                         }}
                       >
                         {/* Day Number Header */}
@@ -459,7 +518,7 @@ export function CalendarPage({
                           {/* Pickups */}
                           {filteredPickups.slice(0, 2).map((rental) => (
                             <div
-                              key={rental.id}
+                              key={`pickup-${rental.id}`}
                               style={{
                                 fontSize: '10px',
                                 background: 'rgba(245, 158, 11, 0.08)',
@@ -495,7 +554,7 @@ export function CalendarPage({
 
                             return (
                               <div
-                                key={rental.id}
+                                key={`return-${rental.id}`}
                                 style={{
                                   fontSize: '10px',
                                   background: badgeBg,
@@ -515,9 +574,9 @@ export function CalendarPage({
                           })}
 
                           {/* Overflow text */}
-                          {(filteredPickups.length + filteredReturns.length) > 2 && (
+                          {overflowCount > 0 && (
                             <div style={{ fontSize: '9px', color: 'var(--text-muted)', paddingLeft: '4px', fontWeight: 600 }}>
-                              +{(filteredPickups.length + filteredReturns.length) - 2} รายการ
+                              +{overflowCount} รายการ
                             </div>
                           )}
                         </div>
@@ -533,29 +592,45 @@ export function CalendarPage({
               <div className="weekly-schedule-list" style={{ display: 'grid', gap: '12px', flex: 1 }}>
                 {currentWeekDays.map(({ date, dateStr, dayName }) => {
                   const dayEvents = rentalsByDate[dateStr] || { pickups: [], returns: [], ongoing: [] }
+                  
+                  // Apply search query filter to weekly view badges
+                  const filteredPickups = dayEvents.pickups.filter(r => 
+                    !searchQuery || 
+                    r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  const filteredReturns = dayEvents.returns.filter(r => 
+                    !searchQuery || 
+                    r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  const filteredOngoing = dayEvents.ongoing.filter(r => 
+                    !searchQuery || 
+                    r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+
                   const isDaySelected = selectedDateStr === dateStr
                   const isDayToday = isToday(dateStr)
 
+                  const ariaLabelText = `วันที่ ${date.getDate()} ${thaiMonths[date.getMonth()]} ${dayName}, รับชุด ${filteredPickups.length} รายการ, คืนชุด ${filteredReturns.length} รายการ`
+
                   return (
-                    <div
-                      key={dateStr}
-                      onClick={() => setSelectedDateStr(dateStr)}
-                      className={`weekly-day-row ${isDaySelected ? 'selected' : ''}`}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '120px 1fr',
-                        background: isDaySelected ? 'rgba(223, 183, 80, 0.02)' : 'rgba(255,255,255,0.01)',
-                        border: isDaySelected 
-                          ? '1px solid var(--border-gold)' 
-                          : isDayToday 
-                            ? '1px solid rgba(223, 183, 80, 0.25)' 
-                            : '1px solid var(--border-color)',
-                        borderRadius: '10px',
-                        padding: '16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                    >
+                      <div
+                        key={dateStr}
+                        onClick={() => setSelectedDateStr(dateStr)}
+                        className={`weekly-day-row ${isDaySelected ? 'selected' : ''} ${isDayToday ? 'today' : ''}`}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={ariaLabelText}
+                        aria-pressed={isDaySelected}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setSelectedDateStr(dateStr)
+                            e.preventDefault()
+                          }
+                        }}
+                      >
                       {/* Left Side: Date Title */}
                       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid var(--border-color)', paddingRight: '12px' }}>
                         <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 700 }}>
@@ -571,12 +646,12 @@ export function CalendarPage({
 
                       {/* Right Side: Badges list for the day */}
                       <div style={{ paddingLeft: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                        {dayEvents.pickups.length === 0 && dayEvents.returns.length === 0 && dayEvents.ongoing.length === 0 ? (
+                        {filteredPickups.length === 0 && filteredReturns.length === 0 && filteredOngoing.length === 0 ? (
                           <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>ไม่มีรายการเช่าหรือส่งคืน</span>
                         ) : (
                           <>
                             {/* Pickups */}
-                            {dayEvents.pickups.map((r) => (
+                            {filteredPickups.map((r) => (
                               <span
                                 key={`pk-${r.id}`}
                                 className="status-pill warning"
@@ -589,7 +664,7 @@ export function CalendarPage({
                             ))}
 
                             {/* Returns */}
-                            {dayEvents.returns.map((r) => (
+                            {filteredReturns.map((r) => (
                               <span
                                 key={`rt-${r.id}`}
                                 className="status-pill success"
@@ -610,13 +685,13 @@ export function CalendarPage({
                             ))}
 
                             {/* Ongoing count */}
-                            {dayEvents.ongoing.length > 0 && (
+                            {filteredOngoing.length > 0 && (
                               <span
                                 className="status-pill muted"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#a78bfa', borderColor: 'rgba(139, 92, 246, 0.2)' }}
                               >
                                 <span>👗 ค้างเช่า:</span>
-                                <strong>{dayEvents.ongoing.length} ชุด</strong>
+                                <strong>{filteredOngoing.length} ชุด</strong>
                               </span>
                             )}
                           </>
@@ -659,7 +734,7 @@ export function CalendarPage({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {selectedDayRentals.pickups.map((rental) => (
-                      <div key={rental.id} className="event-detail-item-card" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px' }}>
+                      <div key={`pk-detail-${rental.id}`} className={`event-detail-item-card status-${rental.status}`}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <strong style={{ fontSize: '14px', color: '#fff' }}>{rental.orderCode}</strong>
                           {getStatusBadge(rental.status)}
@@ -674,6 +749,7 @@ export function CalendarPage({
                           <button
                             className="secondary-button"
                             onClick={() => onNavigateToRentals(rental.id)}
+                            aria-label={`ดูรายละเอียดใบเช่าชุด ${rental.orderCode}`}
                             style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px' }}
                           >
                             <Eye size={12} /> ดูใบเช่าชุด
@@ -683,6 +759,7 @@ export function CalendarPage({
                             <button
                               className="primary-button"
                               onClick={() => onUpdateRentalStatus(rental.id, 'active')}
+                              aria-label={`ดำเนินการส่งมอบชุดสำหรับใบเช่า ${rental.orderCode}`}
                               style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px', background: 'var(--text-gold)', color: '#000' }}
                             >
                               <Check size={12} /> ส่งมอบชุด
@@ -707,7 +784,7 @@ export function CalendarPage({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {selectedDayRentals.returns.map((rental) => (
-                      <div key={rental.id} className="event-detail-item-card" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px' }}>
+                      <div key={`rt-detail-${rental.id}`} className={`event-detail-item-card status-${rental.status}`}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <strong style={{ fontSize: '14px', color: '#fff' }}>{rental.orderCode}</strong>
                           {getStatusBadge(rental.status)}
@@ -722,6 +799,7 @@ export function CalendarPage({
                           <button
                             className="secondary-button"
                             onClick={() => onNavigateToRentals(rental.id)}
+                            aria-label={`ดูรายละเอียดใบเช่าชุด ${rental.orderCode}`}
                             style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px' }}
                           >
                             <Eye size={12} /> ดูใบเช่าชุด
@@ -731,6 +809,7 @@ export function CalendarPage({
                             <button
                               className="primary-button"
                               onClick={() => onUpdateRentalStatus(rental.id, 'returned')}
+                              aria-label={`ดำเนินการรับคืนชุดสำหรับใบเช่า ${rental.orderCode}`}
                               style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
                             >
                               <Check size={12} /> รับคืนชุด
@@ -755,7 +834,7 @@ export function CalendarPage({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {selectedDayRentals.ongoing.map((rental) => (
-                      <div key={rental.id} className="event-detail-item-card" style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px' }}>
+                      <div key={`og-detail-${rental.id}`} className={`event-detail-item-card status-${rental.status}`}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <strong style={{ fontSize: '14px', color: '#fff' }}>{rental.orderCode}</strong>
                           {getStatusBadge(rental.status)}
@@ -771,6 +850,7 @@ export function CalendarPage({
                           <button
                             className="secondary-button"
                             onClick={() => onNavigateToRentals(rental.id)}
+                            aria-label={`ดูรายละเอียดใบเช่าชุด ${rental.orderCode}`}
                             style={{ width: '100%', minHeight: '32px', fontSize: '12px', padding: '0 8px' }}
                           >
                             <Eye size={12} /> ดูใบเช่าชุด
@@ -832,7 +912,7 @@ export function CalendarPage({
                 <span>การจัดการ</span>
               </div>
 
-              {filteredTimelineRentals.map((rental) => (
+              {paginatedListRentals.map((rental) => (
                 <div
                   className="table-row"
                   key={rental.id}
@@ -871,6 +951,29 @@ export function CalendarPage({
                 </div>
               )}
             </div>
+
+            {/* List Pagination Footer */}
+            {listTotalPages > 1 && (
+              <div className="pagination-footer" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+                <button
+                  className="pagination-btn"
+                  disabled={listCurrentPage <= 1}
+                  onClick={() => setListCurrentPage((p) => Math.max(p - 1, 1))}
+                  type="button"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <div className="page-number-box">{listCurrentPage}</div>
+                <button
+                  className="pagination-btn"
+                  disabled={listCurrentPage >= listTotalPages}
+                  onClick={() => setListCurrentPage((p) => Math.min(p + 1, listTotalPages))}
+                  type="button"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

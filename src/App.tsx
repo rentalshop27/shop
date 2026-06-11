@@ -187,6 +187,11 @@ function App() {
   const [externalPickupDate, setExternalPickupDate] = useState<string>('')
   const [externalReturnDate, setExternalReturnDate] = useState<string>('')
 
+  function handleClearExternalDates() {
+    setExternalPickupDate('')
+    setExternalReturnDate('')
+  }
+
   function handleNavigateToRentals(rentalId: string) {
     setExternalSelectedRentalId(rentalId)
     setExternalIsFormOpen(false)
@@ -206,6 +211,7 @@ function App() {
       setExternalIsFormOpen(false)
       setExternalPickupDate('')
       setExternalReturnDate('')
+      setExternalSelectedRentalId('')
     }
   }
 
@@ -1040,6 +1046,7 @@ function App() {
             onFormOpenChange={setExternalIsFormOpen}
             externalPickupDate={externalPickupDate}
             externalReturnDate={externalReturnDate}
+            onClearExternalDates={handleClearExternalDates}
           />
         )}
 
