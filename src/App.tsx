@@ -15,6 +15,8 @@ import {
   Images,
   ImagePlus,
   LayoutDashboard,
+  LayoutGrid,
+  List,
   Menu,
   MessageSquare,
   Pencil,
@@ -30,6 +32,7 @@ import {
 import './index.css'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { RentalsPage } from './features/rentals/RentalsPage'
+import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
@@ -175,6 +178,33 @@ function CurrencyField({
 
 function App() {
   const [activeTab, setActiveTab] = useState<ViewKey>('dashboard')
+  const [externalSelectedRentalId, setExternalSelectedRentalId] = useState<string>('')
+  const [externalIsFormOpen, setExternalIsFormOpen] = useState<boolean>(false)
+  const [externalPickupDate, setExternalPickupDate] = useState<string>('')
+  const [externalReturnDate, setExternalReturnDate] = useState<string>('')
+
+  function handleNavigateToRentals(rentalId: string) {
+    setExternalSelectedRentalId(rentalId)
+    setExternalIsFormOpen(false)
+    setActiveTab('rentals')
+  }
+
+  function handleNavigateToCreateRental(pickupDate: string, returnDate: string) {
+    setExternalPickupDate(pickupDate)
+    setExternalReturnDate(returnDate)
+    setExternalIsFormOpen(true)
+    setActiveTab('rentals')
+  }
+
+  function handleTabChange(tab: ViewKey) {
+    setActiveTab(tab)
+    if (tab !== 'rentals') {
+      setExternalIsFormOpen(false)
+      setExternalPickupDate('')
+      setExternalReturnDate('')
+    }
+  }
+
   const [customers, setCustomers] = useState<Customer[]>(demoCustomers)
   const [stockItems, setStockItems] = useState<StockItem[]>(() => {
     const saved = localStorage.getItem('precious_stock_items')
@@ -956,7 +986,7 @@ function App() {
 
   return (
     <div className="app-layout">
-      <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <SideNav activeTab={activeTab} onTabChange={handleTabChange} />
       <main className="app-shell">
         {activeTab === 'dashboard' && (
           <DashboardPage
@@ -975,6 +1005,21 @@ function App() {
             onCreateRental={handleCreateRental}
             onUpdateRentalStatus={handleUpdateRentalStatus}
             onDeleteRental={handleDeleteRental}
+            externalSelectedRentalId={externalSelectedRentalId}
+            onSelectRental={setExternalSelectedRentalId}
+            externalIsFormOpen={externalIsFormOpen}
+            onFormOpenChange={setExternalIsFormOpen}
+            externalPickupDate={externalPickupDate}
+            externalReturnDate={externalReturnDate}
+          />
+        )}
+
+        {activeTab === 'calendar' && (
+          <CalendarPage
+            rentals={rentals}
+            onUpdateRentalStatus={handleUpdateRentalStatus}
+            onNavigateToRentals={handleNavigateToRentals}
+            onNavigateToCreateRental={handleNavigateToCreateRental}
           />
         )}
 
@@ -1393,6 +1438,15 @@ function InventoryPage({
   colors: string[]
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
+    return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'table'
+  })
+
+  const handleViewModeChange = (mode: 'table' | 'card') => {
+    setViewMode(mode)
+    localStorage.setItem('inventoryViewMode', mode)
+  }
+
   return (
     <>
       <header className="page-header">
@@ -1424,83 +1478,176 @@ function InventoryPage({
               placeholder="ค้นหาด้วย SKU ชื่อสินค้า แบรนด์ หมวดหมู่ สี หรือไซซ์..."
             />
           </label>
+          <div className="view-toggle-group">
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('table')}
+              title="แสดงแบบตาราง"
+            >
+              <List size={20} />
+            </button>
+            <button
+              type="button"
+              className={`view-toggle-btn ${viewMode === 'card' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('card')}
+              title="แสดงแบบการ์ด"
+            >
+              <LayoutGrid size={20} />
+            </button>
+          </div>
         </div>
 
-        <div className="stock-table" role="table" aria-label="รายการคลังชุด">
-          <div className="stock-row stock-head" role="row">
-            <span>รูป</span>
-            <span>SKU</span>
-            <span>สินค้า</span>
-            <span>ไซซ์/สี</span>
-            <span>ค่าเช่า</span>
-            <span>ค่าปรับ</span>
-            <span>ประกัน</span>
-            <span>จัดการ</span>
-          </div>
-          {items.map((item) => (
-            <div className="stock-row" key={item.id} role="row">
-              <div className="stock-image-thumbnail">
-                {item.imageUrls && item.imageUrls.length > 0 ? (
-                  <img
-                    src={item.imageUrls[0]}
-                    alt={item.productName}
-                    onClick={() => onPreview(item, 0)}
-                    style={{ cursor: 'pointer' }}
-                  />
-                ) : (
-                  <div className="stock-image-placeholder">
-                    <FileImage size={20} />
-                  </div>
-                )}
-              </div>
-              <strong>{item.sku}</strong>
-              <div className="stock-product-cell">
+        {viewMode === 'table' ? (
+          <div className="stock-table" role="table" aria-label="รายการคลังชุด">
+            <div className="stock-row stock-head" role="row">
+              <span>รูป</span>
+              <span>SKU</span>
+              <span>สินค้า</span>
+              <span>ไซซ์/สี</span>
+              <span>ค่าเช่า</span>
+              <span>ค่าปรับ</span>
+              <span>ประกัน</span>
+              <span>จัดการ</span>
+            </div>
+            {items.map((item) => (
+              <div className="stock-row" key={item.id} role="row">
+                <div className="stock-image-thumbnail">
+                  {item.imageUrls && item.imageUrls.length > 0 ? (
+                    <img
+                      src={item.imageUrls[0]}
+                      alt={item.productName}
+                      onClick={() => onPreview(item, 0)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ) : (
+                    <div className="stock-image-placeholder">
+                      <FileImage size={20} />
+                    </div>
+                  )}
+                </div>
+                <strong>{item.sku}</strong>
+                <div className="stock-product-cell">
+                  <span>
+                    {item.productName}
+                    <small>{[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}</small>
+                  </span>
+                  {item.imageUrls.length > 0 && (
+                    <button
+                      className="inline-link-button"
+                      type="button"
+                      onClick={() => onPreview(item, 0)}
+                      aria-label={`ดูรูป ${item.sku}`}
+                    >
+                      <Images size={14} />
+                      ดูรูป {item.imageUrls.length}
+                    </button>
+                  )}
+                </div>
                 <span>
-                  {item.productName}
-                  <small>{[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}</small>
+                  {item.size || '-'}
+                  <small>{item.primaryColor || '-'}</small>
                 </span>
-                {item.imageUrls.length > 0 && (
+                <span>{formatBaht(item.rentalPricePerDay)}</span>
+                <span>{item.lateFeeRule || '-'}</span>
+                <span>{formatBaht(item.depositAmount)}</span>
+                <div className="stock-action-group">
                   <button
-                    className="inline-link-button"
+                    className="icon-action-button compact"
                     type="button"
                     onClick={() => onPreview(item, 0)}
                     aria-label={`ดูรูป ${item.sku}`}
+                    disabled={item.imageUrls.length === 0}
                   >
-                    <Images size={14} />
-                    ดูรูป {item.imageUrls.length}
+                    <Eye size={16} />
                   </button>
-                )}
+                  <button
+                    className="icon-action-button compact"
+                    type="button"
+                    onClick={() => onEdit(item)}
+                    aria-label={`แก้ไข ${item.sku}`}
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </div>
               </div>
-              <span>
-                {item.size || '-'}
-                <small>{item.primaryColor || '-'}</small>
-              </span>
-              <span>{formatBaht(item.rentalPricePerDay)}</span>
-              <span>{item.lateFeeRule || '-'}</span>
-              <span>{formatBaht(item.depositAmount)}</span>
-              <div className="stock-action-group">
-                <button
-                  className="icon-action-button compact"
-                  type="button"
-                  onClick={() => onPreview(item, 0)}
-                  aria-label={`ดูรูป ${item.sku}`}
-                  disabled={item.imageUrls.length === 0}
-                >
-                  <Eye size={16} />
-                </button>
-                <button
-                  className="icon-action-button compact"
-                  type="button"
-                  onClick={() => onEdit(item)}
-                  aria-label={`แก้ไข ${item.sku}`}
-                >
-                  <Pencil size={16} />
-                </button>
+            ))}
+            {items.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+          </div>
+        ) : (
+          <div className="stock-grid">
+            {items.map((item) => (
+              <div className="stock-card" key={item.id}>
+                <div className="stock-card-image">
+                  {item.imageUrls && item.imageUrls.length > 0 ? (
+                    <img
+                      src={item.imageUrls[0]}
+                      alt={item.productName}
+                      onClick={() => onPreview(item, 0)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  ) : (
+                    <div className="stock-card-image-placeholder">
+                      <FileImage size={32} />
+                    </div>
+                  )}
+                  <span className="stock-card-sku-badge">{item.sku}</span>
+                </div>
+                <div className="stock-card-content">
+                  <div className="stock-card-title-section">
+                    <h3 className="stock-card-title">{item.productName}</h3>
+                    <p className="stock-card-subtitle">
+                      {[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}
+                    </p>
+                  </div>
+                  
+                  <div className="stock-card-specs">
+                    {item.size && <span className="stock-card-spec-tag">ไซซ์: {item.size}</span>}
+                    {item.primaryColor && <span className="stock-card-spec-tag">สี: {item.primaryColor}</span>}
+                    {item.setCount && <span className="stock-card-spec-tag">จำนวน: {item.setCount} ชุด</span>}
+                  </div>
+
+                  <div className="stock-card-pricing">
+                    <div className="stock-card-price-item">
+                      <span className="stock-card-price-label">ค่าเช่า</span>
+                      <strong className="stock-card-price-value gold">{formatBaht(item.rentalPricePerDay)}</strong>
+                    </div>
+                    <div className="stock-card-price-item">
+                      <span className="stock-card-price-label">ค่าปรับ</span>
+                      <strong className="stock-card-price-value">{item.lateFeeRule || '-'}</strong>
+                    </div>
+                    <div className="stock-card-price-item">
+                      <span className="stock-card-price-label">ประกัน</span>
+                      <strong className="stock-card-price-value">{formatBaht(item.depositAmount)}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="stock-card-actions">
+                  <button
+                    className="icon-action-button compact"
+                    type="button"
+                    onClick={() => onPreview(item, 0)}
+                    aria-label={`ดูรูป ${item.sku}`}
+                    disabled={item.imageUrls.length === 0}
+                    title="ดูรูปภาพ"
+                  >
+                    <Eye size={16} />
+                  </button>
+                  <button
+                    className="icon-action-button compact"
+                    type="button"
+                    onClick={() => onEdit(item)}
+                    aria-label={`แก้ไข ${item.sku}`}
+                    title="แก้ไข"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-          {items.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
-        </div>
+            ))}
+            {items.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+          </div>
+        )}
       </section>
 
       {previewItem && (

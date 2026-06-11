@@ -18,6 +18,14 @@ interface RentalsPageProps {
   onCreateRental: (draft: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>) => void
   onUpdateRentalStatus: (rentalId: string, status: RentalStatus) => void
   onDeleteRental?: (rentalId: string) => void
+
+  // Optional external controls
+  externalSelectedRentalId?: string
+  onSelectRental?: (id: string) => void
+  externalIsFormOpen?: boolean
+  onFormOpenChange?: (open: boolean) => void
+  externalPickupDate?: string
+  externalReturnDate?: string
 }
 
 export function RentalsPage({
@@ -26,10 +34,23 @@ export function RentalsPage({
   stockItems,
   onCreateRental,
   onUpdateRentalStatus,
-  onDeleteRental
+  onDeleteRental,
+
+  // Optional external controls
+  externalSelectedRentalId,
+  onSelectRental,
+  externalIsFormOpen,
+  onFormOpenChange,
+  externalPickupDate,
+  externalReturnDate
 }: RentalsPageProps) {
   // Navigation / Selected rental
-  const [selectedRentalId, setSelectedRentalId] = useState<string>('')
+  const [localSelectedRentalId, setLocalSelectedRentalId] = useState<string>('')
+  const selectedRentalId = externalSelectedRentalId !== undefined ? externalSelectedRentalId : localSelectedRentalId
+  const setSelectedRentalId = (id: string) => {
+    setLocalSelectedRentalId(id)
+    if (onSelectRental) onSelectRental(id)
+  }
   
   // Search & Filter
   const [orderQuery, setOrderQuery] = useState('')
@@ -53,7 +74,25 @@ export function RentalsPage({
   const [collectedAmount, setCollectedAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [formError, setFormError] = useState('')
-  const [isFormOpen, setIsFormOpen] = useState(false)
+  
+  const [localIsFormOpen, setLocalIsFormOpen] = useState(false)
+  const isFormOpen = externalIsFormOpen !== undefined ? externalIsFormOpen : localIsFormOpen
+  const setIsFormOpen = (open: boolean) => {
+    setLocalIsFormOpen(open)
+    if (onFormOpenChange) onFormOpenChange(open)
+  }
+
+  // Effect to prefill dates when form opens externally
+  useEffect(() => {
+    if (isFormOpen) {
+      if (externalPickupDate) {
+        setPickupDate(externalPickupDate)
+      }
+      if (externalReturnDate) {
+        setReturnDate(externalReturnDate)
+      }
+    }
+  }, [isFormOpen, externalPickupDate, externalReturnDate])
 
   // Autocomplete Suggestions
   const filteredCustomersSuggestions = useMemo(() => {
