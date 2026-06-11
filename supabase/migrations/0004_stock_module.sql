@@ -1,5 +1,12 @@
--- SQL migration to add the stock_items table
+-- SQL migration to add the stock_items table and shop settings columns
 
+-- Alter shops table to include brands, categories, and colors settings columns
+alter table public.shops 
+add column if not exists brands text[] not null default '{"Precious", "Chanel", "Dior", "Gucci"}',
+add column if not exists categories text[] not null default '{"ชุดราตรี", "ชุดไทย", "ชุดสูท", "ชุดแต่งงาน"}',
+add column if not exists colors text[] not null default '{"น้ำเงินมิดไนต์", "แดงไวน์", "ชมพูโรส", "ทองแชมเปญ", "ขาวมุก", "ดำคลาสสิก"}';
+
+-- Create stock_items table
 create table public.stock_items (
   id uuid primary key default gen_random_uuid(),
   shop_id uuid not null references public.shops(id) on delete cascade,

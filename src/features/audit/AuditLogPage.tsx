@@ -23,7 +23,8 @@ const tableTranslations: Record<string, string> = {
   customer_documents: 'เอกสารลูกค้า (Customer Documents)',
   rentals: 'รายการเช่าชุด (Rentals)',
   shops: 'ร้านค้า (Shops)',
-  shop_members: 'สมาชิกในร้าน (Shop Members)'
+  shop_members: 'สมาชิกในร้าน (Shop Members)',
+  stock_items: 'คลังสินค้า/ชุด (Stock Items)'
 }
 
 const actionTranslations: Record<string, string> = {
@@ -63,7 +64,21 @@ const fieldTranslations: Record<string, string> = {
 
   // Customer documents
   storage_path: 'ที่เก็บไฟล์เอกสาร',
-  sort_order: 'ลำดับรูปภาพ'
+  sort_order: 'ลำดับรูปภาพ',
+
+  // Stock fields
+  sku: 'SKU/รหัสสต๊อก',
+  serial_number: 'Serial Number',
+  product_name: 'ชื่อสินค้า',
+  brand: 'แบรนด์',
+  category: 'ประเภทสินค้า',
+  size: 'ขนาด (Size)',
+  primary_color: 'สีหลัก',
+  public_description: 'คำอธิบายสินค้า',
+  set_count: 'จำนวนชุด',
+  rental_price_per_day: 'ราคาเช่าต่อวัน',
+  late_fee_rule: 'กฎค่าปรับล่าช้า',
+  image_urls: 'รูปภาพสินค้า'
 }
 
 const ignoredKeys = ['id', 'shop_id', 'created_at', 'updated_at', 'owner_user_id', 'user_id', 'customer_id', 'archived_at']
@@ -298,6 +313,7 @@ export function AuditLogPage({ auditLogs, loading = false, onRefresh }: AuditLog
             <option value="customers">ลูกค้า (Customers)</option>
             <option value="customer_documents">เอกสารลูกค้า</option>
             <option value="rentals">เช่า/คืน (Rentals)</option>
+            <option value="stock_items">คลังสินค้า/ชุด (Stock Items)</option>
           </select>
         </div>
 

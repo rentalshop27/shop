@@ -52,6 +52,13 @@ import {
   updateRemoteCustomerStatus,
   uploadRemoteCustomerDocuments,
 } from './features/customers/customerRemote'
+import {
+  loadStockItems,
+  createRemoteStockItem,
+  updateRemoteStockItem,
+  updateShopSettings,
+  loadShopSettings,
+} from './features/inventory/stockRemote'
 import type {
   Customer,
   CustomerDocument,
@@ -322,28 +329,82 @@ function App() {
     localStorage.setItem('precious_stock_items', JSON.stringify(stockItems))
   }, [stockItems])
 
-  const handleAddBrand = (brand: string) => {
-    setBrands((current) => [...current, brand])
+  const handleAddBrand = async (brand: string) => {
+    const updated = [...brands, brand]
+    setBrands(updated)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await updateShopSettings(supabase, shopId, { brands: updated, categories, colors })
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
   }
 
-  const handleDeleteBrand = (brand: string) => {
-    setBrands((current) => current.filter((b) => b !== brand))
+  const handleDeleteBrand = async (brand: string) => {
+    const updated = brands.filter((b) => b !== brand)
+    setBrands(updated)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await updateShopSettings(supabase, shopId, { brands: updated, categories, colors })
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
   }
 
-  const handleAddCategory = (category: string) => {
-    setCategories((current) => [...current, category])
+  const handleAddCategory = async (category: string) => {
+    const updated = [...categories, category]
+    setCategories(updated)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await updateShopSettings(supabase, shopId, { brands, categories: updated, colors })
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
   }
 
-  const handleDeleteCategory = (category: string) => {
-    setCategories((current) => current.filter((c) => c !== category))
+  const handleDeleteCategory = async (category: string) => {
+    const updated = categories.filter((c) => c !== category)
+    setCategories(updated)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await updateShopSettings(supabase, shopId, { brands, categories: updated, colors })
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
   }
 
-  const handleAddColor = (color: string) => {
-    setColors((current) => [...current, color])
+  const handleAddColor = async (color: string) => {
+    const updated = [...colors, color]
+    setColors(updated)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await updateShopSettings(supabase, shopId, { brands, categories, colors: updated })
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
   }
 
-  const handleDeleteColor = (color: string) => {
-    setColors((current) => current.filter((c) => c !== color))
+  const handleDeleteColor = async (color: string) => {
+    const updated = colors.filter((c) => c !== color)
+    setColors(updated)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await updateShopSettings(supabase, shopId, { brands, categories, colors: updated })
+      } catch (err) {
+        console.error('Failed to save settings:', err)
+        window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
   }
 
   // Audit Logs State
@@ -437,14 +498,28 @@ function App() {
     Promise.resolve()
       .then(() => {
         setRemoteError('')
-        return Promise.all([loadOwnerShopId(client), loadCustomers(client)])
+        return Promise.all([
+          loadOwnerShopId(client),
+          loadCustomers(client),
+          loadStockItems(client)
+        ])
       })
-      .then(([loadedShopId, loadedCustomers]) => {
+      .then(([loadedShopId, loadedCustomers, loadedStock]) => {
         setShopId(loadedShopId)
         setCustomers(loadedCustomers)
+        setStockItems(loadedStock)
         setSelectedCustomerId(loadedCustomers[0]?.id ?? '')
         if (!loadedShopId) {
           setRemoteError('ยังไม่พบร้านของผู้ใช้นี้ กรุณาสร้าง row ใน shops และ shop_members ก่อน')
+          return null
+        }
+        return loadShopSettings(client, loadedShopId)
+      })
+      .then((settings) => {
+        if (settings) {
+          if (settings.brands && settings.brands.length > 0) setBrands(settings.brands)
+          if (settings.categories && settings.categories.length > 0) setCategories(settings.categories)
+          if (settings.colors && settings.colors.length > 0) setColors(settings.colors)
         }
       })
       .catch((error: unknown) => {
@@ -808,7 +883,7 @@ function App() {
     setIsFormOpen(false)
   }
 
-  function handleSaveStockItem() {
+  async function handleSaveStockItem() {
     setStockFormError('')
 
     if (!stockDraft.sku.trim()) {
@@ -842,8 +917,7 @@ function App() {
       ? stockItems.find((item) => item.id === editingStockId)
       : undefined
 
-    const savedItem: StockItem = {
-      id: editingStockId ?? crypto.randomUUID(),
+    const draftItem: Omit<StockItem, 'id' | 'createdAt'> = {
       sku: stockDraft.sku.trim(),
       serialNumber: stockDraft.serialNumber.trim(),
       productName: stockDraft.productName.trim(),
@@ -857,6 +931,44 @@ function App() {
       lateFeeRule: stockDraft.lateFeeRule.trim(),
       depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
       imageUrls: stockDraft.imageUrls,
+    }
+
+    if (supabase && isAuthenticated) {
+      if (!shopId) {
+        setStockFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
+
+      try {
+        let savedItem: StockItem
+        if (editingStockId) {
+          savedItem = await updateRemoteStockItem(
+            supabase,
+            shopId,
+            editingStockId,
+            draftItem,
+            existingItem?.imageUrls ?? []
+          )
+          setStockItems((current) =>
+            current.map((item) => (item.id === editingStockId ? savedItem : item))
+          )
+        } else {
+          savedItem = await createRemoteStockItem(supabase, shopId, draftItem)
+          setStockItems((current) => [savedItem, ...current])
+        }
+        
+        handleLoadAuditLogs()
+        closeStockForm()
+      } catch (err) {
+        setStockFormError(getErrorMessage(err))
+      }
+      return
+    }
+
+    // Local Storage Fallback
+    const savedItem: StockItem = {
+      ...draftItem,
+      id: editingStockId ?? crypto.randomUUID(),
       createdAt: existingItem?.createdAt ?? new Date().toISOString(),
     }
 
@@ -865,9 +977,7 @@ function App() {
         ? current.map((item) => (item.id === editingStockId ? savedItem : item))
         : [savedItem, ...current],
     )
-    setStockDraft(emptyStockDraft)
-    setEditingStockId(null)
-    setIsStockFormOpen(false)
+    closeStockForm()
   }
 
   async function updateSelectedStatus(profileStatus: CustomerProfileStatus) {
