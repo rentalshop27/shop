@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import type { HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import {
   AlertTriangle,
@@ -9,8 +9,10 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  Eye,
   FileImage,
   FileText,
+  Images,
   ImagePlus,
   LayoutDashboard,
   LockKeyhole,
@@ -50,7 +52,6 @@ import type {
   RiskFlag,
 } from './features/customers/customerTypes'
 import {
-  canAddMoreDocuments,
   canCreateRentalForCustomer,
   findPhoneDuplicate,
   formatMeasurements,
@@ -172,9 +173,17 @@ function CurrencyField({
 // SideNav items list is now dynamically defined inside SideNav component
 
 function App() {
-  const [activeTab, setActiveTab] = useState<ViewKey>('customers')
+  const [activeTab, setActiveTab] = useState<ViewKey>('dashboard')
   const [customers, setCustomers] = useState<Customer[]>(demoCustomers)
-  const [stockItems, setStockItems] = useState<StockItem[]>(demoStockItems)
+  const [stockItems, setStockItems] = useState<StockItem[]>(() => {
+    const saved = localStorage.getItem('precious_stock_items')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch (e) {}
+    }
+    return demoStockItems
+  })
   const [selectedCustomerId, setSelectedCustomerId] = useState(demoCustomers[0]?.id ?? '')
   const [query, setQuery] = useState('')
   const [stockQuery, setStockQuery] = useState('')
@@ -182,7 +191,45 @@ function App() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isStockFormOpen, setIsStockFormOpen] = useState(false)
   const [editingStockId, setEditingStockId] = useState<string | null>(null)
+  const [previewStockId, setPreviewStockId] = useState<string | null>(null)
+  const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [draft, setDraft] = useState<CustomerDraft>(emptyDraft)
+  const [draftDocuments, setDraftDocuments] = useState<Array<{ id: string; file: File; previewUrl: string }>>([])
+
+  async function addDraftDocuments(files: FileList | null) {
+    if (!files?.length) return
+
+    const incomingFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    const remainingSlots = 5 - draftDocuments.length
+
+    if (remainingSlots <= 0) {
+      window.alert('รูปเอกสารเต็ม 5 รูปแล้ว')
+      return
+    }
+
+    const filesToUpload = incomingFiles.slice(0, remainingSlots)
+    if (incomingFiles.length > remainingSlots) {
+      window.alert(`สามารถเพิ่มรูปได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
+    }
+
+    const newDocs = await Promise.all(
+      filesToUpload.map(async (file) => {
+        const previewUrl = await readFileAsDataUrl(file)
+        return {
+          id: crypto.randomUUID(),
+          file,
+          previewUrl,
+        }
+      })
+    )
+
+    setDraftDocuments((current) => [...current, ...newDocs])
+  }
+
+  function removeDraftDocument(id: string) {
+    setDraftDocuments((current) => current.filter((doc) => doc.id !== id))
+  }
+
   const [stockDraft, setStockDraft] = useState<StockDraft>(emptyStockDraft)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -228,6 +275,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('precious_colors', JSON.stringify(colors))
   }, [colors])
+
+  useEffect(() => {
+    localStorage.setItem('precious_stock_items', JSON.stringify(stockItems))
+  }, [stockItems])
 
   const handleAddBrand = (brand: string) => {
     setBrands((current) => [...current, brand])
@@ -413,6 +464,10 @@ function App() {
     filteredCustomers[0] ??
     activeCustomers[0]
 
+  const previewStockItem = previewStockId
+    ? stockItems.find((item) => item.id === previewStockId) ?? null
+    : null
+
   function updateDraft(field: keyof CustomerDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }))
   }
@@ -455,16 +510,29 @@ function App() {
     setStockFormError('')
   }
 
-  function addStockImages(files: FileList | null) {
+  async function addStockImages(files: FileList | null) {
     if (!files?.length) return
 
-    const imageUrls = Array.from(files)
-      .filter((file) => file.type.startsWith('image/'))
-      .map((file) => URL.createObjectURL(file))
+    const incomingFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    const remainingSlots = 5 - stockDraft.imageUrls.length
+
+    if (remainingSlots <= 0) {
+      window.alert('รูปชุดเต็ม 5 รูปแล้ว')
+      return
+    }
+
+    const filesToUpload = incomingFiles.slice(0, remainingSlots)
+    if (incomingFiles.length > remainingSlots) {
+      window.alert(`สามารถเพิ่มรูปชุดได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
+    }
+
+    const imageUrls = await Promise.all(
+      filesToUpload.map((file) => readFileAsDataUrl(file)),
+    )
 
     setStockDraft((current) => ({
       ...current,
-      imageUrls: [...current.imageUrls, ...imageUrls].slice(0, 5),
+      imageUrls: [...current.imageUrls, ...imageUrls],
     }))
   }
 
@@ -473,6 +541,17 @@ function App() {
       ...current,
       imageUrls: current.imageUrls.filter((url) => url !== imageUrl),
     }))
+  }
+
+  function openStockPreview(item: StockItem, index = 0) {
+    if (!item.imageUrls.length) return
+    setPreviewStockId(item.id)
+    setPreviewImageIndex(index)
+  }
+
+  function closeStockPreview() {
+    setPreviewStockId(null)
+    setPreviewImageIndex(0)
   }
 
   function createCustomerCode() {
@@ -513,9 +592,21 @@ function App() {
 
       try {
         const newCustomer = await createRemoteCustomer(supabase, shopId, draft)
-        setCustomers((current) => [newCustomer, ...current])
-        setSelectedCustomerId(newCustomer.id)
+        if (draftDocuments.length > 0) {
+          await uploadRemoteCustomerDocuments(
+            supabase,
+            newCustomer,
+            draftDocuments.map((d) => d.file),
+          )
+          const loadedCustomers = await loadCustomers(supabase)
+          setCustomers(loadedCustomers)
+          setSelectedCustomerId(newCustomer.id)
+        } else {
+          setCustomers((current) => [newCustomer, ...current])
+          setSelectedCustomerId(newCustomer.id)
+        }
         setDraft(emptyDraft)
+        setDraftDocuments([])
         setIsFormOpen(false)
       } catch (error) {
         setFormError(getErrorMessage(error))
@@ -540,7 +631,14 @@ function App() {
       waistIn: parseOptionalNumber(draft.waistIn),
       hipIn: parseOptionalNumber(draft.hipIn),
       heightCm: parseOptionalNumber(draft.heightCm),
-      documents: [],
+      documents: draftDocuments.map((doc, index) => ({
+        id: doc.id,
+        customerId: '',
+        storagePath: `customer-documents/demo/${doc.file.name}`,
+        previewUrl: doc.previewUrl,
+        sortOrder: index + 1,
+        createdAt: now,
+      })),
       createdAt: now,
       updatedAt: now,
     }
@@ -548,6 +646,7 @@ function App() {
     setCustomers((current) => [newCustomer, ...current])
     setSelectedCustomerId(newCustomer.id)
     setDraft(emptyDraft)
+    setDraftDocuments([])
     setIsFormOpen(false)
   }
 
@@ -687,15 +786,22 @@ function App() {
   async function addDocuments(files: FileList | null) {
     if (!selectedCustomer || !files?.length) return
 
-    const incomingFiles = Array.from(files)
-    if (!canAddMoreDocuments(selectedCustomer.documents.length, incomingFiles.length)) {
-      window.alert('อัปโหลดรูปเอกสารได้สูงสุด 5 รูปต่อลูกค้า')
+    const incomingFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
+    const remainingSlots = 5 - selectedCustomer.documents.length
+
+    if (remainingSlots <= 0) {
+      window.alert('รูปเอกสารเต็ม 5 รูปต่อลูกค้าแล้ว')
       return
+    }
+
+    const filesToUpload = incomingFiles.slice(0, remainingSlots)
+    if (incomingFiles.length > remainingSlots) {
+      window.alert(`สามารถเพิ่มรูปได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
     }
 
     if (supabase) {
       try {
-        await uploadRemoteCustomerDocuments(supabase, selectedCustomer, incomingFiles)
+        await uploadRemoteCustomerDocuments(supabase, selectedCustomer, filesToUpload)
         const loadedCustomers = await loadCustomers(supabase)
         setCustomers(loadedCustomers)
         setSelectedCustomerId(selectedCustomer.id)
@@ -706,7 +812,7 @@ function App() {
     }
 
     const now = new Date().toISOString()
-    const newDocuments: CustomerDocument[] = incomingFiles.map((file, index) => ({
+    const newDocuments: CustomerDocument[] = filesToUpload.map((file, index) => ({
       id: crypto.randomUUID(),
       customerId: selectedCustomer.id,
       storagePath: `customer-documents/${selectedCustomer.id}/${file.name}`,
@@ -787,11 +893,16 @@ function App() {
             onOpenForm={openCreateStockForm}
             onCloseForm={closeStockForm}
             onEdit={openEditStockForm}
+            onPreview={openStockPreview}
             onDraftChange={updateStockDraft}
             onResetDraft={() => setStockDraft(emptyStockDraft)}
             onImageUpload={addStockImages}
             onImageRemove={removeStockImage}
             onSave={handleSaveStockItem}
+            previewItem={previewStockItem}
+            previewImageIndex={previewImageIndex}
+            onPreviewIndexChange={setPreviewImageIndex}
+            onClosePreview={closeStockPreview}
             brands={brands}
             categories={categories}
             colors={colors}
@@ -938,14 +1049,26 @@ function App() {
                       <p className="eyebrow">Customer Profile</p>
                       <h2>เพิ่มลูกค้าใหม่</h2>
                     </div>
-                    <button className="ghost-button" type="button" onClick={() => setIsFormOpen(false)}>
+                    <button className="ghost-button" type="button" onClick={() => { setIsFormOpen(false); setDraft(emptyDraft); setDraftDocuments([]); setFormError(''); }}>
                       ปิด
                     </button>
                   </div>
 
                   <div className="form-grid">
                     <TextField label="ชื่อ-นามสกุล" value={draft.fullName} onChange={(value) => updateDraft('fullName', value)} required />
-                    <TextField label="เบอร์โทรศัพท์" value={draft.phone} onChange={(value) => updateDraft('phone', value)} required />
+                    <TextField
+                      label="เบอร์โทรศัพท์"
+                      value={draft.phone}
+                      onChange={(value) => {
+                        const onlyNums = value.replace(/\D/g, '')
+                        if (onlyNums.length <= 10) {
+                          updateDraft('phone', onlyNums)
+                        }
+                      }}
+                      inputMode="numeric"
+                      maxLength={10}
+                      required
+                    />
                     <TextField label="ชื่อแอคเคา/LINE" value={draft.lineAccount} onChange={(value) => updateDraft('lineAccount', value)} />
                     <label className="field">
                       <span>สถานะโปรไฟล์</span>
@@ -977,10 +1100,59 @@ function App() {
                     </label>
                   </div>
 
+                  <div className="customer-document-section" style={{ marginTop: '20px' }}>
+                    <div className="section-title-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>เอกสารยืนยันตัวตน (สูงสุด 5 รูป)</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>{draftDocuments.length}/5 รูป</span>
+                    </div>
+                    <label className="upload-box">
+                      <Camera size={20} />
+                      เพิ่มรูปเอกสาร/บัตรประชาชน (เลือกพร้อมกันได้หลายรูป)
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(event) => addDraftDocuments(event.target.files)}
+                      />
+                    </label>
+                    {draftDocuments.length > 0 && (
+                       <div className="document-grid" style={{ marginTop: '12px' }}>
+                         {draftDocuments.map((doc, index) => (
+                           <figure key={doc.id} style={{ position: 'relative', margin: 0 }}>
+                             <img src={doc.previewUrl} alt={`เอกสารร่างที่ ${index + 1}`} />
+                             <button
+                               type="button"
+                               onClick={() => removeDraftDocument(doc.id)}
+                               aria-label={`ลบรูปเอกสารที่ ${index + 1}`}
+                               style={{
+                                 position: 'absolute',
+                                 top: '8px',
+                                 right: '8px',
+                                 background: 'rgba(7, 10, 18, 0.86)',
+                                 border: '1px solid rgba(255, 255, 255, 0.14)',
+                                 borderRadius: '999px',
+                                 color: 'var(--text-bright)',
+                                 display: 'flex',
+                                 width: '28px',
+                                 height: '28px',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 cursor: 'pointer',
+                               }}
+                             >
+                               <X size={16} />
+                             </button>
+                             <figcaption>รูปที่ {index + 1}</figcaption>
+                           </figure>
+                         ))}
+                       </div>
+                    )}
+                  </div>
+
                   {formError && <p className="form-error">{formError}</p>}
 
                   <div className="modal-actions">
-                    <button className="secondary-button" type="button" onClick={() => setDraft(emptyDraft)}>
+                    <button className="secondary-button" type="button" onClick={() => { setDraft(emptyDraft); setDraftDocuments([]); }}>
                       ล้างฟอร์ม
                     </button>
                     <button className="primary-button" type="button" onClick={handleCreateCustomer}>
@@ -1076,11 +1248,16 @@ function InventoryPage({
   onOpenForm,
   onCloseForm,
   onEdit,
+  onPreview,
   onDraftChange,
   onResetDraft,
   onImageUpload,
   onImageRemove,
   onSave,
+  previewItem,
+  previewImageIndex,
+  onPreviewIndexChange,
+  onClosePreview,
   brands,
   categories,
   colors,
@@ -1096,15 +1273,21 @@ function InventoryPage({
   onOpenForm: () => void
   onCloseForm: () => void
   onEdit: (item: StockItem) => void
+  onPreview: (item: StockItem, index?: number) => void
   onDraftChange: (field: keyof StockDraft, value: string) => void
   onResetDraft: () => void
   onImageUpload: (files: FileList | null) => void
   onImageRemove: (imageUrl: string) => void
   onSave: () => void
+  previewItem: StockItem | null
+  previewImageIndex: number
+  onPreviewIndexChange: (index: number) => void
+  onClosePreview: () => void
   brands: string[]
   categories: string[]
   colors: string[]
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
   return (
     <>
       <header className="page-header">
@@ -1140,21 +1323,49 @@ function InventoryPage({
 
         <div className="stock-table" role="table" aria-label="รายการคลังชุด">
           <div className="stock-row stock-head" role="row">
+            <span>รูป</span>
             <span>SKU</span>
             <span>สินค้า</span>
             <span>ไซซ์/สี</span>
             <span>ค่าเช่า</span>
             <span>ค่าปรับ</span>
             <span>ประกัน</span>
-            <span></span>
+            <span>จัดการ</span>
           </div>
           {items.map((item) => (
             <div className="stock-row" key={item.id} role="row">
+              <div className="stock-image-thumbnail">
+                {item.imageUrls && item.imageUrls.length > 0 ? (
+                  <img
+                    src={item.imageUrls[0]}
+                    alt={item.productName}
+                    onClick={() => onPreview(item, 0)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                ) : (
+                  <div className="stock-image-placeholder">
+                    <FileImage size={20} />
+                  </div>
+                )}
+              </div>
               <strong>{item.sku}</strong>
-              <span>
-                {item.productName}
-                <small>{[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}</small>
-              </span>
+              <div className="stock-product-cell">
+                <span>
+                  {item.productName}
+                  <small>{[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}</small>
+                </span>
+                {item.imageUrls.length > 0 && (
+                  <button
+                    className="inline-link-button"
+                    type="button"
+                    onClick={() => onPreview(item, 0)}
+                    aria-label={`ดูรูป ${item.sku}`}
+                  >
+                    <Images size={14} />
+                    ดูรูป {item.imageUrls.length}
+                  </button>
+                )}
+              </div>
               <span>
                 {item.size || '-'}
                 <small>{item.primaryColor || '-'}</small>
@@ -1162,15 +1373,77 @@ function InventoryPage({
               <span>{formatBaht(item.rentalPricePerDay)}</span>
               <span>{item.lateFeeRule || '-'}</span>
               <span>{formatBaht(item.depositAmount)}</span>
-              <button className="icon-action-button" type="button" onClick={() => onEdit(item)} aria-label={`แก้ไข ${item.sku}`}>
-                <Pencil size={18} />
-                <span>แก้ไข</span>
-              </button>
+              <div className="stock-action-group">
+                <button
+                  className="icon-action-button compact"
+                  type="button"
+                  onClick={() => onPreview(item, 0)}
+                  aria-label={`ดูรูป ${item.sku}`}
+                  disabled={item.imageUrls.length === 0}
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  className="icon-action-button compact"
+                  type="button"
+                  onClick={() => onEdit(item)}
+                  aria-label={`แก้ไข ${item.sku}`}
+                >
+                  <Pencil size={16} />
+                </button>
+              </div>
             </div>
           ))}
           {items.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
         </div>
       </section>
+
+      {previewItem && (
+        <div className="modal-backdrop stock-preview-backdrop" role="presentation" onClick={onClosePreview}>
+          <section
+            className="modal-panel stock-preview-panel"
+            aria-label="ดูรูปชุด"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Gallery</p>
+                <h2>{previewItem.productName}</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={onClosePreview}>
+                ปิด
+              </button>
+            </div>
+
+            <div className="stock-preview-stage">
+              <img
+                src={previewItem.imageUrls[previewImageIndex]}
+                alt={`รูปชุด ${previewImageIndex + 1} ของ ${previewItem.productName}`}
+              />
+            </div>
+
+            <div className="stock-preview-meta">
+              <span>{previewItem.sku}</span>
+              <span>
+                รูปที่ {previewImageIndex + 1}/{previewItem.imageUrls.length}
+              </span>
+            </div>
+
+            <div className="stock-preview-thumbs">
+              {previewItem.imageUrls.map((imageUrl, index) => (
+                <button
+                  key={`${previewItem.id}-thumb-${index}`}
+                  className={`stock-preview-thumb ${index === previewImageIndex ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => onPreviewIndexChange(index)}
+                >
+                  <img src={imageUrl} alt={`ภาพย่อรูปชุด ${index + 1}`} />
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
       {isFormOpen && (
         <div className="modal-backdrop" role="presentation">
@@ -1260,8 +1533,9 @@ function InventoryPage({
               </div>
               <label className="stock-image-uploader">
                 <ImagePlus size={22} />
-                <span>เพิ่มรูปชุดได้สูงสุด 5 รูป</span>
+                <span>เพิ่มรูปชุดได้สูงสุด 5 รูป (เลือกพร้อมกันได้หลายรูป)</span>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   multiple
@@ -1282,7 +1556,11 @@ function InventoryPage({
                           </button>
                         </>
                       ) : (
-                        <div className="stock-image-empty">
+                        <div
+                          className="stock-image-empty"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
                           <FileImage size={24} />
                           <span>รูปที่ {index + 1}</span>
                         </div>
@@ -1474,7 +1752,7 @@ function CustomerDetail({
         </div>
         <label className="upload-box">
           <Camera size={20} />
-          อัปโหลดรูปเอกสาร/บัตรประชาชน
+          อัปโหลดรูปเอกสาร/บัตรประชาชน (เลือกพร้อมกันได้หลายรูป)
           <input
             type="file"
             accept="image/*"
@@ -1607,6 +1885,7 @@ function TextField({
   inputMode,
   type = 'text',
   placeholder,
+  maxLength,
 }: {
   label: string
   value: string
@@ -1615,6 +1894,7 @@ function TextField({
   inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']
   type?: InputHTMLAttributes<HTMLInputElement>['type']
   placeholder?: string
+  maxLength?: number
 }) {
   return (
     <label className="field">
@@ -1627,6 +1907,7 @@ function TextField({
         inputMode={inputMode}
         type={type}
         placeholder={placeholder}
+        maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
@@ -1636,6 +1917,15 @@ function TextField({
 function parseOptionalNumber(value: string) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && value.trim() ? parsed : undefined
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+    reader.onerror = () => reject(new Error(`ไม่สามารถอ่านไฟล์ ${file.name} ได้`))
+    reader.readAsDataURL(file)
+  })
 }
 
 function getErrorMessage(error: unknown) {
