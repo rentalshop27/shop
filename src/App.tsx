@@ -9,7 +9,6 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
-  Eye,
   FileImage,
   FileText,
   Images,
@@ -2007,15 +2006,6 @@ function InventoryPage({
                   <button
                     className="icon-action-button compact"
                     type="button"
-                    onClick={() => onPreview(item, 0)}
-                    aria-label={`ดูรูป ${item.sku}`}
-                    disabled={item.imageUrls.length === 0}
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    className="icon-action-button compact"
-                    type="button"
                     onClick={() => onEdit(item)}
                     aria-label={`แก้ไข ${item.sku}`}
                   >
@@ -2083,16 +2073,6 @@ function InventoryPage({
                   </div>
                 </div>
                 <div className="stock-card-actions">
-                  <button
-                    className="icon-action-button compact"
-                    type="button"
-                    onClick={() => onPreview(item, 0)}
-                    aria-label={`ดูรูป ${item.sku}`}
-                    disabled={item.imageUrls.length === 0}
-                    title="ดูรูปภาพ"
-                  >
-                    <Eye size={16} />
-                  </button>
                   <button
                     className="icon-action-button compact"
                     type="button"
