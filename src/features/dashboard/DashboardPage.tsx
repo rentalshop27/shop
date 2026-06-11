@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  AlertTriangle,
   BadgeCheck,
   CalendarCheck,
   Check,
@@ -12,6 +11,7 @@ import {
   ShieldAlert,
   X
 } from 'lucide-react'
+import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
 
 // Interface for Mock Data
 interface RentalSchedule {
@@ -44,76 +44,71 @@ interface BankSlip {
 }
 
 export function DashboardPage({
-  onNavigateToCustomers
+  rentals,
+  onUpdateRentalStatus,
+  onNavigateToCustomers,
+  onNavigateToRentals
 }: {
+  rentals: RentalOrder[]
+  onUpdateRentalStatus: (id: string, status: RentalStatus) => void
   onNavigateToCustomers: () => void
+  onNavigateToRentals: () => void
 }) {
-  // --- STATEFUL DASHBOARD DATA ---
-  const [totalRevenue, setTotalRevenue] = useState<number>(12.0)
+  // --- DYNAMIC CALCULATIONS FROM SHARED STATE ---
+  const [extraRevenue, setExtraRevenue] = useState<number>(12.0) // baseline
   
-  // Pickups state
-  const [pickups, setPickups] = useState<RentalSchedule[]>([
-    {
-      id: 'p_1',
-      customerName: 'คุณปัญญลักษณ์',
-      customerCode: 'PR-C001',
-      item: 'ชุดราตรียาวสีแชมเปญเกาะอก',
-      time: '11:00 น.',
-      status: 'pending'
-    },
-    {
-      id: 'p_2',
-      customerName: 'คุณวิสาขา',
-      customerCode: 'PR-C002',
-      item: 'ชุดไทยศิวาลัยสีทอง',
-      time: '14:30 น.',
-      status: 'pending'
-    }
-  ])
+  const dynamicRevenue = rentals
+    .filter((r) => r.status === 'active' || r.status === 'returned' || r.status === 'overdue')
+    .reduce((sum, r) => sum + r.rentalPrice, 0)
+    
+  const totalRevenue = dynamicRevenue + extraRevenue
+  
+  const currentlyRented = rentals.filter((r) => r.status === 'active' || r.status === 'overdue').length
 
-  // Returns state
-  const [returns, setReturns] = useState<RentalSchedule[]>([
-    {
-      id: 'r_1',
-      customerName: 'คุณณัฐภัทร',
-      customerCode: 'PR-C004',
-      item: 'ชุดสูททักซิโด้สีดำพรีเมียม',
-      time: '16:00 น.',
-      status: 'waiting'
-    },
-    {
-      id: 'r_2',
-      customerName: 'คุณอาริยา',
-      customerCode: 'PR-C005',
-      item: 'ชุดราตรีสั้นสีแดงปักเลื่อม',
+  const today = new Date().toISOString().split('T')[0]
+
+  // Map dynamic pickups (status: booked -> pending, active today -> success)
+  const pickups: RentalSchedule[] = rentals
+    .filter((r) => r.status === 'booked' || (r.status === 'active' && r.pickupDate === today))
+    .map((r) => ({
+      id: r.id,
+      customerName: r.customer.fullName,
+      customerCode: r.customer.customerCode,
+      item: r.costume.productName,
+      time: '12:00 น.',
+      status: r.status === 'active' ? 'success' : 'pending'
+    }))
+
+  // Map dynamic returns (status: active -> waiting, returned today -> success)
+  const returns: RentalSchedule[] = rentals
+    .filter((r) => r.status === 'active' || (r.status === 'returned' && r.returnDate === today))
+    .map((r) => ({
+      id: r.id,
+      customerName: r.customer.fullName,
+      customerCode: r.customer.customerCode,
+      item: r.costume.productName,
       time: '18:00 น.',
-      status: 'waiting'
-    }
-  ])
+      status: r.status === 'returned' ? 'success' : 'waiting'
+    }))
 
-  // Overdue returns state
-  const [overdues, setOverdues] = useState<OverdueRental[]>([
-    {
-      id: 'o_1',
-      customerName: 'คุณสุรพล',
-      customerCode: 'PR-C006',
-      item: 'ชุดสูทเจ้าบ่าวสีเทาอิตาลี',
-      dueDate: '8 มิ.ย. 2569',
-      daysOverdue: 3,
-      phone: '0812345678',
-      lineAccount: '@surapol_suit'
-    },
-    {
-      id: 'o_2',
-      customerName: 'คุณพัชรา',
-      customerCode: 'PR-C007',
-      item: 'ชุดเดรสลูกไม้หรูสีครีม',
-      dueDate: '6 มิ.ย. 2569',
-      daysOverdue: 5,
-      phone: '0898765432',
-      lineAccount: '@patchara_lux'
-    }
-  ])
+  // Map dynamic overdues (status: active but date has passed, or status: overdue)
+  const overdues = rentals
+    .filter((r) => r.status === 'overdue' || (r.status === 'active' && new Date(r.returnDate) < new Date()))
+    .map((r) => {
+      const returnDateObj = new Date(r.returnDate)
+      const diffTime = Math.abs(new Date().getTime() - returnDateObj.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      return {
+        id: r.id,
+        customerName: r.customer.fullName,
+        customerCode: r.customer.customerCode,
+        item: r.costume.productName,
+        dueDate: r.returnDate,
+        daysOverdue: diffDays,
+        phone: r.customer.phone,
+        lineAccount: r.customer.lineAccount
+      }
+    })
 
   // Bank slips state
   const [slips, setSlips] = useState<BankSlip[]>([
@@ -135,9 +130,6 @@ export function DashboardPage({
     }
   ])
 
-  // Currently rented count
-  const [currentlyRented, setCurrentlyRented] = useState<number>(1)
-
   // Modals management
   const [activeSlipToReview, setActiveSlipToReview] = useState<BankSlip | null>(null)
   const [activeContactUser, setActiveContactUser] = useState<OverdueRental | null>(null)
@@ -146,7 +138,7 @@ export function DashboardPage({
   
   // Approve bank transfer slip
   const handleApproveSlip = (slipId: string, amount: number) => {
-    setTotalRevenue((prev) => prev + amount)
+    setExtraRevenue((prev) => prev + amount)
     setSlips((prev) => prev.filter((s) => s.id !== slipId))
     setActiveSlipToReview(null)
   }
@@ -159,24 +151,17 @@ export function DashboardPage({
 
   // Perform Pick-up action (Mark picked up)
   const handleMarkPickedUp = (pickupId: string) => {
-    setPickups((prev) =>
-      prev.map((p) => (p.id === pickupId ? { ...p, status: 'success' } : p))
-    )
-    setCurrentlyRented((prev) => prev + 1)
+    onUpdateRentalStatus(pickupId, 'active')
   }
 
   // Perform Return action (Mark returned)
   const handleMarkReturned = (returnId: string) => {
-    setReturns((prev) =>
-      prev.map((r) => (r.id === returnId ? { ...r, status: 'success' } : r))
-    )
-    setCurrentlyRented((prev) => Math.max(0, prev - 1))
+    onUpdateRentalStatus(returnId, 'returned')
   }
 
   // Settle overdue return
   const handleSettleOverdue = (overdueId: string) => {
-    setOverdues((prev) => prev.filter((o) => o.id !== overdueId))
-    setCurrentlyRented((prev) => Math.max(0, prev - 1))
+    onUpdateRentalStatus(overdueId, 'returned')
     setActiveContactUser(null)
   }
 
@@ -188,15 +173,26 @@ export function DashboardPage({
           <h1>หน้าแดชบอร์ด</h1>
           <p className="subtitle">ภาพรวมร้านเช่าชุด ข้อมูลการเงิน และงานที่รอดำเนินการประจำวัน</p>
         </div>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={onNavigateToCustomers}
-          style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}
-        >
-          <ExternalLink size={18} />
-          จัดการลูกค้า
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={onNavigateToCustomers}
+            style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}
+          >
+            <ExternalLink size={18} />
+            จัดการลูกค้า
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={onNavigateToRentals}
+            style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', background: 'var(--text-gold)', color: '#000' }}
+          >
+            <CalendarCheck size={18} />
+            หน้าเช่า/คืน
+          </button>
+        </div>
       </header>
 
       {/* --- TOP SUMMARY STATS WIDGETS --- */}
