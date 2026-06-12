@@ -78,6 +78,7 @@ export function RentalsPage({
   const [returnDate, setReturnDate] = useState('')
   const [rentalPrice, setRentalPrice] = useState('')
   const [depositAmount, setDepositAmount] = useState('')
+  const [discountAmount, setDiscountAmount] = useState('0')
   const [collectedAmount, setCollectedAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [formError, setFormError] = useState('')
@@ -174,19 +175,32 @@ export function RentalsPage({
       const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
       setRentalPrice(totalRentalPrice.toString())
       setDepositAmount(totalDeposit.toString())
+      setDiscountAmount('0')
       setCollectedAmount((totalRentalPrice + totalDeposit).toString())
     } else {
       setRentalPrice('')
       setDepositAmount('')
+      setDiscountAmount('0')
       setCollectedAmount('')
     }
   }, [selectedCostumes])
 
-  // Recalculate default collected amount if price or deposit changes
-  const handlePriceOrDepositChange = (priceVal: string, depVal: string) => {
+  const parseMoneyInput = (value: string) => {
+    return parseFloat(value) || 0
+  }
+
+  const syncCollectedAmount = (priceVal: string, depVal: string, discountVal: string) => {
     const p = parseFloat(priceVal) || 0
     const d = parseFloat(depVal) || 0
-    setCollectedAmount((p + d).toString())
+    const discount = parseMoneyInput(discountVal)
+    setCollectedAmount(Math.max(0, p + d - discount).toString())
+  }
+
+  const syncDiscountAmount = (priceVal: string, depVal: string, collectedVal: string) => {
+    const p = parseMoneyInput(priceVal)
+    const d = parseMoneyInput(depVal)
+    const collected = parseMoneyInput(collectedVal)
+    setDiscountAmount(Math.max(0, p + d - collected).toString())
   }
 
   const splitAmountByWeights = (total: number, weights: number[]) => {
@@ -361,6 +375,7 @@ export function RentalsPage({
     setCostumeSearch('')
     setPickupDate('')
     setReturnDate('')
+    setDiscountAmount('0')
     setNotes('')
     setIsFormOpen(false)
   }
@@ -998,7 +1013,7 @@ export function RentalsPage({
                       placeholder="0"
                       onChange={(e) => {
                         setRentalPrice(e.target.value)
-                        handlePriceOrDepositChange(e.target.value, depositAmount)
+                        syncCollectedAmount(e.target.value, depositAmount, discountAmount)
                       }}
                     />
                   </label>
@@ -1010,7 +1025,23 @@ export function RentalsPage({
                       placeholder="0"
                       onChange={(e) => {
                         setDepositAmount(e.target.value)
-                        handlePriceOrDepositChange(rentalPrice, e.target.value)
+                        syncCollectedAmount(rentalPrice, e.target.value, discountAmount)
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <label className="field">
+                    <span>ส่วนลด</span>
+                    <input
+                      type="number"
+                      value={discountAmount}
+                      placeholder="0"
+                      min="0"
+                      onChange={(e) => {
+                        setDiscountAmount(e.target.value)
+                        syncCollectedAmount(rentalPrice, depositAmount, e.target.value)
                       }}
                     />
                   </label>
@@ -1023,7 +1054,10 @@ export function RentalsPage({
                       type="number"
                       value={collectedAmount}
                       placeholder="0"
-                      onChange={(e) => setCollectedAmount(e.target.value)}
+                      onChange={(e) => {
+                        setCollectedAmount(e.target.value)
+                        syncDiscountAmount(rentalPrice, depositAmount, e.target.value)
+                      }}
                     />
                   </label>
                 </div>
