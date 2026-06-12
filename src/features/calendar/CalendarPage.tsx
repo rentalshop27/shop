@@ -28,6 +28,34 @@ type DayRentalBuckets = {
   ongoing: RentalOrder[]
 }
 
+type GroupedRentalOrder = {
+  id: string
+  orderCode: string
+  customer: RentalOrder['customer']
+  pickupDate: string
+  returnDate: string
+  rentalPrice: number
+  depositAmount: number
+  collectedAmount: number
+  status: RentalStatus
+  notes: string
+  createdAt: string
+  updatedAt: string
+  rentals: RentalOrder[]
+}
+
+type DayRentalCategory = 'pickup' | 'return' | 'ongoing'
+
+type GroupedDayRentalBuckets = {
+  pickups: GroupedRentalOrder[]
+  returns: GroupedRentalOrder[]
+  ongoing: GroupedRentalOrder[]
+}
+
+type SelectedDayRentalGroup = GroupedRentalOrder & {
+  dayCategories: DayRentalCategory[]
+}
+
 const thaiMonths = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
@@ -78,6 +106,110 @@ function getDisplayDayRentals(
   }
 }
 
+function getOrderGroupCode(orderCode: string) {
+  return orderCode.replace(/-\d+$/, '')
+}
+
+function getGroupStatus(groupItems: RentalOrder[]): RentalStatus {
+  if (groupItems.some((rental) => rental.status === 'overdue')) return 'overdue'
+  if (groupItems.some((rental) => rental.status === 'active')) return 'active'
+  if (groupItems.some((rental) => rental.status === 'booked')) return 'booked'
+  return 'returned'
+}
+
+function groupRentalsByOrder(rentalItems: RentalOrder[]): GroupedRentalOrder[] {
+  if (rentalItems.length === 0) return []
+
+  const groups: Record<string, RentalOrder[]> = {}
+
+  rentalItems.forEach((rental) => {
+    const groupCode = getOrderGroupCode(rental.orderCode)
+    if (!groups[groupCode]) {
+      groups[groupCode] = []
+    }
+    groups[groupCode].push(rental)
+  })
+
+  return Object.entries(groups)
+    .map(([orderCode, groupedItems]) => {
+      const first = groupedItems[0]
+      const pickupDate = groupedItems.reduce(
+        (earliest, rental) => (rental.pickupDate < earliest ? rental.pickupDate : earliest),
+        first.pickupDate
+      )
+      const returnDate = groupedItems.reduce(
+        (latest, rental) => (rental.returnDate > latest ? rental.returnDate : latest),
+        first.returnDate
+      )
+      const createdAt = groupedItems.reduce(
+        (earliest, rental) => (rental.createdAt < earliest ? rental.createdAt : earliest),
+        first.createdAt
+      )
+      const updatedAt = groupedItems.reduce(
+        (latest, rental) => (rental.updatedAt > latest ? rental.updatedAt : latest),
+        first.updatedAt
+      )
+      const notes = groupedItems
+        .map((rental) => rental.notes?.trim())
+        .filter((note): note is string => Boolean(note))
+        .join('\n')
+
+      return {
+        id: first.id,
+        orderCode,
+        customer: first.customer,
+        pickupDate,
+        returnDate,
+        rentalPrice: groupedItems.reduce((sum, rental) => sum + rental.rentalPrice, 0),
+        depositAmount: groupedItems.reduce((sum, rental) => sum + rental.depositAmount, 0),
+        collectedAmount: groupedItems.reduce((sum, rental) => sum + rental.collectedAmount, 0),
+        status: getGroupStatus(groupedItems),
+        notes,
+        createdAt,
+        updatedAt,
+        rentals: groupedItems
+      }
+    })
+    .sort((a, b) => a.pickupDate.localeCompare(b.pickupDate) || a.orderCode.localeCompare(b.orderCode))
+}
+
+function groupDayRentals(dayEvents: DayRentalBuckets): GroupedDayRentalBuckets {
+  return {
+    pickups: groupRentalsByOrder(dayEvents.pickups),
+    returns: groupRentalsByOrder(dayEvents.returns),
+    ongoing: groupRentalsByOrder(dayEvents.ongoing)
+  }
+}
+
+function matchesRentalGroupQuery(group: GroupedRentalOrder, query: string) {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return true
+
+  const searchable = [
+    group.orderCode,
+    group.customer.fullName,
+    group.customer.customerCode,
+    group.customer.phone,
+    group.customer.lineAccount ?? '',
+    group.pickupDate,
+    group.returnDate,
+    group.rentals.map((rental) => `${rental.costume.productName} ${rental.costume.sku} ${rental.costume.primaryColor} ${rental.costume.size}`).join(' ')
+  ]
+    .join(' ')
+    .toLowerCase()
+
+  return searchable.includes(normalizedQuery)
+}
+
+function getGroupShortLabel(group: GroupedRentalOrder) {
+  const firstName = group.customer.fullName.split(' ')[0] || group.customer.fullName
+  return group.rentals.length > 1 ? `${firstName} x${group.rentals.length}` : firstName
+}
+
+function getGroupCostumeSummary(group: GroupedRentalOrder) {
+  return group.rentals.map((rental) => rental.costume.sku).join(', ')
+}
+
 export function CalendarPage({
   rentals,
   onUpdateRentalStatus,
@@ -91,6 +223,7 @@ export function CalendarPage({
   })
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'list'>('month')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedOrderCode, setSelectedOrderCode] = useState('')
   const [listCurrentPage, setListCurrentPage] = useState(1)
   const listPageSize = 10
   const todayStr = toLocalDateStr(new Date())
@@ -305,26 +438,67 @@ export function CalendarPage({
     return getDisplayDayRentals(dayEvents, selectedDateStr, todayStr)
   }, [selectedDateStr, rentalsByDate, todayStr])
 
+  const groupedSelectedDayRentals = useMemo(() => {
+    return groupDayRentals(selectedDayRentals)
+  }, [selectedDayRentals])
+
+  const selectedDayRentalGroups = useMemo<SelectedDayRentalGroup[]>(() => {
+    const groups = new Map<string, SelectedDayRentalGroup>()
+
+    const appendGroups = (items: GroupedRentalOrder[], category: DayRentalCategory) => {
+      items.forEach((group) => {
+        const existing = groups.get(group.orderCode)
+        if (existing) {
+          if (!existing.dayCategories.includes(category)) {
+            existing.dayCategories.push(category)
+          }
+          return
+        }
+
+        groups.set(group.orderCode, {
+          ...group,
+          dayCategories: [category]
+        })
+      })
+    }
+
+    appendGroups(groupedSelectedDayRentals.pickups, 'pickup')
+    appendGroups(groupedSelectedDayRentals.returns, 'return')
+    appendGroups(groupedSelectedDayRentals.ongoing, 'ongoing')
+
+    return Array.from(groups.values()).sort(
+      (a, b) => a.pickupDate.localeCompare(b.pickupDate) || a.orderCode.localeCompare(b.orderCode)
+    )
+  }, [groupedSelectedDayRentals])
+
+  const selectedCalendarRental = useMemo(() => {
+    return selectedDayRentalGroups.find((group) => group.orderCode === selectedOrderCode) ?? selectedDayRentalGroups[0] ?? null
+  }, [selectedDayRentalGroups, selectedOrderCode])
+
+  useEffect(() => {
+    if (selectedDayRentalGroups.length === 0) {
+      if (selectedOrderCode) {
+        setSelectedOrderCode('')
+      }
+      return
+    }
+
+    if (!selectedDayRentalGroups.some((group) => group.orderCode === selectedOrderCode)) {
+      setSelectedOrderCode(selectedDayRentalGroups[0].orderCode)
+    }
+  }, [selectedDayRentalGroups, selectedOrderCode])
+
   // Filter rentals for Timeline Schedule View based on query
   const filteredTimelineRentals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    const list = [...rentals]
+    const list = [...groupRentalsByOrder(rentals)]
 
     // Sort by pickup date ascending
     list.sort((a, b) => a.pickupDate.localeCompare(b.pickupDate))
 
     if (!query) return list
 
-    return list.filter((r) => {
-      return (
-        r.orderCode.toLowerCase().includes(query) ||
-        r.customer.fullName.toLowerCase().includes(query) ||
-        r.costume.productName.toLowerCase().includes(query) ||
-        r.costume.sku.toLowerCase().includes(query) ||
-        r.pickupDate.includes(query) ||
-        r.returnDate.includes(query)
-      )
-    })
+    return list.filter((group) => matchesRentalGroupQuery(group, query))
   }, [rentals, searchQuery])
 
   // Paginated rentals for timeline schedule list view
@@ -334,6 +508,40 @@ export function CalendarPage({
   }, [filteredTimelineRentals, listCurrentPage])
 
   const listTotalPages = Math.ceil(filteredTimelineRentals.length / listPageSize) || 1
+
+  const formatBaht = (value: number) => {
+    return `฿${value.toLocaleString('th-TH', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })}`
+  }
+
+  const getDiscountAmount = (price: number, collected: number) => {
+    return Math.max(0, Number((price - collected).toFixed(2)))
+  }
+
+  const openRentalGroup = (group: GroupedRentalOrder) => {
+    onNavigateToRentals(group.rentals[0]?.id ?? group.id)
+  }
+
+  const updateRentalGroupStatus = (group: GroupedRentalOrder, status: RentalStatus) => {
+    group.rentals.forEach((rental) => {
+      onUpdateRentalStatus(rental.id, status)
+    })
+  }
+
+  const getDayCategoryLabel = (category: DayRentalCategory) => {
+    switch (category) {
+      case 'pickup':
+        return 'รับ/ส่งวันนี้'
+      case 'return':
+        return 'คืนวันนี้'
+      case 'ongoing':
+        return 'อยู่ระหว่างเช่า'
+      default:
+        return category
+    }
+  }
 
   // Get status tag mapping
   const getStatusBadge = (status: RentalStatus) => {
@@ -488,18 +696,11 @@ export function CalendarPage({
                   {calendarDays.map(({ dateStr, dayNumber, isCurrentMonth }) => {
                     const rawDayEvents = rentalsByDate[dateStr] ?? emptyDayRentals
                     const dayEvents = getDisplayDayRentals(rawDayEvents, dateStr, todayStr)
+                    const groupedDayEvents = groupDayRentals(dayEvents)
                     
                     // Apply search query filter to badges
-                    const filteredPickups = dayEvents.pickups.filter(r => 
-                      !searchQuery || 
-                      r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    const filteredReturns = dayEvents.returns.filter(r => 
-                      !searchQuery || 
-                      r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
+                    const filteredPickups = groupedDayEvents.pickups.filter((group) => matchesRentalGroupQuery(group, searchQuery))
+                    const filteredReturns = groupedDayEvents.returns.filter((group) => matchesRentalGroupQuery(group, searchQuery))
 
                     const isDaySelected = selectedDateStr === dateStr
                     const isDayToday = isToday(dateStr)
@@ -508,7 +709,7 @@ export function CalendarPage({
                     const totalCount = filteredPickups.length + filteredReturns.length
                     const overflowCount = totalCount - displayedCount
 
-                    const ariaLabelText = `วันที่ ${dayNumber} ${isCurrentMonth ? thaiMonths[month] : ''} ${isDayToday ? '(วันนี้)' : ''}${filteredPickups.length > 0 ? `, รับ/ส่งชุด ${filteredPickups.length} รายการ` : ''}${filteredReturns.length > 0 ? `, คืนชุด ${filteredReturns.length} รายการ` : ''}${dayEvents.ongoing.length > 0 ? `, อยู่ระหว่างเช่า ${dayEvents.ongoing.length} รายการ` : ''}`
+                    const ariaLabelText = `วันที่ ${dayNumber} ${isCurrentMonth ? thaiMonths[month] : ''} ${isDayToday ? '(วันนี้)' : ''}${filteredPickups.length > 0 ? `, รับ/ส่งชุด ${filteredPickups.length} ใบเช่า` : ''}${filteredReturns.length > 0 ? `, คืนชุด ${filteredReturns.length} ใบเช่า` : ''}${groupedDayEvents.ongoing.length > 0 ? `, อยู่ระหว่างเช่า ${groupedDayEvents.ongoing.length} ใบเช่า` : ''}`
 
                     return (
                       <div
@@ -549,9 +750,9 @@ export function CalendarPage({
                           </span>
                           
                           {/* Mini indicator dot if there are ongoing rentals */}
-                          {dayEvents.ongoing.length > 0 && (
+                          {groupedDayEvents.ongoing.length > 0 && (
                             <span 
-                              title={`${dayEvents.ongoing.length} ชุดกำลังเช่า`}
+                              title={`${groupedDayEvents.ongoing.length} ใบเช่ากำลังดำเนินอยู่`}
                               style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#8b5cf6' }}
                             />
                           )}
@@ -561,23 +762,23 @@ export function CalendarPage({
                         <div className="cell-events-list" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'hidden' }}>
                           
                           {/* Pickups */}
-                          {filteredPickups.slice(0, 2).map((rental) => {
+                          {filteredPickups.slice(0, 2).map((group) => {
                             let badgeBg = 'rgba(245, 158, 11, 0.08)'
                             let borderCol = 'var(--warning-color)'
                             let textCol = 'var(--warning-color)'
                             let icon = '📦'
 
-                            if (rental.status === 'active') {
+                            if (group.status === 'active') {
                               badgeBg = 'rgba(218, 165, 32, 0.08)'
                               borderCol = 'rgba(218, 165, 32, 0.6)'
                               textCol = '#ead483'
                               icon = '✅'
-                            } else if (rental.status === 'returned') {
+                            } else if (group.status === 'returned') {
                               badgeBg = 'rgba(16, 185, 129, 0.08)'
                               borderCol = 'var(--success-color)'
                               textCol = 'var(--success-color)'
                               icon = '✅'
-                            } else if (rental.status === 'overdue') {
+                            } else if (group.status === 'overdue') {
                               badgeBg = 'rgba(239, 68, 68, 0.08)'
                               borderCol = 'var(--danger-color)'
                               textCol = 'var(--danger-color)'
@@ -586,7 +787,7 @@ export function CalendarPage({
 
                             return (
                               <div
-                                key={`pickup-${rental.id}`}
+                                key={`pickup-${group.orderCode}`}
                                 style={{
                                   fontSize: '10px',
                                   background: badgeBg,
@@ -598,36 +799,36 @@ export function CalendarPage({
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden'
                                 }}
-                                title={`📦 รับ/ส่ง: ${rental.customer.fullName} - ${rental.costume.productName} (${rental.status === 'booked' ? 'จอง' : rental.status === 'active' ? 'กำลังเช่า' : rental.status === 'returned' ? 'คืนแล้ว' : 'เกินกำหนด'})`}
+                                title={`📦 รับ/ส่ง: ${group.orderCode} - ${group.customer.fullName} (${getGroupCostumeSummary(group)})`}
                               >
-                                {icon} {rental.customer.fullName.split(' ')[0]}
+                                {icon} {getGroupShortLabel(group)}
                               </div>
                             )
                           })}
 
                           {/* Returns */}
-                          {filteredReturns.slice(0, 2).map((rental) => {
+                          {filteredReturns.slice(0, 2).map((group) => {
                             let badgeBg = 'rgba(16, 185, 129, 0.08)'
                             let borderCol = 'var(--success-color)'
                             let textCol = 'var(--success-color)'
                             let icon = '↩️'
 
-                            if (rental.status === 'overdue') {
+                            if (group.status === 'overdue') {
                               badgeBg = 'rgba(239, 68, 68, 0.08)'
                               borderCol = 'var(--danger-color)'
                               textCol = 'var(--danger-color)'
                               icon = '⚠️'
-                            } else if (rental.status === 'booked') {
+                            } else if (group.status === 'booked') {
                               badgeBg = 'rgba(245, 158, 11, 0.08)'
                               borderCol = 'var(--warning-color)'
                               textCol = 'var(--warning-color)'
                               icon = '↩️'
-                            } else if (rental.status === 'active') {
+                            } else if (group.status === 'active') {
                               badgeBg = 'rgba(218, 165, 32, 0.08)'
                               borderCol = 'rgba(218, 165, 32, 0.6)'
                               textCol = '#ead483'
                               icon = '↩️'
-                            } else if (rental.status === 'returned') {
+                            } else if (group.status === 'returned') {
                               badgeBg = 'rgba(16, 185, 129, 0.08)'
                               borderCol = 'var(--success-color)'
                               textCol = 'var(--success-color)'
@@ -636,7 +837,7 @@ export function CalendarPage({
 
                             return (
                               <div
-                                key={`return-${rental.id}`}
+                                key={`return-${group.orderCode}`}
                                 style={{
                                   fontSize: '10px',
                                   background: badgeBg,
@@ -648,9 +849,9 @@ export function CalendarPage({
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden'
                                 }}
-                                title={`↩️ คืน: ${rental.customer.fullName} - ${rental.costume.productName} (${rental.status === 'booked' ? 'จอง' : rental.status === 'active' ? 'กำลังเช่า' : rental.status === 'returned' ? 'คืนแล้ว' : 'เกินกำหนด'})`}
+                                title={`↩️ คืน: ${group.orderCode} - ${group.customer.fullName} (${getGroupCostumeSummary(group)})`}
                               >
-                                {icon} {rental.customer.fullName.split(' ')[0]}
+                                {icon} {getGroupShortLabel(group)}
                               </div>
                             );
                           })}
@@ -675,28 +876,17 @@ export function CalendarPage({
                 {currentWeekDays.map(({ date, dateStr, dayName }) => {
                   const rawDayEvents = rentalsByDate[dateStr] ?? emptyDayRentals
                   const dayEvents = getDisplayDayRentals(rawDayEvents, dateStr, todayStr)
+                  const groupedDayEvents = groupDayRentals(dayEvents)
                   
                   // Apply search query filter to weekly view badges
-                  const filteredPickups = dayEvents.pickups.filter(r => 
-                    !searchQuery || 
-                    r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  const filteredReturns = dayEvents.returns.filter(r => 
-                    !searchQuery || 
-                    r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  const filteredOngoing = dayEvents.ongoing.filter(r => 
-                    !searchQuery || 
-                    r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    r.costume.productName.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
+                  const filteredPickups = groupedDayEvents.pickups.filter((group) => matchesRentalGroupQuery(group, searchQuery))
+                  const filteredReturns = groupedDayEvents.returns.filter((group) => matchesRentalGroupQuery(group, searchQuery))
+                  const filteredOngoing = groupedDayEvents.ongoing.filter((group) => matchesRentalGroupQuery(group, searchQuery))
 
                   const isDaySelected = selectedDateStr === dateStr
                   const isDayToday = isToday(dateStr)
 
-                  const ariaLabelText = `วันที่ ${date.getDate()} ${thaiMonths[date.getMonth()]} ${dayName}, รับ/ส่งชุด ${filteredPickups.length} รายการ, คืนชุด ${filteredReturns.length} รายการ`
+                  const ariaLabelText = `วันที่ ${date.getDate()} ${thaiMonths[date.getMonth()]} ${dayName}, รับ/ส่งชุด ${filteredPickups.length} ใบเช่า, คืนชุด ${filteredReturns.length} ใบเช่า`
 
                   return (
                       <div
@@ -734,23 +924,23 @@ export function CalendarPage({
                         ) : (
                           <>
                             {/* Pickups */}
-                            {filteredPickups.map((r) => {
+                            {filteredPickups.map((group) => {
                               let badgeBg = 'rgba(245, 158, 11, 0.08)'
                               let borderCol = 'rgba(245, 158, 11, 0.2)'
                               let textCol = 'var(--warning-color)'
                               let label = '📦 รับ/ส่งชุด:'
 
-                              if (r.status === 'active') {
+                              if (group.status === 'active') {
                                 badgeBg = 'rgba(218, 165, 32, 0.08)'
                                 borderCol = 'rgba(218, 165, 32, 0.3)'
                                 textCol = '#ead483'
                                 label = '✅ รับมอบแล้ว:'
-                              } else if (r.status === 'returned') {
+                              } else if (group.status === 'returned') {
                                 badgeBg = 'rgba(16, 185, 129, 0.08)'
                                 borderCol = 'rgba(16, 185, 129, 0.2)'
                                 textCol = 'var(--success-color)'
                                 label = '✅ รับมอบแล้ว:'
-                              } else if (r.status === 'overdue') {
+                              } else if (group.status === 'overdue') {
                                 badgeBg = 'rgba(239, 68, 68, 0.08)'
                                 borderCol = 'rgba(239, 68, 68, 0.2)'
                                 textCol = 'var(--danger-color)'
@@ -759,7 +949,7 @@ export function CalendarPage({
 
                               return (
                                 <span
-                                  key={`pk-${r.id}`}
+                                  key={`pk-${group.orderCode}`}
                                   className="status-pill"
                                   style={{
                                     display: 'inline-flex',
@@ -774,35 +964,35 @@ export function CalendarPage({
                                   }}
                                 >
                                   <span>{label}</span>
-                                  <strong>{r.customer.fullName}</strong>
-                                  <small>({r.costume.sku})</small>
+                                  <strong>{group.customer.fullName}</strong>
+                                  <small>({getGroupCostumeSummary(group)})</small>
                                 </span>
                               )
                             })}
 
                             {/* Returns */}
-                            {filteredReturns.map((r) => {
+                            {filteredReturns.map((group) => {
                               let badgeBg = 'rgba(16, 185, 129, 0.08)'
                               let borderCol = 'rgba(16, 185, 129, 0.2)'
                               let textCol = 'var(--success-color)'
                               let label = '↩️ คืนชุด:'
 
-                              if (r.status === 'overdue') {
+                              if (group.status === 'overdue') {
                                 badgeBg = 'rgba(239, 68, 68, 0.08)'
                                 borderCol = 'rgba(239, 68, 68, 0.2)'
                                 textCol = 'var(--danger-color)'
                                 label = '⚠️ เลยกำหนดคืน:'
-                              } else if (r.status === 'booked') {
+                              } else if (group.status === 'booked') {
                                 badgeBg = 'rgba(245, 158, 11, 0.08)'
                                 borderCol = 'rgba(245, 158, 11, 0.2)'
                                 textCol = 'var(--warning-color)'
                                 label = '↩️ รอคืน (ยังไม่รับชุด):'
-                              } else if (r.status === 'active') {
+                              } else if (group.status === 'active') {
                                 badgeBg = 'rgba(218, 165, 32, 0.08)'
                                 borderCol = 'rgba(218, 165, 32, 0.3)'
                                 textCol = '#ead483'
                                 label = '↩️ กำหนดคืน:'
-                              } else if (r.status === 'returned') {
+                              } else if (group.status === 'returned') {
                                 badgeBg = 'rgba(16, 185, 129, 0.08)'
                                 borderCol = 'rgba(16, 185, 129, 0.2)'
                                 textCol = 'var(--success-color)'
@@ -811,7 +1001,7 @@ export function CalendarPage({
 
                               return (
                                 <span
-                                  key={`rt-${r.id}`}
+                                  key={`rt-${group.orderCode}`}
                                   className="status-pill"
                                   style={{
                                     display: 'inline-flex',
@@ -826,8 +1016,8 @@ export function CalendarPage({
                                   }}
                                 >
                                   <span>{label}</span>
-                                  <strong>{r.customer.fullName}</strong>
-                                  <small>({r.costume.sku})</small>
+                                  <strong>{group.customer.fullName}</strong>
+                                  <small>({getGroupCostumeSummary(group)})</small>
                                 </span>
                               )
                             })}
@@ -839,7 +1029,7 @@ export function CalendarPage({
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: 'rgba(139, 92, 246, 0.08)', color: '#a78bfa', borderColor: 'rgba(139, 92, 246, 0.2)' }}
                               >
                                 <span>👗 ค้างเช่า:</span>
-                                <strong>{filteredOngoing.length} ชุด</strong>
+                                <strong>{filteredOngoing.length} ใบเช่า</strong>
                               </span>
                             )}
                           </>
@@ -869,162 +1059,272 @@ export function CalendarPage({
             </div>
 
             <div className="selected-day-details-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', maxHeight: '600px' }}>
-              
-              {/* Category 1: PICKUPS (นัดรับ/ส่งชุด) */}
-              <div>
-                <h3 style={{ fontSize: '14px', color: '#fff', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginBottom: '10px', display: 'flex', justifyItems: 'center', gap: '6px' }}>
-                  <span style={{ color: 'var(--warning-color)' }}>📦</span>
-                  รายการรับ/ส่งชุด ({selectedDayRentals.pickups.length})
-                </h3>
-                
-                {selectedDayRentals.pickups.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '8px 0' }}>ไม่มีกำหนดรับ/ส่งชุดในวันนี้</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {selectedDayRentals.pickups.map((rental) => (
-                      <div key={`pk-detail-${rental.id}`} className={`event-detail-item-card status-${rental.status}`}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <strong style={{ fontSize: '14px', color: '#fff' }}>{rental.orderCode}</strong>
-                          {getStatusBadge(rental.status)}
-                        </div>
-                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-bright)' }}>
-                          <div><User size={13} style={{ display: 'inline', marginRight: '6px' }} /> {rental.customer.fullName}</div>
-                          <div><Shirt size={13} style={{ display: 'inline', marginRight: '6px' }} /> {rental.costume.productName} ({rental.costume.sku})</div>
-                        </div>
-
-                        {/* Quick Action Buttons */}
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                          <button
-                            className="secondary-button"
-                            onClick={() => onNavigateToRentals(rental.id)}
-                            aria-label={`ดูรายละเอียดใบเช่าชุด ${rental.orderCode}`}
-                            style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px' }}
-                          >
-                            <Eye size={12} /> ดูใบเช่าชุด
-                          </button>
-                          
-                          {rental.status === 'booked' && (
-                            <button
-                              className="primary-button"
-                              onClick={() => onUpdateRentalStatus(rental.id, 'active')}
-                              aria-label={`ดำเนินการส่งมอบชุดสำหรับใบเช่า ${rental.orderCode}`}
-                              style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px', background: 'var(--text-gold)', color: '#000' }}
-                            >
-                              <Check size={12} /> ส่งมอบชุด
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Category 2: RETURNS (กำหนดคืนชุด) */}
-              <div style={{ marginTop: '12px' }}>
-                <h3 style={{ fontSize: '14px', color: '#fff', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginBottom: '10px', display: 'flex', justifyItems: 'center', gap: '6px' }}>
-                  <span style={{ color: 'var(--success-color)' }}>↩️</span>
-                  รายการคืนชุด ({selectedDayRentals.returns.length})
-                </h3>
-                
-                {selectedDayRentals.returns.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '8px 0' }}>ไม่มีกำหนดคืนชุดในวันนี้</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {selectedDayRentals.returns.map((rental) => (
-                      <div key={`rt-detail-${rental.id}`} className={`event-detail-item-card status-${rental.status}`}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <strong style={{ fontSize: '14px', color: '#fff' }}>{rental.orderCode}</strong>
-                          {getStatusBadge(rental.status)}
-                        </div>
-                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-bright)' }}>
-                          <div><User size={13} style={{ display: 'inline', marginRight: '6px' }} /> {rental.customer.fullName}</div>
-                          <div><Shirt size={13} style={{ display: 'inline', marginRight: '6px' }} /> {rental.costume.productName} ({rental.costume.sku})</div>
-                        </div>
-
-                        {/* Quick Action Buttons */}
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                          <button
-                            className="secondary-button"
-                            onClick={() => onNavigateToRentals(rental.id)}
-                            aria-label={`ดูรายละเอียดใบเช่าชุด ${rental.orderCode}`}
-                            style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px' }}
-                          >
-                            <Eye size={12} /> ดูใบเช่าชุด
-                          </button>
-                          
-                          {(rental.status === 'active' || rental.status === 'overdue') && (
-                            <button
-                              className="primary-button"
-                              onClick={() => onUpdateRentalStatus(rental.id, 'returned')}
-                              aria-label={`ดำเนินการรับคืนชุดสำหรับใบเช่า ${rental.orderCode}`}
-                              style={{ flex: 1, minHeight: '32px', fontSize: '12px', padding: '0 8px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
-                            >
-                              <Check size={12} /> รับคืนชุด
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Category 3: ONGOING (ค้างเช่าอยู่ในบ้าน) */}
-              <div style={{ marginTop: '12px' }}>
-                <h3 style={{ fontSize: '14px', color: '#fff', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginBottom: '10px', display: 'flex', justifyItems: 'center', gap: '6px' }}>
-                  <span style={{ color: '#8b5cf6' }}>👗</span>
-                  รายการอยู่ระหว่างการเช่า ({selectedDayRentals.ongoing.length})
-                </h3>
-                
-                {selectedDayRentals.ongoing.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '8px 0' }}>ไม่มีชุดอยู่ระหว่างเช่าในวันนี้</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {selectedDayRentals.ongoing.map((rental) => (
-                      <div key={`og-detail-${rental.id}`} className={`event-detail-item-card status-${rental.status}`}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <strong style={{ fontSize: '14px', color: '#fff' }}>{rental.orderCode}</strong>
-                          {getStatusBadge(rental.status)}
-                        </div>
-                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--text-bright)' }}>
-                          <div><User size={13} style={{ display: 'inline', marginRight: '6px' }} /> {rental.customer.fullName}</div>
-                          <div><Shirt size={13} style={{ display: 'inline', marginRight: '6px' }} /> {rental.costume.productName} ({rental.costume.sku})</div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '2px' }}>
-                            ช่วงเวลา: {rental.pickupDate} ถึง {rental.returnDate}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                          <button
-                            className="secondary-button"
-                            onClick={() => onNavigateToRentals(rental.id)}
-                            aria-label={`ดูรายละเอียดใบเช่าชุด ${rental.orderCode}`}
-                            style={{ width: '100%', minHeight: '32px', fontSize: '12px', padding: '0 8px' }}
-                          >
-                            <Eye size={12} /> ดูใบเช่าชุด
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Day Actions */}
-              {selectedDayRentals.pickups.length === 0 && selectedDayRentals.returns.length === 0 && selectedDayRentals.ongoing.length === 0 && (
+              {selectedDayRentalGroups.length === 0 ? (
                 <div style={{ padding: '30px 10px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border-color)', borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
                   <Clock size={32} style={{ color: 'var(--text-muted)' }} />
                   <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>ไม่มีนัดหมายในวันที่เลือก</span>
                   <button
                     className="primary-button"
+                    type="button"
                     onClick={() => triggerCreateRentalForDate(selectedDateStr)}
                     style={{ fontSize: '13px', minHeight: '36px', background: 'rgba(223, 183, 80, 0.05)', border: '1px solid var(--border-gold)', color: 'var(--text-gold)' }}
                   >
                     <Plus size={16} /> สร้างใบเช่าวันนี้
                   </button>
                 </div>
-              )}
+              ) : (
+                <>
+                  <section className="detail-section">
+                    <div className="section-title-row" style={{ marginBottom: '12px' }}>
+                      <h3 style={{ fontSize: '15px', color: '#fff', margin: 0 }}>รายการใบเช่าในวันนี้ ({selectedDayRentalGroups.length})</h3>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {selectedDayRentalGroups.map((group) => {
+                        const isSelected = selectedCalendarRental?.orderCode === group.orderCode
 
+                        return (
+                          <button
+                            key={group.orderCode}
+                            className="secondary-button"
+                            type="button"
+                            onClick={() => setSelectedOrderCode(group.orderCode)}
+                            style={{
+                              width: '100%',
+                              minHeight: 'auto',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              padding: '14px',
+                              borderRadius: '12px',
+                              background: isSelected ? 'rgba(223, 183, 80, 0.08)' : 'var(--bg-input)',
+                              borderColor: isSelected ? 'var(--border-gold)' : 'var(--border-color)'
+                            }}
+                          >
+                            <div style={{ display: 'grid', gap: '6px', textAlign: 'left' }}>
+                              <strong style={{ fontSize: '15px', color: '#fff' }}>{group.orderCode}</strong>
+                              <span style={{ fontSize: '13px', color: 'var(--text-bright)' }}>
+                                <User size={13} style={{ display: 'inline', marginRight: '6px' }} />
+                                {group.customer.fullName}
+                              </span>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                {group.dayCategories.map((category) => (
+                                  <span
+                                    key={`${group.orderCode}-${category}`}
+                                    className="status-pill muted"
+                                    style={{
+                                      fontSize: '11px',
+                                      padding: '4px 8px',
+                                      background: category === 'pickup'
+                                        ? 'rgba(245, 158, 11, 0.08)'
+                                        : category === 'return'
+                                          ? 'rgba(16, 185, 129, 0.08)'
+                                          : 'rgba(139, 92, 246, 0.08)',
+                                      color: category === 'pickup'
+                                        ? 'var(--warning-color)'
+                                        : category === 'return'
+                                          ? 'var(--success-color)'
+                                          : '#a78bfa',
+                                      borderColor: category === 'pickup'
+                                        ? 'rgba(245, 158, 11, 0.2)'
+                                        : category === 'return'
+                                          ? 'rgba(16, 185, 129, 0.2)'
+                                          : 'rgba(139, 92, 246, 0.2)'
+                                    }}
+                                  >
+                                    {getDayCategoryLabel(category)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gap: '8px', justifyItems: 'end' }}>
+                              {getStatusBadge(group.status)}
+                              <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{group.rentals.length} ชุด</small>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  {selectedCalendarRental && (
+                    <>
+                      <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <div className="profile-card-top">
+                          <div className="profile-card-info">
+                            <div className="profile-avatar">
+                              {selectedCalendarRental.customer.fullName.slice(0, 2).toLowerCase()}
+                            </div>
+                            <div className="profile-meta">
+                              <h2 style={{ marginBottom: '4px' }}>ใบเช่า {selectedCalendarRental.orderCode}</h2>
+                              <p>
+                                <strong>{selectedCalendarRental.customer.fullName}</strong> ({selectedCalendarRental.customer.phone})
+                              </p>
+                              <p>LINE: {selectedCalendarRental.customer.lineAccount || '-'}</p>
+                            </div>
+                          </div>
+                          {getStatusBadge(selectedCalendarRental.status)}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '18px' }}>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>ช่วงเช่า</span>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>
+                              {formatThaiDate(selectedCalendarRental.pickupDate)} - {formatThaiDate(selectedCalendarRental.returnDate)}
+                            </strong>
+                          </div>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>ยอดเก็บจริง</span>
+                            <strong style={{ fontSize: '14px', color: 'var(--text-gold)' }}>{formatBaht(selectedCalendarRental.collectedAmount)}</strong>
+                          </div>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>มัดจำรวม</span>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>{formatBaht(selectedCalendarRental.depositAmount)}</strong>
+                          </div>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>จำนวนชุด</span>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>{selectedCalendarRental.rentals.length} ชุด</strong>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <div className="section-title-row">
+                          <h3 style={{ fontSize: '15px', color: '#fff', margin: 0 }}>ขนาดสัดส่วน</h3>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginTop: '10px' }}>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบอก</span>
+                            <strong style={{ fontSize: '16px', color: '#fff' }}>
+                              {selectedCalendarRental.customer.bustIn ? `${selectedCalendarRental.customer.bustIn}"` : '-'}
+                            </strong>
+                          </div>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบเอว</span>
+                            <strong style={{ fontSize: '16px', color: '#fff' }}>
+                              {selectedCalendarRental.customer.waistIn ? `${selectedCalendarRental.customer.waistIn}"` : '-'}
+                            </strong>
+                          </div>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>สะโพก</span>
+                            <strong style={{ fontSize: '16px', color: '#fff' }}>
+                              {selectedCalendarRental.customer.hipIn ? `${selectedCalendarRental.customer.hipIn}"` : '-'}
+                            </strong>
+                          </div>
+                          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>ส่วนสูง</span>
+                            <strong style={{ fontSize: '16px', color: '#fff' }}>
+                              {selectedCalendarRental.customer.heightCm ? `${selectedCalendarRental.customer.heightCm} cm` : '-'}
+                            </strong>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการชุดในใบเช่า</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {selectedCalendarRental.rentals.map((rental) => (
+                            <div
+                              key={rental.id}
+                              style={{
+                                display: 'grid',
+                                gap: '10px',
+                                background: 'var(--bg-input)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '12px',
+                                padding: '14px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
+                                <div>
+                                  <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                                    <Shirt size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                                    {rental.costume.productName}
+                                  </h4>
+                                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    SKU: {rental.costume.sku} | สี: {rental.costume.primaryColor} | ไซส์: {rental.costume.size}
+                                  </p>
+                                </div>
+                                {getStatusBadge(rental.status)}
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                <div>
+                                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)' }}>ค่าเช่า</span>
+                                  <strong style={{ color: '#fff', fontSize: '13px' }}>{formatBaht(rental.rentalPrice)}</strong>
+                                </div>
+                                <div>
+                                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)' }}>มัดจำ</span>
+                                  <strong style={{ color: '#fff', fontSize: '13px' }}>{formatBaht(rental.depositAmount)}</strong>
+                                </div>
+                                <div>
+                                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)' }}>เก็บจริง</span>
+                                  <strong style={{ color: 'var(--text-gold)', fontSize: '13px' }}>{formatBaht(rental.collectedAmount)}</strong>
+                                </div>
+                              </div>
+                              {getDiscountAmount(rental.rentalPrice, rental.collectedAmount) > 0 && (
+                                <small style={{ color: 'var(--success-color)', fontSize: '11px' }}>
+                                  ส่วนลดรายการนี้: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.collectedAmount))}
+                                </small>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      {selectedCalendarRental.notes && (
+                        <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                          <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '8px' }}>หมายเหตุ</h3>
+                          <p style={{ margin: 0, color: 'var(--text-bright)', whiteSpace: 'pre-wrap', fontSize: '13px' }}>
+                            {selectedCalendarRental.notes}
+                          </p>
+                        </section>
+                      )}
+
+                      <section className="detail-section controls-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>การควบคุมใบเช่า</h3>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <button
+                            className="secondary-button"
+                            type="button"
+                            onClick={() => openRentalGroup(selectedCalendarRental)}
+                            style={{ fontSize: '14px' }}
+                          >
+                            <Eye size={14} /> ดูใบเช่าชุด
+                          </button>
+
+                          {selectedCalendarRental.status === 'booked' && (
+                            <button
+                              className="primary-button"
+                              type="button"
+                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, 'active')}
+                              style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
+                            >
+                              <Check size={14} /> ส่งมอบชุด
+                            </button>
+                          )}
+
+                          {(selectedCalendarRental.status === 'active' || selectedCalendarRental.status === 'overdue') && (
+                            <button
+                              className="primary-button"
+                              type="button"
+                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, 'returned')}
+                              style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
+                            >
+                              <Check size={14} /> รับคืนชุด
+                            </button>
+                          )}
+                        </div>
+
+                        {selectedCalendarRental.status === 'returned' && (
+                          <div style={{ marginTop: '12px', textAlign: 'center', color: 'var(--success-color)', background: 'var(--success-bg)', borderRadius: '8px', padding: '12px', fontWeight: 600 }}>
+                            ใบเช่านี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
+                          </div>
+                        )}
+                      </section>
+                    </>
+                  )}
+                </>
+              )}
             </div>
           </aside>
         )}
@@ -1034,7 +1334,7 @@ export function CalendarPage({
           <div className="panel" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>
-                รายการจองและเช่าทั้งหมด ({filteredTimelineRentals.length} รายการ)
+                รายการใบเช่าทั้งหมด ({filteredTimelineRentals.length} ใบเช่า)
               </h2>
 
               <label className="search-box" style={{ minHeight: '38px', width: '300px', padding: '0 12px' }}>
@@ -1050,7 +1350,7 @@ export function CalendarPage({
             </div>
 
             <div className="customer-table" role="table" aria-label="รายการจองเช่าชุด">
-              <div className="table-row table-head" role="row" style={{ gridTemplateColumns: '120px 1fr 1.5fr 160px 120px 140px 80px', minWidth: '800px' }}>
+              <div className="table-row table-head" role="row" style={{ gridTemplateColumns: '120px 1fr 1.7fr 150px 120px 120px 90px', minWidth: '860px' }}>
                 <span>รหัสออเดอร์</span>
                 <span>ลูกค้า</span>
                 <span>รายการชุด</span>
@@ -1060,29 +1360,36 @@ export function CalendarPage({
                 <span>การจัดการ</span>
               </div>
 
-              {paginatedListRentals.map((rental) => (
+              {paginatedListRentals.map((group) => (
                 <div
                   className="table-row"
-                  key={rental.id}
+                  key={group.orderCode}
                   role="row"
-                  style={{ gridTemplateColumns: '120px 1fr 1.5fr 160px 120px 140px 80px', minWidth: '800px', minHeight: '60px' }}
+                  style={{ gridTemplateColumns: '120px 1fr 1.7fr 150px 120px 120px 90px', minWidth: '860px', minHeight: '60px' }}
                 >
-                  <strong style={{ color: 'var(--text-gold)' }}>{rental.orderCode}</strong>
+                  <strong style={{ color: 'var(--text-gold)' }}>{group.orderCode}</strong>
                   <span>
-                    {rental.customer.fullName}
-                    <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>{rental.customer.customerCode}</small>
+                    {group.customer.fullName}
+                    <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>{group.customer.customerCode}</small>
                   </span>
                   <span>
-                    {rental.costume.productName}
-                    <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>SKU: {rental.costume.sku} | ไซส์: {rental.costume.size}</small>
+                    {group.rentals
+                      .slice(0, 2)
+                      .map((rental) => rental.costume.productName)
+                      .join(', ')}
+                    {group.rentals.length > 2 && ` และอีก ${group.rentals.length - 2} ชุด`}
+                    <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
+                      SKU: {getGroupCostumeSummary(group)}
+                    </small>
                   </span>
-                  <span>{formatThaiDate(rental.pickupDate)}</span>
-                  <span>{formatThaiDate(rental.returnDate)}</span>
-                  <span>{getStatusBadge(rental.status)}</span>
+                  <span>{formatThaiDate(group.pickupDate)}</span>
+                  <span>{formatThaiDate(group.returnDate)}</span>
+                  <span>{getStatusBadge(group.status)}</span>
                   <span>
                     <button
                       className="secondary-button"
-                      onClick={() => onNavigateToRentals(rental.id)}
+                      type="button"
+                      onClick={() => openRentalGroup(group)}
                       style={{ minHeight: '32px', padding: '0 10px', fontSize: '12px' }}
                       title="ดูใบเช่าชุด"
                     >

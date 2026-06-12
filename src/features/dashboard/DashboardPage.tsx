@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   BadgeCheck,
   CalendarCheck,
-  Check,
   ExternalLink,
   MessageCircle,
   Phone,
@@ -10,46 +9,15 @@ import {
   ShieldAlert,
   X,
   Clock,
-  FileText,
   Wallet,
   UserRound,
   ChevronRight,
   ClipboardList,
-  CreditCard,
   ShoppingBag,
   Undo2
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
-
-// Interface for Mock Data
-interface RentalSchedule {
-  id: string
-  customerName: string
-  customerCode: string
-  item: string
-  time: string
-  status: 'pending' | 'success' | 'waiting'
-}
-
-interface OverdueRental {
-  id: string
-  customerName: string
-  customerCode: string
-  item: string
-  dueDate: string
-  daysOverdue: number
-  phone: string
-  lineAccount: string
-}
-
-interface BankSlip {
-  id: string
-  customerName: string
-  amount: number
-  time: string
-  slipUrl: string
-  refNo: string
-}
+import { buildDashboardMetrics, getLocalDateString, type OverdueRental } from './dashboardMetrics'
 
 export function DashboardPage({
   rentals,
@@ -63,86 +31,13 @@ export function DashboardPage({
   onNavigateToRentals: () => void
 }) {
   // --- DYNAMIC CALCULATIONS FROM SHARED STATE ---
-  const [extraRevenue, setExtraRevenue] = useState<number>(0) // baseline
-  
-  const dynamicRevenue = rentals
-    .filter((r) => r.status === 'active' || r.status === 'returned' || r.status === 'overdue')
-    .reduce((sum, r) => sum + r.rentalPrice, 0)
-    
-  const totalRevenue = dynamicRevenue + extraRevenue
-  
-  const currentlyRented = rentals.filter((r) => r.status === 'active' || r.status === 'overdue').length
-
-  const today = (() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })()
-
-  // Map dynamic pickups (status: booked -> pending, active today -> success)
-  const pickups: RentalSchedule[] = rentals
-    .filter((r) => r.status === 'booked' || (r.status === 'active' && r.pickupDate === today))
-    .map((r) => ({
-      id: r.id,
-      customerName: r.customer.fullName,
-      customerCode: r.customer.customerCode,
-      item: r.costume.productName,
-      time: '12:00 น.',
-      status: r.status === 'active' ? 'success' : 'pending'
-    }))
-
-  // Map dynamic returns (status: active -> waiting, returned today -> success)
-  const returns: RentalSchedule[] = rentals
-    .filter((r) => r.status === 'active' || (r.status === 'returned' && r.returnDate === today))
-    .map((r) => ({
-      id: r.id,
-      customerName: r.customer.fullName,
-      customerCode: r.customer.customerCode,
-      item: r.costume.productName,
-      time: '18:00 น.',
-      status: r.status === 'returned' ? 'success' : 'waiting'
-    }))
-
-  // Map dynamic overdues (status: active but date has passed, or status: overdue)
-  const overdues = rentals
-    .filter((r) => r.status === 'overdue' || (r.status === 'active' && new Date(r.returnDate) < new Date()))
-    .map((r) => {
-      const returnDateObj = new Date(r.returnDate)
-      const diffTime = Math.abs(new Date().getTime() - returnDateObj.getTime())
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      return {
-        id: r.id,
-        customerName: r.customer.fullName,
-        customerCode: r.customer.customerCode,
-        item: r.costume.productName,
-        dueDate: r.returnDate,
-        daysOverdue: diffDays,
-        phone: r.customer.phone,
-        lineAccount: r.customer.lineAccount
-      }
-    })
-
-  // Bank slips state
-  const [slips, setSlips] = useState<BankSlip[]>([])
+  const today = getLocalDateString(new Date())
+  const { totalRevenue, currentlyRented, pickups, returns, overdues } = buildDashboardMetrics(rentals, today)
 
   // Modals management
-  const [activeSlipToReview, setActiveSlipToReview] = useState<BankSlip | null>(null)
   const [activeContactUser, setActiveContactUser] = useState<OverdueRental | null>(null)
 
   // --- ACTIONS ---
-  
-  // Approve bank transfer slip
-  const handleApproveSlip = (slipId: string, amount: number) => {
-    setExtraRevenue((prev) => prev + amount)
-    setSlips((prev) => prev.filter((s) => s.id !== slipId))
-    setActiveSlipToReview(null)
-  }
-
-  // Reject bank transfer slip
-  const handleRejectSlip = (slipId: string) => {
-    setSlips((prev) => prev.filter((s) => s.id !== slipId))
-    setActiveSlipToReview(null)
-  }
-
   // Perform Pick-up action (Mark picked up)
   const handleMarkPickedUp = (pickupId: string) => {
     onUpdateRentalStatus(pickupId, 'active')
@@ -219,9 +114,8 @@ export function DashboardPage({
 
       {/* --- TOP SUMMARY STATS WIDGETS --- */}
       <section className="dashboard-top-grid" aria-label="สถิติหลัก">
-        {/* Left Side: Danger & Warning Alerts Group */}
+        {/* Left Side: Danger Alerts Group */}
         <div className="dashboard-group-panel">
-          {/* Card 1: Overdue Returns */}
           <div
             className="dashboard-card"
             style={{ cursor: overdues.length > 0 ? 'pointer' : 'default' }}
@@ -244,28 +138,6 @@ export function DashboardPage({
             )}
           </div>
 
-          {/* Card 2: Pending Bank Transfer Slips */}
-          <div
-            className="dashboard-card"
-            style={{ cursor: slips.length > 0 ? 'pointer' : 'default' }}
-            onClick={() => {
-              if (slips.length > 0) {
-                setActiveSlipToReview(slips[0])
-              }
-            }}
-          >
-            <div className="dashboard-card-icon yellow-theme">
-              <FileText size={20} />
-            </div>
-            <span className="dashboard-card-label">สลิปที่รอตรวจสอบ</span>
-            <span className={`dashboard-card-value ${slips.length > 0 ? 'warning-color' : ''}`}>
-              {slips.length}
-            </span>
-            <span className="dashboard-card-subtext">รายการโอนเงินที่ต้องตรวจ</span>
-            {slips.length > 0 && (
-              <span className="dashboard-card-badge warning">รอตรวจสอบ</span>
-            )}
-          </div>
         </div>
 
         {/* Right Side: Financial & Rental Summary Group */}
@@ -275,11 +147,11 @@ export function DashboardPage({
             <div className="dashboard-card-icon green-theme">
               <Wallet size={20} />
             </div>
-            <span className="dashboard-card-label">รายได้สะสมทั้งหมด</span>
+            <span className="dashboard-card-label">ยอดรับชำระสะสม</span>
             <span className="dashboard-card-value">
               ฿{Math.round(totalRevenue).toLocaleString('th-TH')}
             </span>
-            <span className="dashboard-card-subtext">ยอดรวมรายได้ทั้งหมด</span>
+            <span className="dashboard-card-subtext">ยอดเงินที่บันทึกรับชำระแล้ว</span>
           </div>
 
           {/* Card 4: Currently Rented Sets */}
@@ -307,22 +179,6 @@ export function DashboardPage({
         </div>
 
         <div className="task-list">
-          <div className="task-item" onClick={() => { if (slips.length > 0) setActiveSlipToReview(slips[0]) }}>
-            <div className="task-item-left">
-              <div className="task-icon-wrapper purple">
-                <CreditCard size={18} />
-              </div>
-              <div className="task-info">
-                <span className="task-title">รอรับชำระเงิน</span>
-                <span className="task-subtext">ลูกค้า <span className="highlight-count">{slips.length}</span> รายการ</span>
-              </div>
-            </div>
-            <div className="task-item-right">
-              <span className="task-count purple">{slips.length}</span>
-              <ChevronRight size={16} className="chevron-icon" />
-            </div>
-          </div>
-
           <div className="task-item" onClick={onNavigateToRentals}>
             <div className="task-item-left">
               <div className="task-icon-wrapper yellow">
@@ -529,74 +385,7 @@ export function DashboardPage({
         </div>
       </section>
 
-      {/* --- MODAL 1: BANK SLIP REVIEW MODAL --- */}
-      {activeSlipToReview && (
-        <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">
-          <div className="dashboard-modal-content">
-            <div className="dashboard-modal-header">
-              <h3>ตรวจสลิปโอนเงิน</h3>
-              <button
-                className="dashboard-modal-close-btn"
-                type="button"
-                onClick={() => setActiveSlipToReview(null)}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="dashboard-modal-body">
-              <div className="slip-preview-container">
-                <img
-                  src={activeSlipToReview.slipUrl}
-                  alt={`สลิปโอนเงินของ ${activeSlipToReview.customerName}`}
-                />
-              </div>
-
-              <div className="slip-info-list">
-                <div className="slip-info-item">
-                  <span>ผู้โอนเงิน:</span>
-                  <strong>{activeSlipToReview.customerName}</strong>
-                </div>
-                <div className="slip-info-item">
-                  <span>รหัสอ้างอิง (Ref No.):</span>
-                  <strong>{activeSlipToReview.refNo}</strong>
-                </div>
-                <div className="slip-info-item">
-                  <span>วันเวลาในสลิป:</span>
-                  <strong>{activeSlipToReview.time}</strong>
-                </div>
-                <div className="slip-info-item" style={{ marginTop: '8px', borderTop: '1px solid #3d312f', paddingTop: '12px' }}>
-                  <span>ยอดเงินโอน:</span>
-                  <strong className="amount-highlight">
-                    ฿{activeSlipToReview.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                  </strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="dashboard-modal-footer">
-              <button
-                className="secondary-button"
-                style={{ background: 'rgba(214, 83, 83, 0.1)', borderColor: 'rgba(214, 83, 83, 0.3)', color: '#f1a09b' }}
-                type="button"
-                onClick={() => handleRejectSlip(activeSlipToReview.id)}
-              >
-                สลิปไม่ถูกต้อง
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                onClick={() => handleApproveSlip(activeSlipToReview.id, activeSlipToReview.amount)}
-              >
-                <Check size={16} />
-                อนุมัติยอดโอน
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 2: CUSTOMER CONTACT DETAILS --- */}
+      {/* --- MODAL: CUSTOMER CONTACT DETAILS --- */}
       {activeContactUser && (
         <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">
           <div className="dashboard-modal-content" style={{ width: '450px' }}>

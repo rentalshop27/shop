@@ -424,9 +424,6 @@ export function RentalsPage({
     return `${start} to ${end}`
   }
 
-  // Fallback Red/Midnight Dress Image if none
-  const sampleDressImage = 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=300&q=80'
-
   return (
     <>
       <header className="page-header">
@@ -599,24 +596,53 @@ export function RentalsPage({
             <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
               <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการออเดอร์และวงจรสินค้า</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {selectedRental.rentals.map((r) => (
-                  <div
-                    key={r.id}
-                    style={{
-                      display: 'flex',
-                      gap: '16px',
-                      background: 'var(--bg-input)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <img
-                      src={sampleDressImage}
-                      alt={r.costume.productName}
-                      style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }}
-                    />
+                {selectedRental.rentals.map((r) => {
+                  const costumeImageUrl = r.costume.imageUrls.find((url) => url.trim().length > 0)
+
+                  return (
+                    <div
+                      key={r.id}
+                      style={{
+                        display: 'flex',
+                        gap: '16px',
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        alignItems: 'center'
+                      }}
+                    >
+                    {costumeImageUrl ? (
+                      <img
+                        src={costumeImageUrl}
+                        alt={r.costume.productName}
+                        style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        aria-label="ยังไม่มีรูปสินค้า"
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          color: 'var(--text-muted)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          flexShrink: 0,
+                          fontSize: '10px',
+                          textAlign: 'center',
+                          lineHeight: 1.2
+                        }}
+                      >
+                        <Shirt size={16} />
+                        <span>ไม่มีรูป</span>
+                      </div>
+                    )}
                     <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
                         {r.costume.productName}
@@ -647,7 +673,8 @@ export function RentalsPage({
                       )}
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </section>
 
