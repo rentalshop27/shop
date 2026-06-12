@@ -3,13 +3,21 @@ import {
   BadgeCheck,
   CalendarCheck,
   Check,
-  DollarSign,
   ExternalLink,
   MessageCircle,
   Phone,
   Shirt,
   ShieldAlert,
-  X
+  X,
+  Clock,
+  FileText,
+  Wallet,
+  UserRound,
+  ChevronRight,
+  ClipboardList,
+  CreditCard,
+  ShoppingBag,
+  Undo2
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
 
@@ -114,7 +122,24 @@ export function DashboardPage({
     })
 
   // Bank slips state
-  const [slips, setSlips] = useState<BankSlip[]>([])
+  const [slips, setSlips] = useState<BankSlip[]>([
+    {
+      id: 'slip-1',
+      customerName: 'คุณมนัสวี ใสสว่าง',
+      amount: 1500,
+      time: '19:30 น.',
+      slipUrl: 'https://images.unsplash.com/photo-1616077168079-7e09a677fb2c?w=400&auto=format&fit=crop&q=60',
+      refNo: 'REF-889210293'
+    },
+    {
+      id: 'slip-2',
+      customerName: 'คุณณิชารีย์ ศรีสุข',
+      amount: 2400,
+      time: '19:15 น.',
+      slipUrl: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=400&auto=format&fit=crop&q=60',
+      refNo: 'REF-901428371'
+    }
+  ])
 
   // Modals management
   const [activeSlipToReview, setActiveSlipToReview] = useState<BankSlip | null>(null)
@@ -155,11 +180,13 @@ export function DashboardPage({
     <>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Precious Shop</p>
+          <p className="eyebrow">PRECIOUS SHOP</p>
           <h1>หน้าแดชบอร์ด</h1>
           <p className="subtitle">ภาพรวมร้านเช่าชุด ข้อมูลการเงิน และงานที่รอดำเนินการประจำวัน</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        
+        {/* Desktop Header Actions */}
+        <div className="header-action-group desktop-only-actions" style={{ display: 'flex', gap: '12px' }}>
           <button
             className="secondary-button"
             type="button"
@@ -179,6 +206,32 @@ export function DashboardPage({
             หน้าเช่า/คืน
           </button>
         </div>
+
+        {/* Mobile Header Actions */}
+        <div className="mobile-only-actions-grid">
+          <button
+            className="mobile-action-card-btn customer-btn"
+            type="button"
+            onClick={onNavigateToCustomers}
+          >
+            <span className="btn-left-content">
+              <UserRound className="btn-icon" size={20} />
+              <span>จัดการลูกค้า</span>
+            </span>
+            <ChevronRight className="btn-chevron" size={16} />
+          </button>
+          <button
+            className="mobile-action-card-btn rental-btn"
+            type="button"
+            onClick={onNavigateToRentals}
+          >
+            <span className="btn-left-content">
+              <CalendarCheck className="btn-icon" size={20} />
+              <span>หน้าเช่า/คืน</span>
+            </span>
+            <ChevronRight className="btn-chevron" size={16} />
+          </button>
+        </div>
       </header>
 
       {/* --- TOP SUMMARY STATS WIDGETS --- */}
@@ -195,6 +248,9 @@ export function DashboardPage({
               }
             }}
           >
+            <div className="dashboard-card-icon purple-theme">
+              <Clock size={20} />
+            </div>
             <span className="dashboard-card-label">รายการคืนเกินกำหนด</span>
             <span className={`dashboard-card-value ${overdues.length > 0 ? 'danger-color' : ''}`}>
               {overdues.length}
@@ -215,6 +271,9 @@ export function DashboardPage({
               }
             }}
           >
+            <div className="dashboard-card-icon yellow-theme">
+              <FileText size={20} />
+            </div>
             <span className="dashboard-card-label">สลิปที่รอตรวจสอบ</span>
             <span className={`dashboard-card-value ${slips.length > 0 ? 'warning-color' : ''}`}>
               {slips.length}
@@ -230,23 +289,86 @@ export function DashboardPage({
         <div className="dashboard-group-panel premium-gradient-bg">
           {/* Card 3: Total Cumulative Revenue */}
           <div className="dashboard-card gradient-card">
+            <div className="dashboard-card-icon green-theme">
+              <Wallet size={20} />
+            </div>
             <span className="dashboard-card-label">รายได้สะสมทั้งหมด</span>
             <span className="dashboard-card-value">
-              ฿{totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+              ฿{Math.round(totalRevenue).toLocaleString('th-TH')}
             </span>
-            <span className="dashboard-card-subtext">ยอดเงินที่อนุมัติแล้ว</span>
-            <div className="dashboard-card-icon">
-              <DollarSign size={20} />
-            </div>
+            <span className="dashboard-card-subtext">ยอดรวมรายได้ทั้งหมด</span>
           </div>
 
           {/* Card 4: Currently Rented Sets */}
           <div className="dashboard-card gradient-card">
-            <span className="dashboard-card-label">กำลังเช่าอยู่ขณะนี้</span>
-            <span className="dashboard-card-value">{currentlyRented} ชุด</span>
-            <span className="dashboard-card-subtext">ออกจากร้านไปแล้ว</span>
             <div className="dashboard-card-icon blue-theme">
               <Shirt size={20} />
+            </div>
+            <span className="dashboard-card-label">กำลังเช่าอยู่ขณะนี้</span>
+            <span className="dashboard-card-value">{currentlyRented}</span>
+            <span className="dashboard-card-subtext">ชุดที่อยู่ระหว่างการเช่า</span>
+          </div>
+        </div>
+      </section>
+
+      {/* --- MOBILE ONLY: งานวันนี้ (Today's Tasks Summary) --- */}
+      <section className="mobile-only-today-tasks">
+        <div className="section-header">
+          <div className="section-title">
+            <ClipboardList className="section-header-icon" size={20} />
+            <h2>งานวันนี้</h2>
+          </div>
+          <button onClick={onNavigateToRentals} className="view-all-link">
+            ดูทั้งหมด <ChevronRight size={14} style={{ marginLeft: '2px' }} />
+          </button>
+        </div>
+
+        <div className="task-list">
+          <div className="task-item" onClick={() => { if (slips.length > 0) setActiveSlipToReview(slips[0]) }}>
+            <div className="task-item-left">
+              <div className="task-icon-wrapper purple">
+                <CreditCard size={18} />
+              </div>
+              <div className="task-info">
+                <span className="task-title">รอรับชำระเงิน</span>
+                <span className="task-subtext">ลูกค้า <span className="highlight-count">{slips.length}</span> รายการ</span>
+              </div>
+            </div>
+            <div className="task-item-right">
+              <span className="task-count purple">{slips.length}</span>
+              <ChevronRight size={16} className="chevron-icon" />
+            </div>
+          </div>
+
+          <div className="task-item" onClick={onNavigateToRentals}>
+            <div className="task-item-left">
+              <div className="task-icon-wrapper yellow">
+                <ShoppingBag size={18} />
+              </div>
+              <div className="task-info">
+                <span className="task-title">นัดรับชุดวันนี้</span>
+                <span className="task-subtext">ลูกค้า <span className="highlight-count">{pickups.filter((p) => p.status === 'pending').length}</span> รายการ</span>
+              </div>
+            </div>
+            <div className="task-item-right">
+              <span className="task-count yellow">{pickups.filter((p) => p.status === 'pending').length}</span>
+              <ChevronRight size={16} className="chevron-icon" />
+            </div>
+          </div>
+
+          <div className="task-item" onClick={onNavigateToRentals}>
+            <div className="task-item-left">
+              <div className="task-icon-wrapper blue">
+                <Undo2 size={18} />
+              </div>
+              <div className="task-info">
+                <span className="task-title">คืนชุดวันนี้</span>
+                <span className="task-subtext">ลูกค้า <span className="highlight-count">{returns.filter((r) => r.status === 'waiting').length}</span> รายการ</span>
+              </div>
+            </div>
+            <div className="task-item-right">
+              <span className="task-count blue">{returns.filter((r) => r.status === 'waiting').length}</span>
+              <ChevronRight size={16} className="chevron-icon" />
             </div>
           </div>
         </div>

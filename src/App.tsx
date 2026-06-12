@@ -28,6 +28,7 @@ import {
   UserRound,
   X,
   History,
+  Shirt,
 } from 'lucide-react'
 import './index.css'
 import { DashboardPage } from './features/dashboard/DashboardPage'
@@ -1453,6 +1454,30 @@ function App() {
 
   return (
     <div className="app-layout">
+      <div className="mobile-top-bar">
+        <div className="mobile-brand-logo">
+          <img src="/web-logo.png" alt="Precious Rental" />
+        </div>
+        <div className="mobile-top-actions">
+          <button
+            className={`mobile-action-btn ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => handleTabChange('settings')}
+            title="ตั้งค่า"
+            type="button"
+          >
+            <Settings size={20} />
+          </button>
+          <button
+            className={`mobile-action-btn ${activeTab === 'audit' ? 'active' : ''}`}
+            onClick={() => handleTabChange('audit')}
+            title="ประวัติระบบ"
+            type="button"
+          >
+            <History size={20} />
+          </button>
+        </div>
+      </div>
+
       <SideNav activeTab={activeTab} onTabChange={handleTabChange} />
       <main className="app-shell">
         {activeTab === 'dashboard' && (
@@ -1875,6 +1900,48 @@ function App() {
         )}
       </main>
       <UpdatePrompt />
+      <nav className="mobile-bottom-nav">
+        <button
+          className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => handleTabChange('dashboard')}
+          type="button"
+        >
+          <LayoutGrid size={20} />
+          <span>แดชบอร์ด</span>
+        </button>
+        <button
+          className={`mobile-nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+          onClick={() => handleTabChange('inventory')}
+          type="button"
+        >
+          <Shirt size={20} />
+          <span>คลังชุด</span>
+        </button>
+        <button
+          className={`mobile-nav-item ${activeTab === 'rentals' ? 'active' : ''}`}
+          onClick={() => handleTabChange('rentals')}
+          type="button"
+        >
+          <FileText size={20} />
+          <span>การเช่า</span>
+        </button>
+        <button
+          className={`mobile-nav-item ${activeTab === 'customers' ? 'active' : ''}`}
+          onClick={() => handleTabChange('customers')}
+          type="button"
+        >
+          <UserRound size={20} />
+          <span>ลูกค้า</span>
+        </button>
+        <button
+          className={`mobile-nav-item ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => handleTabChange('calendar')}
+          type="button"
+        >
+          <CalendarDays size={20} />
+          <span>ปฏิทิน</span>
+        </button>
+      </nav>
     </div>
   )
 }
