@@ -40,7 +40,27 @@ export async function createRemoteRental(
   shopId: string,
   rental: RentalOrder,
 ): Promise<void> {
-  const { error } = await supabase.from('rentals').insert({
+  const { error } = await supabase.from('rentals').insert(toRentalInsert(shopId, rental))
+
+  if (error) throw error
+}
+
+export async function createRemoteRentals(
+  supabase: SupabaseClient,
+  shopId: string,
+  rentals: RentalOrder[],
+): Promise<void> {
+  if (rentals.length === 0) return
+
+  const { error } = await supabase
+    .from('rentals')
+    .insert(rentals.map((rental) => toRentalInsert(shopId, rental)))
+
+  if (error) throw error
+}
+
+function toRentalInsert(shopId: string, rental: RentalOrder) {
+  return {
     id: rental.id,
     shop_id: shopId,
     order_code: rental.orderCode,
@@ -55,9 +75,7 @@ export async function createRemoteRental(
     notes: rental.notes ?? '',
     created_at: rental.createdAt,
     updated_at: rental.updatedAt,
-  })
-
-  if (error) throw error
+  }
 }
 
 export async function updateRemoteRentalStatus(

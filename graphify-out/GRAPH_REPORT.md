@@ -1,16 +1,16 @@
 # Graph Report - Precious Shop  (2026-06-12)
 
 ## Corpus Check
-- 30 files · ~65,090 words
+- 30 files · ~65,205 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 442 nodes · 691 edges · 32 communities (21 shown, 11 thin omitted)
+- 445 nodes · 698 edges · 32 communities (22 shown, 10 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `08f64c38`
+- Built from commit: `d824a39a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -59,6 +59,8 @@
 10. `normalizeHandler()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `handleCreateRentals()` --calls--> `createRemoteRental()`  [EXTRACTED]
+  src/App.tsx → src/features/rentals/rentalRemote.ts
 - `handleSaveCustomer()` --calls--> `setIsFormOpen()`  [EXTRACTED]
   src/App.tsx → src/features/rentals/RentalsPage.tsx
 - `handleSaveStockItem()` --calls--> `updateRemoteStockItem()`  [EXTRACTED]
@@ -67,10 +69,8 @@
   src/App.tsx → src/features/inventory/stockRemote.ts
 - `refreshCustomerDocumentUrls()` --calls--> `loadCustomers()`  [EXTRACTED]
   src/App.tsx → src/features/customers/customerRemote.ts
-- `refreshAuditLogs()` --calls--> `loadAuditLogs()`  [EXTRACTED]
-  src/App.tsx → src/features/audit/auditRemote.ts
 
-## Communities (32 total, 11 thin omitted)
+## Communities (32 total, 10 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
@@ -78,27 +78,27 @@ Nodes (59): activeCustomers, [activeTab, setActiveTab], [auditLogs, setAuditLogs
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
-Nodes (34): [collectedAmount, setCollectedAmount], costumeContainerRef, [costumeSearch, setCostumeSearch], [currentPage, setCurrentPage], customerContainerRef, [customerSearch, setCustomerSearch], [depositAmount, setDepositAmount], filteredCostumesSuggestions (+26 more)
+Nodes (35): [collectedAmount, setCollectedAmount], costumeContainerRef, [costumeSearch, setCostumeSearch], [currentPage, setCurrentPage], customerContainerRef, [customerSearch, setCustomerSearch], [depositAmount, setDepositAmount], filteredCostumesSuggestions (+27 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.1
 Nodes (32): createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemoteCustomerDocuments(), loadCustomers(), loadOwnerShopId(), mapCustomerRow(), parseOptionalNumber() (+24 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.15
-Nodes (7): getFriendlyURL(), isArray(), isInstance(), PrecacheStrategy, Strategy, StrategyHandler, toRequest()
+Cohesion: 0.08
+Nodes (21): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], OverdueRental, overdues, pickups (+13 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.07
 Nodes (25): calendarDays, CalendarPageProps, [currentDate, setCurrentDate], currentWeekDays, filteredOngoing, filteredPickups, filteredReturns, filteredTimelineRentals (+17 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.08
-Nodes (23): additionalURLs, cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanURL, copyResponse() (+15 more)
+Cohesion: 0.16
+Nodes (7): executeQuotaErrorCallbacks(), getFriendlyURL(), PrecacheStrategy, Strategy, StrategyHandler, timeout(), toRequest()
 
 ### Community 6 - "Community 6"
-Cohesion: 0.09
-Nodes (19): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], OverdueRental, overdues, pickups (+11 more)
+Cohesion: 0.08
+Nodes (21): additionalURLs, cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanURL, copyResponse() (+13 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.09
@@ -117,10 +117,14 @@ Cohesion: 0.2
 Nodes (14): archiveRemoteCustomer(), updateRemoteCustomerRisk(), updateRemoteCustomerStatus(), updateShopSettings(), archiveSelectedCustomer(), getErrorMessage(), handleAddBrand(), handleAddCategory() (+6 more)
 
 ### Community 11 - "Community 11"
+Cohesion: 0.27
+Nodes (5): hasMethod(), isOneOf(), isType(), normalizeHandler(), Route
+
+### Community 12 - "Community 12"
 Cohesion: 0.36
 Nodes (9): cleanupUnusedImages(), createRemoteStockItem(), dataURLtoFile(), getPathFromUrl(), loadShopSettings(), mapStockItemRow(), StockItemRow, updateRemoteStockItem() (+1 more)
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.2
 Nodes (9): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+1 more)
 
@@ -130,11 +134,7 @@ Nodes (9): countRemoteRentalsForStockSku(), deleteRemoteStockItem(), loadStockIt
 
 ### Community 15 - "Community 15"
 Cohesion: 0.22
-Nodes (9): loadAuditLogs(), createRemoteRental(), deleteRemoteRental(), updateRemoteRentalStatus(), handleCreateRentals(), handleDeleteRental(), handleLoadAuditLogs(), handleUpdateRentalStatus() (+1 more)
-
-### Community 16 - "Community 16"
-Cohesion: 0.36
-Nodes (5): hasMethod(), isOneOf(), isType(), normalizeHandler(), Route
+Nodes (9): loadAuditLogs(), createRemoteRentals(), deleteRemoteRental(), updateRemoteRentalStatus(), handleCreateRentals(), handleDeleteRental(), handleLoadAuditLogs(), handleUpdateRentalStatus() (+1 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.4
@@ -144,23 +144,27 @@ Nodes (6): addRoute(), createHandlerBoundToURL(), getOrCreatePrecacheController(
 Cohesion: 0.4
 Nodes (5): exports, registry, require(), singleRequire(), specialDeps
 
-### Community 20 - "Community 20"
+### Community 19 - "Community 19"
+Cohesion: 0.4
+Nodes (3): isArray(), isArrayOfClass(), NavigationRoute
+
+### Community 21 - "Community 21"
 Cohesion: 0.5
 Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
 ## Knowledge Gaps
 - **181 isolated node(s):** `logger`, `messages`, `finalAssertExports`, `validMethods`, `_cacheNameDetails` (+176 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PrecacheController` connect `Community 9` to `Community 5`?**
+- **Why does `PrecacheController` connect `Community 9` to `Community 6`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `StrategyHandler` connect `Community 3` to `Community 9`, `Community 5`?**
+- **Why does `StrategyHandler` connect `Community 5` to `Community 9`, `Community 20`, `Community 6`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
-- **Why does `RentalOrder` connect `Community 6` to `Community 0`, `Community 1`, `Community 4`?**
+- **Why does `RentalOrder` connect `Community 3` to `Community 0`, `Community 1`, `Community 4`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `logger`, `messages`, `finalAssertExports` to the rest of the system?**
   _181 weakly-connected nodes found - possible documentation gaps or missing edges._

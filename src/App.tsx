@@ -39,10 +39,8 @@ import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
 import {
-  createRemoteRental,
-  deleteRemoteRental,
+  createRemoteRentals,
   loadRentals,
-  updateRemoteRentalStatus,
 } from './features/rentals/rentalRemote'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
 import { demoCustomers } from './features/customers/customerSeed'
@@ -466,45 +464,55 @@ function App() {
     localStorage.setItem('precious_rentals', JSON.stringify(rentals))
   }, [rentals])
 
-  async function handleCreateRental(draftVal: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>) {
+  async function handleCreateRentals(drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]): Promise<boolean> {
+    if (drafts.length === 0) return false
+
     const maxOrderCode = rentals.reduce((max, r) => {
       const match = r.orderCode.match(/PR-ORD-(\d+)/)
       return match ? Math.max(max, Number(match[1])) : max
     }, 100)
 
-    const nextCode = `PR-ORD-${maxOrderCode + 1}`
     const now = new Date().toISOString()
-
-    const newRental: RentalOrder = {
-      ...draftVal,
+    const nextCode = `PR-ORD-${maxOrderCode + 1}`
+    const newRentals: RentalOrder[] = drafts.map((draft) => ({
+      ...draft,
       id: crypto.randomUUID(),
       orderCode: nextCode,
       createdAt: now,
       updatedAt: now
-    }
+    }))
 
     if (supabase && isAuthenticated) {
       if (!shopId) {
         window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
-        return
+        return false
       }
 
       try {
-        await createRemoteRental(supabase, shopId, newRental)
+        await createRemoteRentals(supabase, shopId, newRentals)
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
-        return
+        return false
       }
     }
 
-    setRentals((current) => [newRental, ...current])
+    setRentals((current) => [...newRentals, ...current])
+    return true
   }
 
-  async function handleUpdateRentalStatus(rentalId: string, status: RentalStatus) {
+  async function handleUpdateRentalStatus(rentalIdOrIds: string | string[], status: RentalStatus) {
+    const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
+    if (ids.length === 0) return
+
     if (supabase && isAuthenticated) {
       try {
-        await updateRemoteRentalStatus(supabase, rentalId, status)
+        const { error } = await supabase
+          .from('rentals')
+          .update({ status, updated_at: new Date().toISOString() })
+          .in('id', ids)
+
+        if (error) throw error
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
@@ -514,17 +522,25 @@ function App() {
 
     setRentals((current) =>
       current.map((r) =>
-        r.id === rentalId
+        ids.includes(r.id)
           ? { ...r, status, updatedAt: new Date().toISOString() }
           : r
       )
     )
   }
 
-  async function handleDeleteRental(rentalId: string) {
+  async function handleDeleteRental(rentalIdOrIds: string | string[]) {
+    const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
+    if (ids.length === 0) return
+
     if (supabase && isAuthenticated) {
       try {
-        await deleteRemoteRental(supabase, rentalId)
+        const { error } = await supabase
+          .from('rentals')
+          .delete()
+          .in('id', ids)
+
+        if (error) throw error
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
@@ -532,7 +548,7 @@ function App() {
       }
     }
 
-    setRentals((current) => current.filter((r) => r.id !== rentalId))
+    setRentals((current) => current.filter((r) => !ids.includes(r.id)))
   }
   const [formError, setFormError] = useState('')
   const [stockFormError, setStockFormError] = useState('')
@@ -1453,7 +1469,7 @@ function App() {
             rentals={rentals}
             customers={customers}
             stockItems={stockItems}
-            onCreateRental={handleCreateRental}
+            onCreateRentals={handleCreateRentals}
             onUpdateRentalStatus={handleUpdateRentalStatus}
             onDeleteRental={handleDeleteRental}
             externalSelectedRentalId={externalSelectedRentalId}

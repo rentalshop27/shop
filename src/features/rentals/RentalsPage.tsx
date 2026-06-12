@@ -1,11 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Search,
   Plus,
   ChevronRight,
   ChevronLeft,
   Shirt,
-  Trash2
+  Trash2,
+  ChevronDown,
+  X
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
@@ -15,9 +17,9 @@ interface RentalsPageProps {
   rentals: RentalOrder[]
   customers: Customer[]
   stockItems: StockItem[]
-  onCreateRental: (draft: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>) => void
-  onUpdateRentalStatus: (rentalId: string, status: RentalStatus) => void
-  onDeleteRental?: (rentalId: string) => void
+  onCreateRentals: (drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]) => boolean | Promise<boolean>
+  onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus) => void
+  onDeleteRental?: (rentalId: string | string[]) => void
 
   // Optional external controls
   externalSelectedRentalId?: string
@@ -33,7 +35,7 @@ export function RentalsPage({
   rentals,
   customers,
   stockItems,
-  onCreateRental,
+  onCreateRentals,
   onUpdateRentalStatus,
   onDeleteRental,
 
@@ -69,7 +71,7 @@ export function RentalsPage({
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
 
   const [costumeSearch, setCostumeSearch] = useState('')
-  const [selectedCostume, setSelectedCostume] = useState<StockItem | null>(null)
+  const [selectedCostumes, setSelectedCostumes] = useState<StockItem[]>([])
   const [showCostumeDropdown, setShowCostumeDropdown] = useState(false)
 
   const [pickupDate, setPickupDate] = useState('')
@@ -89,6 +91,26 @@ export function RentalsPage({
       setLocalIsFormOpen(open)
     }
   }
+
+  // Refs for click outside handling
+  const customerContainerRef = useRef<HTMLDivElement>(null)
+  const costumeContainerRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (customerContainerRef.current && !customerContainerRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false)
+      }
+      if (costumeContainerRef.current && !costumeContainerRef.current.contains(event.target as Node)) {
+        setShowCostumeDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Effect to prefill dates when form opens externally
   useEffect(() => {
@@ -111,37 +133,54 @@ export function RentalsPage({
   // Autocomplete Suggestions
   const filteredCustomersSuggestions = useMemo(() => {
     const query = customerSearch.trim().toLowerCase()
-    if (!query) return []
-    return customers.filter(
+    const activeCustomers = customers.filter((c) => !c.archivedAt)
+    const isSelectedMatch = selectedCustomer && query === `${selectedCustomer.fullName} (${selectedCustomer.customerCode})`.toLowerCase()
+    
+    if (!query || isSelectedMatch) {
+      return activeCustomers
+    }
+    
+    return activeCustomers.filter(
       (c) =>
         c.fullName.toLowerCase().includes(query) ||
         c.customerCode.toLowerCase().includes(query) ||
         c.phone.includes(query)
     )
-  }, [customers, customerSearch])
+  }, [customers, customerSearch, selectedCustomer])
 
   const filteredCostumesSuggestions = useMemo(() => {
     const query = costumeSearch.trim().toLowerCase()
-    if (!query) return []
-    return stockItems.filter(
+    
+    // Filter out costumes that are already selected
+    const unselectedCostumes = stockItems.filter(
+      (item) => !selectedCostumes.some((selected) => selected.id === item.id)
+    )
+
+    if (!query) {
+      return unselectedCostumes
+    }
+    
+    return unselectedCostumes.filter(
       (item) =>
         item.productName.toLowerCase().includes(query) ||
         item.sku.toLowerCase().includes(query)
     )
-  }, [stockItems, costumeSearch])
+  }, [stockItems, costumeSearch, selectedCostumes])
 
-  // Sync pricing when costume is selected
+  // Sync pricing when costumes are selected
   useEffect(() => {
-    if (selectedCostume) {
-      setRentalPrice(selectedCostume.rentalPricePerDay.toString())
-      setDepositAmount(selectedCostume.depositAmount.toString())
-      setCollectedAmount((selectedCostume.rentalPricePerDay + selectedCostume.depositAmount).toString())
+    if (selectedCostumes.length > 0) {
+      const totalRentalPrice = selectedCostumes.reduce((sum, item) => sum + item.rentalPricePerDay, 0)
+      const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
+      setRentalPrice(totalRentalPrice.toString())
+      setDepositAmount(totalDeposit.toString())
+      setCollectedAmount((totalRentalPrice + totalDeposit).toString())
     } else {
       setRentalPrice('')
       setDepositAmount('')
       setCollectedAmount('')
     }
-  }, [selectedCostume])
+  }, [selectedCostumes])
 
   // Recalculate default collected amount if price or deposit changes
   const handlePriceOrDepositChange = (priceVal: string, depVal: string) => {
@@ -150,40 +189,111 @@ export function RentalsPage({
     setCollectedAmount((p + d).toString())
   }
 
-  // Filter rentals list
-  const filteredRentals = useMemo(() => {
+  const splitAmountByWeights = (total: number, weights: number[]) => {
+    if (weights.length === 0) return []
+
+    const safeTotal = Number.isFinite(total) ? total : 0
+    const positiveWeightTotal = weights.reduce((sum, weight) => sum + Math.max(weight, 0), 0)
+    let assignedTotal = 0
+
+    return weights.map((weight, index) => {
+      if (index === weights.length - 1) {
+        return Number((safeTotal - assignedTotal).toFixed(2))
+      }
+
+      const share = positiveWeightTotal > 0
+        ? (Math.max(weight, 0) / positiveWeightTotal) * safeTotal
+        : safeTotal / weights.length
+      const roundedShare = Number(share.toFixed(2))
+      assignedTotal += roundedShare
+      return roundedShare
+    })
+  }
+
+  // Helper to get status of grouped rentals based on priority: overdue > active > booked > returned
+  const getGroupStatus = (groupItems: RentalOrder[]): RentalStatus => {
+    if (groupItems.some((r) => r.status === 'overdue')) return 'overdue'
+    if (groupItems.some((r) => r.status === 'active')) return 'active'
+    if (groupItems.some((r) => r.status === 'booked')) return 'booked'
+    return 'returned'
+  }
+
+  // Group all rentals by orderCode
+  const groupedRentals = useMemo(() => {
+    const groups: Record<string, RentalOrder[]> = {}
+    rentals.forEach((r) => {
+      if (!groups[r.orderCode]) {
+        groups[r.orderCode] = []
+      }
+      groups[r.orderCode].push(r)
+    })
+
+    return Object.keys(groups).map((orderCode) => {
+      const groupItems = groups[orderCode]
+      const first = groupItems[0]
+      const totalPrice = groupItems.reduce((sum, r) => sum + r.rentalPrice, 0)
+      const totalDeposit = groupItems.reduce((sum, r) => sum + r.depositAmount, 0)
+      const totalCollected = groupItems.reduce((sum, r) => sum + r.collectedAmount, 0)
+      const groupStatus = getGroupStatus(groupItems)
+      const notes = groupItems.map((r) => r.notes).filter(Boolean).join('\n')
+
+      return {
+        id: first.id, // For backward compatibility
+        orderCode,
+        customer: first.customer,
+        pickupDate: first.pickupDate,
+        returnDate: first.returnDate,
+        rentalPrice: totalPrice, // Sum for compatibility with list display
+        depositAmount: totalDeposit, // Sum for compatibility with list display
+        collectedAmount: totalCollected, // Sum for compatibility with list display
+        status: groupStatus,
+        notes,
+        createdAt: first.createdAt,
+        updatedAt: first.updatedAt,
+        rentals: groupItems
+      }
+    })
+  }, [rentals])
+
+  // Filter grouped rentals list
+  const filteredGroupedRentals = useMemo(() => {
     const query = orderQuery.trim().toLowerCase()
-    return rentals.filter((rental) => {
-      const matchesStatus = statusFilter === 'all' || rental.status === statusFilter
+    return groupedRentals.filter((group) => {
+      const matchesStatus = statusFilter === 'all' || group.status === statusFilter
+      
+      const costumeSearchable = group.rentals.map((r) => `${r.costume.productName} ${r.costume.sku}`).join(' ')
       const searchable = [
-        rental.orderCode,
-        rental.customer.fullName,
-        rental.customer.customerCode,
-        rental.costume.productName,
-        rental.costume.sku
+        group.orderCode,
+        group.customer.fullName,
+        group.customer.customerCode,
+        costumeSearchable
       ]
         .join(' ')
         .toLowerCase()
       
       return matchesStatus && (!query || searchable.includes(query))
     })
-  }, [rentals, orderQuery, statusFilter])
+  }, [groupedRentals, orderQuery, statusFilter])
 
   // Paginated rentals
   const paginatedRentals = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize
-    return filteredRentals.slice(startIndex, startIndex + pageSize)
-  }, [filteredRentals, currentPage, pageSize])
+    return filteredGroupedRentals.slice(startIndex, startIndex + pageSize)
+  }, [filteredGroupedRentals, currentPage, pageSize])
 
-  const totalPages = Math.ceil(filteredRentals.length / pageSize) || 1
+  const totalPages = Math.ceil(filteredGroupedRentals.length / pageSize) || 1
 
-  // Set default selected rental
+  // Set default selected rental group (represented as selectedRental for compatibility)
   const selectedRental = useMemo(() => {
-    return rentals.find((r) => r.id === selectedRentalId) ?? filteredRentals[0] ?? rentals[0]
-  }, [rentals, selectedRentalId, filteredRentals])
+    let group = groupedRentals.find((g) => g.orderCode === selectedRentalId)
+    if (!group) {
+      group = groupedRentals.find((g) => g.rentals.some((r) => r.id === selectedRentalId))
+    }
+    return group ?? filteredGroupedRentals[0] ?? groupedRentals[0]
+  }, [groupedRentals, selectedRentalId, filteredGroupedRentals])
 
   // Handle Form Submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
 
@@ -191,8 +301,8 @@ export function RentalsPage({
       setFormError('กรุณาเลือกผู้เช่า')
       return
     }
-    if (!selectedCostume) {
-      setFormError('กรุณาเลือกแบบชุด')
+    if (selectedCostumes.length === 0) {
+      setFormError('กรุณาเลือกแบบชุดอย่างน้อย 1 ชุด')
       return
     }
     if (!pickupDate) {
@@ -210,24 +320,39 @@ export function RentalsPage({
 
     const price = parseFloat(rentalPrice) || 0
     const deposit = parseFloat(depositAmount) || 0
-    const collected = parseFloat(collectedAmount) || (price + deposit)
+    const collected = parseFloat(collectedAmount)
+    const collectedTotal = Number.isFinite(collected) ? collected : price + deposit
 
-    onCreateRental({
-      customer: selectedCustomer,
-      costume: selectedCostume,
-      pickupDate,
-      returnDate,
-      rentalPrice: price,
-      depositAmount: deposit,
-      collectedAmount: collected,
-      status: 'booked',
-      notes
+    const priceShares = splitAmountByWeights(price, selectedCostumes.map((item) => item.rentalPricePerDay))
+    const depositShares = splitAmountByWeights(deposit, selectedCostumes.map((item) => item.depositAmount))
+    const collectedShares = splitAmountByWeights(
+      collectedTotal,
+      selectedCostumes.map((item) => item.rentalPricePerDay + item.depositAmount)
+    )
+
+    const drafts = selectedCostumes.map((item, index) => {
+      return {
+        customer: selectedCustomer,
+        costume: item,
+        pickupDate,
+        returnDate,
+        rentalPrice: priceShares[index],
+        depositAmount: depositShares[index],
+        collectedAmount: collectedShares[index],
+        status: 'booked' as RentalStatus,
+        notes
+      }
     })
+
+    const saved = await onCreateRentals(drafts)
+    if (!saved) {
+      return
+    }
 
     // Reset Form
     setSelectedCustomer(null)
     setCustomerSearch('')
-    setSelectedCostume(null)
+    setSelectedCostumes([])
     setCostumeSearch('')
     setPickupDate('')
     setReturnDate('')
@@ -318,11 +443,11 @@ export function RentalsPage({
 
             {paginatedRentals.map((rental) => (
               <button
-                className={`table-row table-button ${rental.id === selectedRental?.id ? 'selected' : ''}`}
-                key={rental.id}
+                className={`table-row table-button ${rental.orderCode === selectedRental?.orderCode ? 'selected' : ''}`}
+                key={rental.orderCode}
                 role="row"
                 type="button"
-                onClick={() => setSelectedRentalId(rental.id)}
+                onClick={() => setSelectedRentalId(rental.orderCode)}
                 style={{ gridTemplateColumns: '105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}
               >
                 <strong>{rental.orderCode}</strong>
@@ -429,50 +554,54 @@ export function RentalsPage({
               </div>
             </section>
 
-            {/* Costume Detail Item */}
+            {/* Costume Detail Items */}
             <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
               <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการออเดอร์และวงจรสินค้า</h3>
-              <div style={{ display: 'flex', gap: '16px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', alignItems: 'center' }}>
-                <img
-                  src={sampleDressImage}
-                  alt={selectedRental.costume.productName}
-                  style={{ width: '70px', height: '70px', objectFit: 'cover', borderRadius: '8px' }}
-                />
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#fff' }}>
-                    {selectedRental.costume.productName}
-                  </h4>
-                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    รหัส: {selectedRental.costume.sku} | <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4169e1' }}></span>
-                      {selectedRental.costume.primaryColor}
-                    </span>
-                  </p>
-                  <div style={{ marginTop: '8px' }}>
-                    {selectedRental.status === 'booked' && (
-                      <span className="status-pill warning" style={{ fontSize: '11px', padding: '4px 8px' }}>สถานะ รอส่งมอบ</span>
-                    )}
-                    {selectedRental.status === 'active' && (
-                      <span className="status-pill success" style={{ fontSize: '11px', padding: '4px 8px', background: 'rgba(218, 165, 32, 0.15)', color: '#ead483' }}>สถานะ ใช้งานอยู่</span>
-                    )}
-                    {selectedRental.status === 'returned' && (
-                      <span className="status-pill success" style={{ fontSize: '11px', padding: '4px 8px' }}>สถานะ ส่งคืนแล้ว</span>
-                    )}
-                    {selectedRental.status === 'overdue' && (
-                      <span className="status-pill danger" style={{ fontSize: '11px', padding: '4px 8px' }}>สถานะ เกินกำหนด</span>
-                    )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {selectedRental.rentals.map((r) => (
+                  <div
+                    key={r.id}
+                    style={{
+                      display: 'flex',
+                      gap: '16px',
+                      background: 'var(--bg-input)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <img
+                      src={sampleDressImage}
+                      alt={r.costume.productName}
+                      style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                        {r.costume.productName}
+                      </h4>
+                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        รหัส: {r.costume.sku} | <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4169e1' }}></span>
+                          {r.costume.primaryColor}
+                        </span>
+                      </p>
+                      <div style={{ marginTop: '6px' }}>
+                        {getStatusBadge(r.status)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
+                        {formatBaht(r.rentalPrice)}
+                      </strong>
+                      {r.depositAmount > 0 && (
+                        <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                          ประกัน: {formatBaht(r.depositAmount)}
+                        </small>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <strong style={{ fontSize: '18px', color: 'var(--text-gold)', display: 'block' }}>
-                    {formatBaht(selectedRental.rentalPrice)}
-                  </strong>
-                  {selectedRental.depositAmount > 0 && (
-                    <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                      ประกัน: {formatBaht(selectedRental.depositAmount)}
-                    </small>
-                  )}
-                </div>
+                ))}
               </div>
             </section>
 
@@ -485,7 +614,7 @@ export function RentalsPage({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => onUpdateRentalStatus(selectedRental.id, 'active')}
+                    onClick={() => onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), 'active')}
                     style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
                   >
                     ส่งมอบชุด (ขนส่ง)
@@ -495,7 +624,7 @@ export function RentalsPage({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => onUpdateRentalStatus(selectedRental.id, 'returned')}
+                    onClick={() => onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), 'returned')}
                     style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
                   >
                     รับคืนชุด (รับคืน)
@@ -517,7 +646,7 @@ export function RentalsPage({
                       overdue: 'returned',
                       returned: 'booked'
                     }
-                    onUpdateRentalStatus(selectedRental.id, nextStatusMap[selectedRental.status])
+                    onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), nextStatusMap[selectedRental.status])
                   }}
                   style={{ fontSize: '14px' }}
                 >
@@ -531,7 +660,7 @@ export function RentalsPage({
                   type="button"
                   onClick={() => {
                     if (window.confirm(`ต้องการลบใบเช่า ${selectedRental.orderCode} ใช่หรือไม่?`)) {
-                      onDeleteRental(selectedRental.id)
+                      onDeleteRental(selectedRental.rentals.map((r) => r.id))
                     }
                   }}
                   style={{ marginTop: '16px' }}
@@ -562,10 +691,11 @@ export function RentalsPage({
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               {/* SELECT CUSTOMER AUTOCOMPLETE */}
-              <div style={{ position: 'relative' }}>
+              <div ref={customerContainerRef} style={{ position: 'relative' }}>
                 <label className="field">
                   <span>ผู้เช่าชุด (พิมพ์ชื่อ หรือ รหัสลูกค้า)<b style={{ color: 'red' }}> *</b></span>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
                       value={customerSearch}
@@ -575,40 +705,83 @@ export function RentalsPage({
                         setSelectedCustomer(null)
                         setShowCustomerDropdown(true)
                       }}
-                      onFocus={() => setShowCustomerDropdown(true)}
+                      onFocus={(e) => {
+                        e.target.select()
+                        setShowCustomerDropdown(true)
+                      }}
+                      style={{ width: '100%', paddingLeft: '38px', paddingRight: '38px' }}
                     />
-                    <Search size={18} style={{ position: 'absolute', right: '16px', color: 'var(--text-muted)' }} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowCustomerDropdown(!showCustomerDropdown)
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <ChevronDown
+                        size={18}
+                        style={{
+                          transform: showCustomerDropdown ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.2s'
+                        }}
+                      />
+                    </button>
                   </div>
                 </label>
 
-                {showCustomerDropdown && filteredCustomersSuggestions.length > 0 && (
-                  <ul style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0,
-                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                    borderRadius: '8px', listStyle: 'none', padding: '6px 0', margin: '4px 0 0',
-                    zIndex: 999, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
-                  }}>
-                    {filteredCustomersSuggestions.map((c) => (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedCustomer(c)
-                            setCustomerSearch(`${c.fullName} (${c.customerCode})`)
-                            setShowCustomerDropdown(false)
-                          }}
-                          style={{
-                            width: '100%', textAlign: 'left', background: 'none', border: 0,
-                            padding: '10px 16px', color: '#fff', cursor: 'pointer', transition: 'background 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(223, 183, 80, 0.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <strong>{c.fullName}</strong> ({c.customerCode}) - LINE: {c.lineAccount || '-'} | โทร: {c.phone}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                {showCustomerDropdown && (
+                  filteredCustomersSuggestions.length > 0 ? (
+                    <ul style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0,
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      borderRadius: '8px', listStyle: 'none', padding: '6px 0', margin: '4px 0 0',
+                      zIndex: 999, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+                    }}>
+                      {filteredCustomersSuggestions.map((c) => (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomer(c)
+                              setCustomerSearch(`${c.fullName} (${c.customerCode})`)
+                              setShowCustomerDropdown(false)
+                            }}
+                            style={{
+                              width: '100%', textAlign: 'left', background: 'none', border: 0,
+                              padding: '10px 16px', color: '#fff', cursor: 'pointer', transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(223, 183, 80, 0.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <strong>{c.fullName}</strong> ({c.customerCode}) - LINE: {c.lineAccount || '-'} | โทร: {c.phone}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0,
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      borderRadius: '8px', padding: '12px 16px', margin: '4px 0 0',
+                      zIndex: 999, color: 'var(--text-muted)', fontSize: '13px',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+                    }}>
+                      ไม่พบข้อมูลผู้เช่า
+                    </div>
+                  )
                 )}
 
                 {selectedCustomer && (
@@ -627,61 +800,148 @@ export function RentalsPage({
               </div>
 
               {/* SELECT COSTUME AUTOCOMPLETE */}
-              <div style={{ position: 'relative' }}>
+              <div ref={costumeContainerRef} style={{ position: 'relative' }}>
                 <label className="field">
                   <span>เลือกแบบชุด (พิมพ์ชื่อ หรือ SKU)<b style={{ color: 'red' }}> *</b></span>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <Shirt size={18} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
                       value={costumeSearch}
                       placeholder="เช่น Midnight, PR-8130"
                       onChange={(e) => {
                         setCostumeSearch(e.target.value)
-                        setSelectedCostume(null)
                         setShowCostumeDropdown(true)
                       }}
-                      onFocus={() => setShowCostumeDropdown(true)}
+                      onFocus={(e) => {
+                        e.target.select()
+                        setShowCostumeDropdown(true)
+                      }}
+                      style={{ width: '100%', paddingLeft: '38px', paddingRight: '38px' }}
                     />
-                    <Shirt size={18} style={{ position: 'absolute', right: '16px', color: 'var(--text-muted)' }} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setShowCostumeDropdown(!showCostumeDropdown)
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <ChevronDown
+                        size={18}
+                        style={{
+                          transform: showCostumeDropdown ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.2s'
+                        }}
+                      />
+                    </button>
                   </div>
                 </label>
 
-                {showCostumeDropdown && filteredCostumesSuggestions.length > 0 && (
-                  <ul style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0,
-                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                    borderRadius: '8px', listStyle: 'none', padding: '6px 0', margin: '4px 0 0',
-                    zIndex: 999, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
-                  }}>
-                    {filteredCostumesSuggestions.map((item) => (
-                      <li key={item.id}>
+                {showCostumeDropdown && (
+                  filteredCostumesSuggestions.length > 0 ? (
+                    <ul style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0,
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      borderRadius: '8px', listStyle: 'none', padding: '6px 0', margin: '4px 0 0',
+                      zIndex: 999, maxHeight: '200px', overflowY: 'auto', boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+                    }}>
+                      {filteredCostumesSuggestions.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCostumes([...selectedCostumes, item])
+                              setCostumeSearch('')
+                              setShowCostumeDropdown(false)
+                            }}
+                            style={{
+                              width: '100%', textAlign: 'left', background: 'none', border: 0,
+                              padding: '10px 16px', color: '#fff', cursor: 'pointer', transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(223, 183, 80, 0.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <strong>{item.productName}</strong> ({item.sku}) - ไซส์: {item.size} | ค่าเช่า: {formatBaht(item.rentalPricePerDay)}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0,
+                      background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      borderRadius: '8px', padding: '12px 16px', margin: '4px 0 0',
+                      zIndex: 999, color: 'var(--text-muted)', fontSize: '13px',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)'
+                    }}>
+                      ไม่พบข้อมูลแบบชุด
+                    </div>
+                  )
+                )}
+
+                {selectedCostumes.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-gold)', fontWeight: 600 }}>
+                      ชุดที่เลือกไว้ ({selectedCostumes.length} ชุด):
+                    </div>
+                    {selectedCostumes.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          padding: '10px 12px',
+                          background: 'rgba(223, 183, 80, 0.05)',
+                          border: '1px solid rgba(223, 183, 80, 0.2)',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <strong>{item.productName}</strong> ({item.sku})
+                          <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px' }}>
+                            สี: {item.primaryColor} | ไซส์: {item.size} | ค่าเช่า: {formatBaht(item.rentalPricePerDay)}
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedCostume(item)
-                            setCostumeSearch(`${item.productName} (${item.sku})`)
-                            setShowCostumeDropdown(false)
+                            setSelectedCostumes(selectedCostumes.filter((c) => c.id !== item.id))
                           }}
                           style={{
-                            width: '100%', textAlign: 'left', background: 'none', border: 0,
-                            padding: '10px 16px', color: '#fff', cursor: 'pointer', transition: 'background 0.2s'
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--danger-color)',
+                            cursor: 'pointer',
+                            padding: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '4px',
+                            transition: 'background 0.2s'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(223, 183, 80, 0.05)'}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          title="ลบออก"
                         >
-                          <strong>{item.productName}</strong> ({item.sku}) - ไซส์: {item.size} | ค่าเช่า: {formatBaht(item.rentalPricePerDay)}
+                          <X size={16} />
                         </button>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
-                )}
-
-                {selectedCostume && (
-                  <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(223, 183, 80, 0.05)', border: '1px solid rgba(223, 183, 80, 0.2)', borderRadius: '8px', fontSize: '13px' }}>
-                    <span style={{ color: 'var(--text-gold)', fontWeight: 600 }}>เลือกสำเร็จ:</span> {selectedCostume.productName} ({selectedCostume.sku})
-                    <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px' }}>
-                      สี: {selectedCostume.primaryColor} | ไซส์: {selectedCostume.size} | ค่าปรับ: {selectedCostume.lateFeeRule || '-'}
-                    </div>
                   </div>
                 )}
               </div>
