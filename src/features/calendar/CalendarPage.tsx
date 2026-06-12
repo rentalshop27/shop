@@ -22,18 +22,60 @@ interface CalendarPageProps {
   onNavigateToCreateRental: (pickupDate: string, returnDate: string) => void
 }
 
+type DayRentalBuckets = {
+  pickups: RentalOrder[]
+  returns: RentalOrder[]
+  ongoing: RentalOrder[]
+}
+
 const thaiMonths = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
 ]
 
 const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
+const emptyDayRentals: DayRentalBuckets = { pickups: [], returns: [], ongoing: [] }
 
 function toLocalDateStr(d: Date): string {
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const date = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${date}`
+}
+
+function getDisplayDayRentals(
+  dayEvents: DayRentalBuckets,
+  dateStr: string,
+  todayStr: string
+): DayRentalBuckets {
+  if (dateStr !== todayStr || dayEvents.pickups.length === 0) {
+    return dayEvents
+  }
+
+  const ongoingIds = new Set(dayEvents.ongoing.map((rental) => rental.id))
+  const ongoing = [...dayEvents.ongoing]
+  const pickups = dayEvents.pickups.filter((rental) => {
+    const shouldShowAsOngoing =
+      (rental.status === 'active' || rental.status === 'overdue') &&
+      rental.pickupDate === dateStr &&
+      rental.returnDate > dateStr
+
+    if (!shouldShowAsOngoing) {
+      return true
+    }
+
+    if (!ongoingIds.has(rental.id)) {
+      ongoing.push(rental)
+      ongoingIds.add(rental.id)
+    }
+    return false
+  })
+
+  return {
+    pickups,
+    returns: dayEvents.returns,
+    ongoing
+  }
 }
 
 export function CalendarPage({
@@ -51,6 +93,7 @@ export function CalendarPage({
   const [searchQuery, setSearchQuery] = useState('')
   const [listCurrentPage, setListCurrentPage] = useState(1)
   const listPageSize = 10
+  const todayStr = toLocalDateStr(new Date())
 
   // Reset list page to 1 on search query change
   useEffect(() => {
@@ -257,9 +300,10 @@ export function CalendarPage({
 
   // Find selected day rentals
   const selectedDayRentals = useMemo(() => {
-    if (!selectedDateStr) return { pickups: [], returns: [], ongoing: [] }
-    return rentalsByDate[selectedDateStr] ?? { pickups: [], returns: [], ongoing: [] }
-  }, [selectedDateStr, rentalsByDate])
+    if (!selectedDateStr) return emptyDayRentals
+    const dayEvents = rentalsByDate[selectedDateStr] ?? emptyDayRentals
+    return getDisplayDayRentals(dayEvents, selectedDateStr, todayStr)
+  }, [selectedDateStr, rentalsByDate, todayStr])
 
   // Filter rentals for Timeline Schedule View based on query
   const filteredTimelineRentals = useMemo(() => {
@@ -442,7 +486,8 @@ export function CalendarPage({
                 {/* Days Cells Grid */}
                 <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(110px, 1fr)', gap: '1px', background: 'var(--border-color)', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
                   {calendarDays.map(({ dateStr, dayNumber, isCurrentMonth }) => {
-                    const dayEvents = rentalsByDate[dateStr] || { pickups: [], returns: [], ongoing: [] }
+                    const rawDayEvents = rentalsByDate[dateStr] ?? emptyDayRentals
+                    const dayEvents = getDisplayDayRentals(rawDayEvents, dateStr, todayStr)
                     
                     // Apply search query filter to badges
                     const filteredPickups = dayEvents.pickups.filter(r => 
@@ -628,7 +673,8 @@ export function CalendarPage({
             {viewMode === 'week' && (
               <div className="weekly-schedule-list" style={{ display: 'grid', gap: '12px', flex: 1 }}>
                 {currentWeekDays.map(({ date, dateStr, dayName }) => {
-                  const dayEvents = rentalsByDate[dateStr] || { pickups: [], returns: [], ongoing: [] }
+                  const rawDayEvents = rentalsByDate[dateStr] ?? emptyDayRentals
+                  const dayEvents = getDisplayDayRentals(rawDayEvents, dateStr, todayStr)
                   
                   // Apply search query filter to weekly view badges
                   const filteredPickups = dayEvents.pickups.filter(r => 
