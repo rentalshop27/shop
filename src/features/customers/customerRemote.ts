@@ -126,7 +126,7 @@ export async function updateRemoteCustomerStatus(
 ) {
   const { error } = await supabase
     .from('customers')
-    .update({ profile_status: profileStatus })
+    .update({ profile_status: profileStatus, updated_at: new Date().toISOString() })
     .eq('id', customerId)
 
   if (error) throw error
@@ -139,16 +139,17 @@ export async function updateRemoteCustomerRisk(
 ) {
   const { error } = await supabase
     .from('customers')
-    .update({ risk_flag: riskFlag })
+    .update({ risk_flag: riskFlag, updated_at: new Date().toISOString() })
     .eq('id', customerId)
 
   if (error) throw error
 }
 
 export async function archiveRemoteCustomer(supabase: SupabaseClient, customerId: string) {
+  const now = new Date().toISOString()
   const { error } = await supabase
     .from('customers')
-    .update({ archived_at: new Date().toISOString() })
+    .update({ archived_at: now, updated_at: now })
     .eq('id', customerId)
 
   if (error) throw error

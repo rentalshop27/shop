@@ -667,9 +667,8 @@ function App() {
   }, [stockItems, stockQuery])
 
   const selectedCustomer =
-    activeCustomers.find((customer) => customer.id === selectedCustomerId) ??
-    filteredCustomers[0] ??
-    activeCustomers[0]
+    filteredCustomers.find((customer) => customer.id === selectedCustomerId) ??
+    filteredCustomers[0]
 
   const previewStockItem = previewStockId
     ? stockItems.find((item) => item.id === previewStockId) ?? null
@@ -1402,6 +1401,18 @@ function App() {
     )
   }
 
+  async function refreshCustomerDocumentUrls(customerId: string) {
+    if (!supabase) return
+
+    try {
+      const loadedCustomers = await loadCustomers(supabase)
+      setCustomers(loadedCustomers)
+      setSelectedCustomerId(customerId)
+    } catch (error) {
+      console.warn('Failed to refresh customer document URLs:', error)
+    }
+  }
+
   const summary = {
     total: activeCustomers.length,
     verified: activeCustomers.filter((customer) => customer.profileStatus === 'verified').length,
@@ -1597,6 +1608,7 @@ function App() {
                   onRiskChange={updateSelectedRisk}
                   onArchive={archiveSelectedCustomer}
                   onDocumentUpload={addDocuments}
+                  onDocumentPreviewError={refreshCustomerDocumentUrls}
                   onEdit={() => openEditCustomerForm(selectedCustomer)}
                 />
               )}
@@ -2453,6 +2465,7 @@ function CustomerDetail({
   onRiskChange,
   onArchive,
   onDocumentUpload,
+  onDocumentPreviewError,
   onEdit,
 }: {
   customer: Customer
@@ -2460,6 +2473,7 @@ function CustomerDetail({
   onRiskChange: (riskFlag: RiskFlag) => void
   onArchive: () => void
   onDocumentUpload: (files: FileList | null) => void
+  onDocumentPreviewError: (customerId: string) => void
   onEdit: () => void
 }) {
   const rentalGuard = canCreateRentalForCustomer(customer)
@@ -2581,7 +2595,11 @@ function CustomerDetail({
           {customer.documents.map((document) => (
             <figure key={document.id}>
               {document.previewUrl ? (
-                <img src={document.previewUrl} alt={`เอกสารลูกค้า ${document.sortOrder}`} />
+                <img
+                  src={document.previewUrl}
+                  alt={`เอกสารลูกค้า ${document.sortOrder}`}
+                  onError={() => onDocumentPreviewError(customer.id)}
+                />
               ) : (
                 <div className="file-placeholder">
                   <FileImage />
