@@ -19,6 +19,10 @@
     "mtime": 1781269137.6972377,
     "hash": "8c59fd3c65c5b0a191adc74c14cd4e5f"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0005_prevent_duplicate_open_rentals.sql": {
+    "mtime": 1781278981.8848665,
+    "hash": "99948b184953f7387607f1104538af76"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0001_customer_module.sql": {
     "mtime": 1781269137.6959102,
     "hash": "1f6076bf5fb97f6467a02cdb88dc0744"
@@ -32,8 +36,8 @@
     "hash": "997ff55a1554ad1846439a92a291bb77"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1781273375.2722025,
-    "hash": "e11f8407877de8c6a5e36f297b62b659"
+    "mtime": 1781278981.8838856,
+    "hash": "044952edcd6d5ae6d070d51cb91df596"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -79,9 +83,17 @@
     "mtime": 1781269137.6920795,
     "hash": "511ce9e726241cb78471a5c12fce2cad"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalRules.ts": {
+    "mtime": 1781278981.8808115,
+    "hash": "6741621f3f0d4a734c2435a1582d81c8"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/RentalsPage.tsx": {
-    "mtime": 1781269137.6916616,
-    "hash": "1d15723967e71f97c202aa9e17cb9133"
+    "mtime": 1781278981.8820207,
+    "hash": "2999c22c0e676af7e4f029e007da0a57"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalRules.test.ts": {
+    "mtime": 1781278981.8842504,
+    "hash": "500c3018f9f2601d7237d4100eb9e8d7"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/calendar/CalendarPage.tsx": {
     "mtime": 1781274037.4988656,
@@ -99,9 +111,13 @@
     "mtime": 1781269137.687579,
     "hash": "736421095769f47a0bd1b8c8936efe58"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.test.ts": {
+    "mtime": 1781278497.61382,
+    "hash": "dbe3100d90279bc6d370937f0ec2f1c7"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts": {
-    "mtime": 1781269137.6911187,
-    "hash": "3427895f73c67bfb635bdbcd1339d79b"
+    "mtime": 1781278473.9178207,
+    "hash": "fb55712af5e37c071470a70c6f1bf7ac"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/lib/supabase.ts": {
     "mtime": 1781269137.694621,

@@ -12,6 +12,7 @@ import {
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { StockItem } from '../../App'
+import { findOpenRentalConflict, findOpenRentalForStockSku } from './rentalRules'
 
 interface RentalsPageProps {
   rentals: RentalOrder[]
@@ -152,21 +153,23 @@ export function RentalsPage({
   const filteredCostumesSuggestions = useMemo(() => {
     const query = costumeSearch.trim().toLowerCase()
     
-    // Filter out costumes that are already selected
-    const unselectedCostumes = stockItems.filter(
-      (item) => !selectedCostumes.some((selected) => selected.id === item.id)
+    // Filter out costumes that are already selected or still tied to an open rental.
+    const availableCostumes = stockItems.filter(
+      (item) =>
+        !selectedCostumes.some((selected) => selected.id === item.id) &&
+        !findOpenRentalForStockSku(rentals, item.sku)
     )
 
     if (!query) {
-      return unselectedCostumes
+      return availableCostumes
     }
     
-    return unselectedCostumes.filter(
+    return availableCostumes.filter(
       (item) =>
         item.productName.toLowerCase().includes(query) ||
         item.sku.toLowerCase().includes(query)
     )
-  }, [stockItems, costumeSearch, selectedCostumes])
+  }, [stockItems, rentals, costumeSearch, selectedCostumes])
 
   // Sync pricing when costumes are selected
   useEffect(() => {
@@ -334,6 +337,14 @@ export function RentalsPage({
     }
     if (new Date(returnDate) < new Date(pickupDate)) {
       setFormError('วันที่คืนต้องอยู่หลังวันที่จอง/รับ/ส่งชุด')
+      return
+    }
+    const openRentalConflict = findOpenRentalConflict(
+      rentals,
+      selectedCostumes.map((item) => item.sku),
+    )
+    if (openRentalConflict) {
+      setFormError(`ชุด ${openRentalConflict.costume.sku} ยังมีใบเช่าเปิดอยู่ (${openRentalConflict.orderCode}) ต้องรับคืนก่อนจึงจะเช่าซ้ำได้`)
       return
     }
 
@@ -671,22 +682,25 @@ export function RentalsPage({
                   </div>
                 )}
 
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => {
-                    const nextStatusMap: Record<RentalStatus, RentalStatus> = {
-                      booked: 'active',
-                      active: 'overdue',
-                      overdue: 'returned',
-                      returned: 'booked'
-                    }
-                    onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), nextStatusMap[selectedRental.status])
-                  }}
-                  style={{ fontSize: '14px' }}
-                >
-                  เปลี่ยนสถานะถัดไป
-                </button>
+                {selectedRental.status !== 'returned' && (
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => {
+                      const currentStatus = selectedRental.status
+                      if (currentStatus === 'returned') return
+                      const nextStatusMap: Record<Exclude<RentalStatus, 'returned'>, RentalStatus> = {
+                        booked: 'active',
+                        active: 'overdue',
+                        overdue: 'returned'
+                      }
+                      onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), nextStatusMap[currentStatus])
+                    }}
+                    style={{ fontSize: '14px' }}
+                  >
+                    เปลี่ยนสถานะถัดไป
+                  </button>
+                )}
               </div>
 
               {onDeleteRental && (

@@ -21,6 +21,11 @@ type StockItemRow = {
   updated_at: string
 }
 
+type UploadedStockImages = {
+  paths: string[]
+  uploadedPaths: string[]
+}
+
 // Function to extract storage paths from signed URLs or public URLs
 export function getPathFromUrl(url: string, bucketName = 'stock-images'): string | null {
   if (url.startsWith('data:')) return null // Data URL, needs upload
@@ -107,14 +112,15 @@ async function uploadStockImages(
   shopId: string,
   stockId: string,
   imageUrls: string[]
-): Promise<string[]> {
+): Promise<UploadedStockImages> {
+  const paths: string[] = []
   const uploadedPaths: string[] = []
 
   for (const [index, url] of imageUrls.entries()) {
     const existingPath = getPathFromUrl(url)
     if (existingPath) {
       // Already uploaded image path
-      uploadedPaths.push(existingPath)
+      paths.push(existingPath)
       continue
     }
 
@@ -131,15 +137,26 @@ async function uploadStockImages(
           .upload(storagePath, file, { upsert: false })
 
         if (uploadError) throw uploadError
+        paths.push(storagePath)
         uploadedPaths.push(storagePath)
       } catch (err) {
         console.error('Failed to upload image at index:', index, err)
-        throw err;
+        throw err
       }
     }
   }
 
-  return uploadedPaths
+  return { paths, uploadedPaths }
+}
+
+async function removeStockImagePaths(
+  supabase: SupabaseClient,
+  paths: string[],
+): Promise<Error | null> {
+  if (paths.length === 0) return null
+
+  const { error } = await supabase.storage.from('stock-images').remove(paths)
+  return error
 }
 
 // Cleanup deleted stock images from storage
@@ -151,7 +168,10 @@ async function cleanupUnusedImages(
   const pathsToDelete = oldPaths.filter((path) => !newPaths.includes(path))
   if (pathsToDelete.length > 0) {
     try {
-      await supabase.storage.from('stock-images').remove(pathsToDelete)
+      const error = await removeStockImagePaths(supabase, pathsToDelete)
+      if (error) {
+        console.warn('Failed to delete unused images:', pathsToDelete, error)
+      }
     } catch (e) {
       console.warn('Failed to delete unused images:', pathsToDelete, e)
     }
@@ -166,7 +186,7 @@ export async function createRemoteStockItem(
   const stockId = item.id || crypto.randomUUID()
   
   // First, upload new images
-  const imagePaths = await uploadStockImages(supabase, shopId, stockId, item.imageUrls)
+  const { paths: imagePaths, uploadedPaths } = await uploadStockImages(supabase, shopId, stockId, item.imageUrls)
 
   const payload = {
     id: stockId,
@@ -194,8 +214,11 @@ export async function createRemoteStockItem(
 
   if (error) {
     // Attempt cleanup of newly uploaded images if insert fails
-    if (imagePaths.length > 0) {
-      await supabase.storage.from('stock-images').remove(imagePaths)
+    if (uploadedPaths.length > 0) {
+      const storageError = await removeStockImagePaths(supabase, uploadedPaths)
+      if (storageError) {
+        console.warn('Failed to delete stock images after insert error:', uploadedPaths, storageError)
+      }
     }
     throw error
   }
@@ -214,7 +237,7 @@ export async function updateRemoteStockItem(
   const oldPaths = oldImageUrls.map((url) => getPathFromUrl(url)).filter(Boolean) as string[]
   
   // Upload any new images and retain existing ones
-  const newPaths = await uploadStockImages(supabase, shopId, stockId, item.imageUrls)
+  const { paths: newPaths, uploadedPaths } = await uploadStockImages(supabase, shopId, stockId, item.imageUrls)
 
   const payload = {
     sku: item.sku,
@@ -240,7 +263,15 @@ export async function updateRemoteStockItem(
     .select('*')
     .single()
 
-  if (error) throw error
+  if (error) {
+    if (uploadedPaths.length > 0) {
+      const storageError = await removeStockImagePaths(supabase, uploadedPaths)
+      if (storageError) {
+        console.warn('Failed to delete stock images after update error:', uploadedPaths, storageError)
+      }
+    }
+    throw error
+  }
 
   // Cleanup unused images from storage since database update succeeded
   await cleanupUnusedImages(supabase, oldPaths, newPaths)
@@ -266,7 +297,10 @@ export async function deleteRemoteStockItem(
 
   if (imagePaths.length > 0) {
     try {
-      await supabase.storage.from('stock-images').remove(imagePaths)
+      const error = await removeStockImagePaths(supabase, imagePaths)
+      if (error) {
+        console.warn('Failed to delete stock images:', imagePaths, error)
+      }
     } catch (storageError) {
       console.warn('Failed to delete stock images:', imagePaths, storageError)
     }
@@ -275,11 +309,13 @@ export async function deleteRemoteStockItem(
 
 export async function countRemoteRentalsForStockSku(
   supabase: SupabaseClient,
+  shopId: string,
   stockSku: string,
 ): Promise<number> {
   const { count, error } = await supabase
     .from('rentals')
     .select('id', { count: 'exact', head: true })
+    .eq('shop_id', shopId)
     .eq('stock_item_sku', stockSku)
 
   if (error) throw error

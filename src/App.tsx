@@ -39,6 +39,7 @@ import { AuditLogPage } from './features/audit/AuditLogPage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
+import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
   loadRentals,
@@ -468,6 +469,15 @@ function App() {
   async function handleCreateRentals(drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]): Promise<boolean> {
     if (drafts.length === 0) return false
 
+    const openRentalConflict = findOpenRentalConflict(
+      rentals,
+      drafts.map((draft) => draft.costume.sku),
+    )
+    if (openRentalConflict) {
+      window.alert(`ชุด ${openRentalConflict.costume.sku} ยังมีใบเช่าเปิดอยู่ (${openRentalConflict.orderCode}) ต้องรับคืนก่อนจึงจะเช่าซ้ำได้`)
+      return false
+    }
+
     const maxOrderCode = rentals.reduce((max, r) => {
       const match = r.orderCode.match(/PR-ORD-(\d+)/)
       return match ? Math.max(max, Number(match[1])) : max
@@ -784,7 +794,11 @@ function App() {
       ).length
 
       if (supabase && isAuthenticated) {
-        relatedRentalCount = await countRemoteRentalsForStockSku(supabase, item.sku)
+        if (!shopId) {
+          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+          return
+        }
+        relatedRentalCount = await countRemoteRentalsForStockSku(supabase, shopId, item.sku)
       }
 
       if (relatedRentalCount > 0) {
