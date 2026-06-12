@@ -2349,11 +2349,20 @@ function InventoryPage({
                     ))}
                   </select>
                 </label>
-                <TextField
-                  label="ไซซ์ / ขนาด"
-                  value={draft.size}
-                  onChange={(value) => onDraftChange('size', value)}
-                />
+                <label className="field">
+                  <span>ไซซ์ / ขนาด</span>
+                  <select
+                    value={draft.size}
+                    onChange={(event) => onDraftChange('size', event.target.value)}
+                  >
+                    <option value="">-- เลือกไซซ์ --</option>
+                    {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Custom'].map((sz) => (
+                      <option key={sz} value={sz}>
+                        {sz}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="field">
                   <span>สีหลัก</span>
                   <select
