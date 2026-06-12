@@ -210,6 +210,10 @@ export function RentalsPage({
     })
   }
 
+  const getOrderGroupCode = (orderCode: string) => {
+    return orderCode.replace(/-\d+$/, '')
+  }
+
   // Helper to get status of grouped rentals based on priority: overdue > active > booked > returned
   const getGroupStatus = (groupItems: RentalOrder[]): RentalStatus => {
     if (groupItems.some((r) => r.status === 'overdue')) return 'overdue'
@@ -218,14 +222,15 @@ export function RentalsPage({
     return 'returned'
   }
 
-  // Group all rentals by orderCode
+  // Group line-item order codes such as PR-ORD-101-1 back into one displayed order.
   const groupedRentals = useMemo(() => {
     const groups: Record<string, RentalOrder[]> = {}
     rentals.forEach((r) => {
-      if (!groups[r.orderCode]) {
-        groups[r.orderCode] = []
+      const groupCode = getOrderGroupCode(r.orderCode)
+      if (!groups[groupCode]) {
+        groups[groupCode] = []
       }
-      groups[r.orderCode].push(r)
+      groups[groupCode].push(r)
     })
 
     return Object.keys(groups).map((orderCode) => {

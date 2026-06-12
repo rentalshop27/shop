@@ -474,10 +474,10 @@ function App() {
 
     const now = new Date().toISOString()
     const nextCode = `PR-ORD-${maxOrderCode + 1}`
-    const newRentals: RentalOrder[] = drafts.map((draft) => ({
+    const newRentals: RentalOrder[] = drafts.map((draft, index) => ({
       ...draft,
       id: crypto.randomUUID(),
-      orderCode: nextCode,
+      orderCode: drafts.length > 1 ? `${nextCode}-${index + 1}` : nextCode,
       createdAt: now,
       updatedAt: now
     }))
@@ -2784,6 +2784,12 @@ function readFileAsDataUrl(file: File) {
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
+  if (error && typeof error === 'object') {
+    const maybeError = error as { message?: unknown; details?: unknown; hint?: unknown }
+    const parts = [maybeError.message, maybeError.details, maybeError.hint]
+      .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+    if (parts.length > 0) return parts.join('\n')
+  }
   return 'เกิดข้อผิดพลาด กรุณาลองใหม่'
 }
 
