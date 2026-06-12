@@ -257,7 +257,7 @@ export function DashboardPage({
         {/* Table 1: Pickups Today */}
         <div className="dashboard-table-panel">
           <div className="dashboard-table-header">
-            <h3 className="dashboard-table-title">นัดรับชุดวันนี้</h3>
+            <h3 className="dashboard-table-title">นัดรับ/ส่งชุดวันนี้</h3>
             <span
               className={`dashboard-table-count-badge ${
                 pickups.filter((p) => p.status === 'pending').length > 0 ? 'active-count' : ''
@@ -299,7 +299,7 @@ export function DashboardPage({
                         type="button"
                         onClick={() => handleMarkPickedUp(pickup.id)}
                       >
-                        รับชุดแล้ว
+                        รับ/ส่งชุดแล้ว
                       </button>
                     )}
                   </span>

@@ -196,7 +196,7 @@ export function RentalsPage({
       return
     }
     if (!pickupDate) {
-      setFormError('กรุณาระบุวันที่จอง/รับชุด')
+      setFormError('กรุณาระบุวันที่จอง/รับ/ส่งชุด')
       return
     }
     if (!returnDate) {
@@ -204,7 +204,7 @@ export function RentalsPage({
       return
     }
     if (new Date(returnDate) < new Date(pickupDate)) {
-      setFormError('วันที่คืนต้องอยู่หลังวันที่จอง/รับชุด')
+      setFormError('วันที่คืนต้องอยู่หลังวันที่จอง/รับ/ส่งชุด')
       return
     }
 
@@ -273,7 +273,7 @@ export function RentalsPage({
         <div>
           <p className="eyebrow">Precious Shop</p>
           <h1>หน้าเช่าชุด</h1>
-          <p className="subtitle">ลงทะเบียนจองชุด จัดทำประวัติการเช่า ติดตามช่วงรับชุดและส่งคืน</p>
+          <p className="subtitle">ลงทะเบียนจองชุด จัดทำประวัติการเช่า ติดตามช่วงรับ/ส่งชุดและส่งคืน</p>
         </div>
         <button className="primary-button" type="button" onClick={() => setIsFormOpen(true)}>
           <Plus size={22} />
@@ -689,7 +689,7 @@ export function RentalsPage({
               {/* RENTAL PERIOD DATES */}
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label className="field">
-                  <span>วันที่จอง / รับชุด<b style={{ color: 'red' }}> *</b></span>
+                  <span>วันที่จอง / รับ/ส่งชุด<b style={{ color: 'red' }}> *</b></span>
                   <input
                     type="date"
                     value={pickupDate}

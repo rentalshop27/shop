@@ -330,7 +330,7 @@ export function CalendarPage({
         <div>
           <p className="eyebrow">Precious Shop</p>
           <h1>หน้าปฏิทินเช่า/คืน</h1>
-          <p className="subtitle">ปฏิทินตรวจสอบรายการจอง รับชุด และส่งคืนเสื้อผ้าประจำเดือน</p>
+          <p className="subtitle">ปฏิทินตรวจสอบรายการจอง รับ/ส่งชุด และส่งคืนเสื้อผ้าประจำเดือน</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* View Mode Toggle */}
@@ -463,7 +463,7 @@ export function CalendarPage({
                     const totalCount = filteredPickups.length + filteredReturns.length
                     const overflowCount = totalCount - displayedCount
 
-                    const ariaLabelText = `วันที่ ${dayNumber} ${isCurrentMonth ? thaiMonths[month] : ''} ${isDayToday ? '(วันนี้)' : ''}${filteredPickups.length > 0 ? `, รับชุด ${filteredPickups.length} รายการ` : ''}${filteredReturns.length > 0 ? `, คืนชุด ${filteredReturns.length} รายการ` : ''}${dayEvents.ongoing.length > 0 ? `, อยู่ระหว่างเช่า ${dayEvents.ongoing.length} รายการ` : ''}`
+                    const ariaLabelText = `วันที่ ${dayNumber} ${isCurrentMonth ? thaiMonths[month] : ''} ${isDayToday ? '(วันนี้)' : ''}${filteredPickups.length > 0 ? `, รับ/ส่งชุด ${filteredPickups.length} รายการ` : ''}${filteredReturns.length > 0 ? `, คืนชุด ${filteredReturns.length} รายการ` : ''}${dayEvents.ongoing.length > 0 ? `, อยู่ระหว่างเช่า ${dayEvents.ongoing.length} รายการ` : ''}`
 
                     return (
                       <div
@@ -530,7 +530,7 @@ export function CalendarPage({
                                 textOverflow: 'ellipsis',
                                 overflow: 'hidden'
                               }}
-                              title={`📦 รับ: ${rental.customer.fullName} - ${rental.costume.productName}`}
+                              title={`📦 รับ/ส่ง: ${rental.customer.fullName} - ${rental.costume.productName}`}
                             >
                               📦 {rental.customer.fullName.split(' ')[0]}
                             </div>
@@ -613,7 +613,7 @@ export function CalendarPage({
                   const isDaySelected = selectedDateStr === dateStr
                   const isDayToday = isToday(dateStr)
 
-                  const ariaLabelText = `วันที่ ${date.getDate()} ${thaiMonths[date.getMonth()]} ${dayName}, รับชุด ${filteredPickups.length} รายการ, คืนชุด ${filteredReturns.length} รายการ`
+                  const ariaLabelText = `วันที่ ${date.getDate()} ${thaiMonths[date.getMonth()]} ${dayName}, รับ/ส่งชุด ${filteredPickups.length} รายการ, คืนชุด ${filteredReturns.length} รายการ`
 
                   return (
                       <div
@@ -657,7 +657,7 @@ export function CalendarPage({
                                 className="status-pill warning"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: 'rgba(245, 158, 11, 0.08)' }}
                               >
-                                <span>📦 รับชุด:</span>
+                                <span>📦 รับ/ส่งชุด:</span>
                                 <strong>{r.customer.fullName}</strong>
                                 <small>({r.costume.sku})</small>
                               </span>
@@ -722,15 +722,15 @@ export function CalendarPage({
 
             <div className="selected-day-details-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', maxHeight: '600px' }}>
               
-              {/* Category 1: PICKUPS (นัดรับชุด) */}
+              {/* Category 1: PICKUPS (นัดรับ/ส่งชุด) */}
               <div>
                 <h3 style={{ fontSize: '14px', color: '#fff', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginBottom: '10px', display: 'flex', justifyItems: 'center', gap: '6px' }}>
                   <span style={{ color: 'var(--warning-color)' }}>📦</span>
-                  รายการรับชุด ({selectedDayRentals.pickups.length})
+                  รายการรับ/ส่งชุด ({selectedDayRentals.pickups.length})
                 </h3>
                 
                 {selectedDayRentals.pickups.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '8px 0' }}>ไม่มีกำหนดรับชุดในวันนี้</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '8px 0' }}>ไม่มีกำหนดรับ/ส่งชุดในวันนี้</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {selectedDayRentals.pickups.map((rental) => (
@@ -906,7 +906,7 @@ export function CalendarPage({
                 <span>รหัสออเดอร์</span>
                 <span>ลูกค้า</span>
                 <span>รายการชุด</span>
-                <span>วันที่นัดรับ</span>
+                <span>วันที่นัดรับ/ส่ง</span>
                 <span>วันที่กำหนดคืน</span>
                 <span>สถานะ</span>
                 <span>การจัดการ</span>
