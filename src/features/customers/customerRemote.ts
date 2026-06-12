@@ -243,29 +243,21 @@ export async function deleteRemoteCustomerDocuments(
 ) {
   if (documentIds.length === 0) return
 
-  // 1. Delete rows from database
+  const validPaths = storagePaths.filter(Boolean)
+  if (validPaths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from('customer-documents')
+      .remove(validPaths)
+
+    if (storageError) throw storageError
+  }
+
   const { error: dbError } = await supabase
     .from('customer_documents')
     .delete()
     .in('id', documentIds)
 
   if (dbError) throw dbError
-
-  // 2. Delete files from storage bucket
-  const validPaths = storagePaths.filter(Boolean)
-  if (validPaths.length > 0) {
-    try {
-      const { error: storageError } = await supabase.storage
-        .from('customer-documents')
-        .remove(validPaths)
-
-      if (storageError) {
-        console.error('Failed to delete files from storage:', storageError)
-      }
-    } catch (e) {
-      console.error('Error during storage deletion:', e)
-    }
-  }
 }
 
 function parseOptionalNumber(value: string) {

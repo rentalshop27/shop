@@ -38,6 +38,12 @@ import { AuditLogPage } from './features/audit/AuditLogPage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
+import {
+  createRemoteRental,
+  deleteRemoteRental,
+  loadRentals,
+  updateRemoteRentalStatus,
+} from './features/rentals/rentalRemote'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
 import { demoCustomers } from './features/customers/customerSeed'
 import { loadAuditLogs, demoAuditLogs } from './features/audit/auditRemote'
@@ -155,6 +161,24 @@ const statusOptions: Array<{ value: 'all' | CustomerProfileStatus; label: string
   { value: 'suspended', label: profileStatusLabel.suspended },
 ]
 
+async function refreshAuditLogs(
+  isAuthenticated: boolean,
+  setLoadingAudit: (loading: boolean) => void,
+  setAuditLogs: (logs: AuditLog[]) => void,
+) {
+  if (!supabase || !isAuthenticated) return
+  try {
+    setLoadingAudit(true)
+    const logs = await loadAuditLogs(supabase)
+    setAuditLogs(logs)
+  } catch (error) {
+    console.warn('Failed to load audit logs from Supabase, using demo logs:', error)
+    setAuditLogs(demoAuditLogs)
+  } finally {
+    setLoadingAudit(false)
+  }
+}
+
 function formatBaht(value: number) {
   return `฿${value.toLocaleString('th-TH', {
     minimumFractionDigits: value % 1 === 0 ? 0 : 2,
@@ -231,7 +255,9 @@ function App() {
     if (saved) {
       try {
         return JSON.parse(saved)
-      } catch (e) {}
+      } catch {
+        return demoStockItems
+      }
     }
     return demoStockItems
   })
@@ -294,7 +320,9 @@ function App() {
     if (saved) {
       try {
         return JSON.parse(saved)
-      } catch (e) {}
+      } catch {
+        return ['Precious', 'Chanel', 'Dior', 'Gucci']
+      }
     }
     return ['Precious', 'Chanel', 'Dior', 'Gucci']
   })
@@ -304,7 +332,9 @@ function App() {
     if (saved) {
       try {
         return JSON.parse(saved)
-      } catch (e) {}
+      } catch {
+        return ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
+      }
     }
     return ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
   })
@@ -314,7 +344,9 @@ function App() {
     if (saved) {
       try {
         return JSON.parse(saved)
-      } catch (e) {}
+      } catch {
+        return ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
+      }
     }
     return ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
   })
@@ -423,8 +455,8 @@ function App() {
     if (saved) {
       try {
         return JSON.parse(saved)
-      } catch (e) {
-        // fallback
+      } catch {
+        return demoRentals
       }
     }
     return demoRentals
@@ -434,7 +466,7 @@ function App() {
     localStorage.setItem('precious_rentals', JSON.stringify(rentals))
   }, [rentals])
 
-  function handleCreateRental(draftVal: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>) {
+  async function handleCreateRental(draftVal: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>) {
     const maxOrderCode = rentals.reduce((max, r) => {
       const match = r.orderCode.match(/PR-ORD-(\d+)/)
       return match ? Math.max(max, Number(match[1])) : max
@@ -451,10 +483,35 @@ function App() {
       updatedAt: now
     }
 
+    if (supabase && isAuthenticated) {
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
+
+      try {
+        await createRemoteRental(supabase, shopId, newRental)
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
     setRentals((current) => [newRental, ...current])
   }
 
-  function handleUpdateRentalStatus(rentalId: string, status: RentalStatus) {
+  async function handleUpdateRentalStatus(rentalId: string, status: RentalStatus) {
+    if (supabase && isAuthenticated) {
+      try {
+        await updateRemoteRentalStatus(supabase, rentalId, status)
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
     setRentals((current) =>
       current.map((r) =>
         r.id === rentalId
@@ -464,7 +521,17 @@ function App() {
     )
   }
 
-  function handleDeleteRental(rentalId: string) {
+  async function handleDeleteRental(rentalId: string) {
+    if (supabase && isAuthenticated) {
+      try {
+        await deleteRemoteRental(supabase, rentalId)
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
     setRentals((current) => current.filter((r) => r.id !== rentalId))
   }
   const [formError, setFormError] = useState('')
@@ -510,7 +577,7 @@ function App() {
           loadStockItems(client)
         ])
       })
-      .then(([loadedShopId, loadedCustomers, loadedStock]) => {
+      .then(async ([loadedShopId, loadedCustomers, loadedStock]) => {
         setShopId(loadedShopId)
         setCustomers(loadedCustomers)
         setStockItems(loadedStock)
@@ -519,7 +586,12 @@ function App() {
           setRemoteError('ยังไม่พบร้านของผู้ใช้นี้ กรุณาสร้าง row ใน shops และ shop_members ก่อน')
           return null
         }
-        return loadShopSettings(client, loadedShopId)
+        const [settings, loadedRentals] = await Promise.all([
+          loadShopSettings(client, loadedShopId),
+          loadRentals(client, loadedCustomers, loadedStock),
+        ])
+        setRentals(loadedRentals)
+        return settings
       })
       .then((settings) => {
         if (settings) {
@@ -534,17 +606,7 @@ function App() {
   }, [isAuthenticated])
 
   async function handleLoadAuditLogs() {
-    if (!supabase || !isAuthenticated) return
-    try {
-      setLoadingAudit(true)
-      const logs = await loadAuditLogs(supabase)
-      setAuditLogs(logs)
-    } catch (error) {
-      console.warn('Failed to load audit logs from Supabase, using demo logs:', error)
-      setAuditLogs(demoAuditLogs)
-    } finally {
-      setLoadingAudit(false)
-    }
+    await refreshAuditLogs(isAuthenticated, setLoadingAudit, setAuditLogs)
   }
 
   useEffect(() => {
@@ -552,7 +614,7 @@ function App() {
       setAuditLogs(demoAuditLogs)
       return
     }
-    handleLoadAuditLogs()
+    refreshAuditLogs(isAuthenticated, setLoadingAudit, setAuditLogs)
   }, [isAuthenticated])
 
   const activeCustomers = customers.filter((customer) => !customer.archivedAt)

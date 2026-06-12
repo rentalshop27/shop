@@ -1,5 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+export type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE'
+
+type AuditRow = {
+  id: string
+  shop_id: string
+  user_id: string | null
+  user_email: string | null
+  table_name: string
+  record_id: string
+  action: AuditAction
+  old_data: Record<string, unknown> | null
+  new_data: Record<string, unknown> | null
+  created_at: string
+}
+
 export interface AuditLog {
   id: string
   shopId: string
@@ -7,9 +22,9 @@ export interface AuditLog {
   userEmail: string | null
   tableName: string
   recordId: string
-  action: 'INSERT' | 'UPDATE' | 'DELETE'
-  oldData: Record<string, any> | null
-  newData: Record<string, any> | null
+  action: AuditAction
+  oldData: Record<string, unknown> | null
+  newData: Record<string, unknown> | null
   createdAt: string
 }
 
@@ -21,7 +36,7 @@ export async function loadAuditLogs(supabase: SupabaseClient): Promise<AuditLog[
 
   if (error) throw error
 
-  return (data || []).map((row: any) => ({
+  return ((data || []) as AuditRow[]).map((row) => ({
     id: row.id,
     shopId: row.shop_id,
     userId: row.user_id,

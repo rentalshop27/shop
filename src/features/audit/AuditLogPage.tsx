@@ -10,7 +10,7 @@ import {
   X,
   FileText
 } from 'lucide-react'
-import type { AuditLog } from './auditRemote'
+import type { AuditAction, AuditLog } from './auditRemote'
 
 interface AuditLogPageProps {
   auditLogs: AuditLog[]
@@ -85,7 +85,7 @@ const ignoredKeys = ['id', 'shop_id', 'created_at', 'updated_at', 'owner_user_id
 
 export function AuditLogPage({ auditLogs, loading = false, onRefresh }: AuditLogPageProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [actionFilter, setActionFilter] = useState<'all' | AuditLog['action']>('all')
+  const [actionFilter, setActionFilter] = useState<'all' | AuditAction>('all')
   const [tableFilter, setTableFilter] = useState<'all' | string>('all')
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -179,7 +179,7 @@ export function AuditLogPage({ auditLogs, loading = false, onRefresh }: AuditLog
   }
 
   // Helper to format values for display
-  const formatValue = (val: any) => {
+  const formatValue = (val: unknown) => {
     if (val === null || val === undefined) return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>null</span>
     if (typeof val === 'boolean') return val ? 'True' : 'False'
     return String(val)
@@ -188,7 +188,7 @@ export function AuditLogPage({ auditLogs, loading = false, onRefresh }: AuditLog
   // Helper to determine what actually changed
   const getDiffItems = (log: AuditLog) => {
     const { action, oldData, newData } = log
-    const items: Array<{ field: string; oldVal: any; newVal: any }> = []
+    const items: Array<{ field: string; oldVal: unknown; newVal: unknown }> = []
 
     if (action === 'INSERT' && newData) {
       Object.keys(newData).forEach(key => {
@@ -295,7 +295,7 @@ export function AuditLogPage({ auditLogs, loading = false, onRefresh }: AuditLog
           
           <select
             value={actionFilter}
-            onChange={(e) => { setActionFilter(e.target.value as any); setCurrentPage(1); }}
+            onChange={(e) => { setActionFilter(e.target.value as 'all' | AuditAction); setCurrentPage(1); }}
             aria-label="ประเภทกิจกรรม"
           >
             <option value="all">ทุกกิจกรรม</option>

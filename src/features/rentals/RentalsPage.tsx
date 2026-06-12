@@ -296,7 +296,7 @@ export function RentalsPage({
             </label>
             <select
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
+              onChange={(e) => { setStatusFilter(e.target.value as 'all' | RentalStatus); setCurrentPage(1); }}
             >
               <option value="all">ทุกสถานะ</option>
               <option value="booked">จอง (รอส่งมอบ)</option>

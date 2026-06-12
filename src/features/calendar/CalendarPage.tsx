@@ -171,8 +171,8 @@ export function CalendarPage({
 
   // Calculate the bounds of the visible range for performance optimization
   const visibleRange = useMemo(() => {
-    let startStr = ''
-    let endStr = ''
+    let startStr: string
+    let endStr: string
     
     if (viewMode === 'month' && calendarDays.length > 0) {
       startStr = calendarDays[0].dateStr
@@ -229,7 +229,7 @@ export function CalendarPage({
           const overlapStart = rental.pickupDate > startStr ? rental.pickupDate : startStr
           const overlapEnd = rental.returnDate < endStr ? rental.returnDate : endStr
           
-          let current = new Date(overlapStart)
+          const current = new Date(overlapStart)
           const end = new Date(overlapEnd)
           
           if (toLocalDateStr(current) === rental.pickupDate) {
@@ -264,7 +264,7 @@ export function CalendarPage({
   // Filter rentals for Timeline Schedule View based on query
   const filteredTimelineRentals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    let list = [...rentals]
+    const list = [...rentals]
 
     // Sort by pickup date ascending
     list.sort((a, b) => a.pickupDate.localeCompare(b.pickupDate))
