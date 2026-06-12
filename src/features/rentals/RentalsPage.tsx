@@ -373,6 +373,10 @@ export function RentalsPage({
     })}`
   }
 
+  const getDiscountAmount = (price: number, collected: number) => {
+    return Math.max(0, Number((price - collected).toFixed(2)))
+  }
+
   // Get status translation
   const getStatusBadge = (status: RentalStatus) => {
     switch (status) {
@@ -441,7 +445,7 @@ export function RentalsPage({
               <span>รหัสออเดอร์</span>
               <span>ลูกค้า</span>
               <span>ช่วงเช่า</span>
-              <span>ค่าปรับ / เงินประกัน</span>
+              <span>ยอดเก็บจริง</span>
               <span>สถานะ</span>
               <span></span>
             </div>
@@ -466,10 +470,16 @@ export function RentalsPage({
                   {formatDateRange(rental.pickupDate, rental.returnDate)}
                 </span>
                 <span>
-                  {formatBaht(rental.rentalPrice)}
-                  <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
-                    มัดจำ: {formatBaht(rental.depositAmount)}
-                  </small>
+                  {formatBaht(rental.collectedAmount)}
+                  {getDiscountAmount(rental.rentalPrice, rental.collectedAmount) > 0 ? (
+                    <small style={{ display: 'block', color: 'var(--success-color)', fontSize: '11px' }}>
+                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.collectedAmount))}
+                    </small>
+                  ) : (
+                    <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
+                      มัดจำ: {formatBaht(rental.depositAmount)}
+                    </small>
+                  )}
                 </span>
                 {getStatusBadge(rental.status)}
                 <ChevronRight size={18} className="arrow-icon" />
@@ -597,8 +607,13 @@ export function RentalsPage({
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
-                        {formatBaht(r.rentalPrice)}
+                        {formatBaht(r.collectedAmount)}
                       </strong>
+                      {getDiscountAmount(r.rentalPrice, r.collectedAmount) > 0 && (
+                        <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
+                          ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.collectedAmount))}
+                        </small>
+                      )}
                       {r.depositAmount > 0 && (
                         <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                           ประกัน: {formatBaht(r.depositAmount)}

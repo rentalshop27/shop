@@ -1,16 +1,16 @@
 # Graph Report - Precious Shop  (2026-06-12)
 
 ## Corpus Check
-- 30 files · ~65,283 words
+- 30 files · ~65,339 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 446 nodes · 699 edges · 31 communities (21 shown, 10 thin omitted)
+- 447 nodes · 700 edges · 31 communities (21 shown, 10 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `77f342ff`
+- Built from commit: `1721f582`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -58,16 +58,16 @@
 10. `normalizeHandler()` - 7 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `handleCreateRentals()` --calls--> `createRemoteRental()`  [EXTRACTED]
+  src/App.tsx → src/features/rentals/rentalRemote.ts
 - `handleSaveCustomer()` --calls--> `setIsFormOpen()`  [EXTRACTED]
   src/App.tsx → src/features/rentals/RentalsPage.tsx
+- `handleSaveStockItem()` --calls--> `updateRemoteStockItem()`  [EXTRACTED]
+  src/App.tsx → src/features/inventory/stockRemote.ts
+- `handleSaveStockItem()` --calls--> `createRemoteStockItem()`  [EXTRACTED]
+  src/App.tsx → src/features/inventory/stockRemote.ts
 - `refreshCustomerDocumentUrls()` --calls--> `loadCustomers()`  [EXTRACTED]
   src/App.tsx → src/features/customers/customerRemote.ts
-- `refreshAuditLogs()` --calls--> `loadAuditLogs()`  [EXTRACTED]
-  src/App.tsx → src/features/audit/auditRemote.ts
-- `handleAddBrand()` --calls--> `updateShopSettings()`  [EXTRACTED]
-  src/App.tsx → src/features/inventory/stockRemote.ts
-- `handleDeleteBrand()` --calls--> `updateShopSettings()`  [EXTRACTED]
-  src/App.tsx → src/features/inventory/stockRemote.ts
 
 ## Communities (31 total, 10 thin omitted)
 
@@ -85,7 +85,7 @@ Nodes (32): createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemo
 
 ### Community 3 - "Community 3"
 Cohesion: 0.08
-Nodes (23): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], OverdueRental, overdues, pickups (+15 more)
+Nodes (21): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], OverdueRental, overdues, pickups (+13 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.07
@@ -104,8 +104,8 @@ Cohesion: 0.09
 Nodes (19): [actionFilter, setActionFilter], actionTranslations, allKeys, AuditLogPageProps, [currentPage, setCurrentPage], fieldTranslations, filteredLogs, ignoredKeys (+11 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.17
-Nodes (18): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadShopSettings(), loadStockItems() (+10 more)
+Cohesion: 0.12
+Nodes (18): loadAuditLogs(), countRemoteRentalsForStockSku(), deleteRemoteStockItem(), loadStockItems(), createRemoteRentals(), deleteRemoteRental(), updateRemoteRentalStatus(), closeStockForm() (+10 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.12
@@ -120,16 +120,16 @@ Cohesion: 0.2
 Nodes (14): archiveRemoteCustomer(), updateRemoteCustomerRisk(), updateRemoteCustomerStatus(), updateShopSettings(), archiveSelectedCustomer(), getErrorMessage(), handleAddBrand(), handleAddCategory() (+6 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.2
-Nodes (9): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+1 more)
-
-### Community 14 - "Community 14"
-Cohesion: 0.36
+Cohesion: 0.27
 Nodes (5): hasMethod(), isOneOf(), isType(), normalizeHandler(), Route
 
-### Community 15 - "Community 15"
-Cohesion: 0.29
-Nodes (7): loadAuditLogs(), deleteRemoteRental(), updateRemoteRentalStatus(), handleDeleteRental(), handleLoadAuditLogs(), handleUpdateRentalStatus(), refreshAuditLogs()
+### Community 13 - "Community 13"
+Cohesion: 0.36
+Nodes (9): cleanupUnusedImages(), createRemoteStockItem(), dataURLtoFile(), getPathFromUrl(), loadShopSettings(), mapStockItemRow(), StockItemRow, updateRemoteStockItem() (+1 more)
+
+### Community 14 - "Community 14"
+Cohesion: 0.2
+Nodes (9): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+1 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.4
@@ -160,7 +160,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `StrategyHandler` connect `Community 5` to `Community 10`, `Community 19`, `Community 6`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Why does `RentalOrder` connect `Community 3` to `Community 0`, `Community 1`, `Community 4`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `logger`, `messages`, `finalAssertExports` to the rest of the system?**
   _181 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**

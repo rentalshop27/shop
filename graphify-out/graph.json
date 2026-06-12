@@ -63,7 +63,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L369",
       "id": "dev_dist_workbox_f0c192c2_workboxerror",
-      "community": 24,
+      "community": 21,
       "norm_label": "workboxerror"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L378",
       "id": "dev_dist_workbox_f0c192c2_workboxerror_constructor",
-      "community": 24,
+      "community": 21,
       "norm_label": ".constructor()"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L404",
       "id": "dev_dist_workbox_f0c192c2_hasmethod",
-      "community": 14,
+      "community": 12,
       "norm_label": "hasmethod()"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L411",
       "id": "dev_dist_workbox_f0c192c2_istype",
-      "community": 14,
+      "community": 12,
       "norm_label": "istype()"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L426",
       "id": "dev_dist_workbox_f0c192c2_isoneof",
-      "community": 14,
+      "community": 12,
       "norm_label": "isoneof()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L500",
       "id": "dev_dist_workbox_f0c192c2_normalizehandler",
-      "community": 14,
+      "community": 12,
       "norm_label": "normalizehandler()"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L542",
       "id": "dev_dist_workbox_f0c192c2_route",
-      "community": 14,
+      "community": 12,
       "norm_label": "route"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L554",
       "id": "dev_dist_workbox_f0c192c2_route_constructor",
-      "community": 14,
+      "community": 12,
       "norm_label": ".constructor()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L579",
       "id": "dev_dist_workbox_f0c192c2_route_setcatchhandler",
-      "community": 14,
+      "community": 12,
       "norm_label": ".setcatchhandler()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L691",
       "id": "dev_dist_workbox_f0c192c2_router",
-      "community": 13,
+      "community": 15,
       "norm_label": "router"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L695",
       "id": "dev_dist_workbox_f0c192c2_router_constructor",
-      "community": 13,
+      "community": 15,
       "norm_label": ".constructor()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L704",
       "id": "dev_dist_workbox_f0c192c2_router_routes",
-      "community": 13,
+      "community": 15,
       "norm_label": ".routes()"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L711",
       "id": "dev_dist_workbox_f0c192c2_router_addfetchlistener",
-      "community": 13,
+      "community": 15,
       "norm_label": ".addfetchlistener()"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L748",
       "id": "dev_dist_workbox_f0c192c2_router_addcachelistener",
-      "community": 13,
+      "community": 15,
       "norm_label": ".addcachelistener()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1004",
       "id": "dev_dist_workbox_f0c192c2_router_setdefaulthandler",
-      "community": 13,
+      "community": 12,
       "norm_label": ".setdefaulthandler()"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1014",
       "id": "dev_dist_workbox_f0c192c2_router_setcatchhandler",
-      "community": 13,
+      "community": 12,
       "norm_label": ".setcatchhandler()"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1022",
       "id": "dev_dist_workbox_f0c192c2_router_registerroute",
-      "community": 14,
+      "community": 12,
       "norm_label": ".registerroute()"
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1067",
       "id": "dev_dist_workbox_f0c192c2_router_unregisterroute",
-      "community": 13,
+      "community": 15,
       "norm_label": ".unregisterroute()"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1097",
       "id": "dev_dist_workbox_f0c192c2_getorcreatedefaultrouter",
-      "community": 13,
+      "community": 15,
       "norm_label": "getorcreatedefaultrouter()"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1333",
       "id": "dev_dist_workbox_f0c192c2_precacheinstallreportplugin",
-      "community": 21,
+      "community": 25,
       "norm_label": "precacheinstallreportplugin"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1334",
       "id": "dev_dist_workbox_f0c192c2_precacheinstallreportplugin_constructor",
-      "community": 21,
+      "community": 25,
       "norm_label": ".constructor()"
     },
     {
@@ -405,7 +405,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1380",
       "id": "dev_dist_workbox_f0c192c2_precachecachekeyplugin",
-      "community": 25,
+      "community": 23,
       "norm_label": "precachecachekeyplugin"
     },
     {
@@ -414,7 +414,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1381",
       "id": "dev_dist_workbox_f0c192c2_precachecachekeyplugin_constructor",
-      "community": 25,
+      "community": 23,
       "norm_label": ".constructor()"
     },
     {
@@ -495,7 +495,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1627",
       "id": "dev_dist_workbox_f0c192c2_deferred",
-      "community": 22,
+      "community": 24,
       "norm_label": "deferred"
     },
     {
@@ -504,7 +504,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1631",
       "id": "dev_dist_workbox_f0c192c2_deferred_constructor",
-      "community": 22,
+      "community": 24,
       "norm_label": ".constructor()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3047",
       "id": "dev_dist_workbox_f0c192c2_precacheroute",
-      "community": 23,
+      "community": 22,
       "norm_label": "precacheroute"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3064",
       "id": "dev_dist_workbox_f0c192c2_precacheroute_constructor",
-      "community": 23,
+      "community": 22,
       "norm_label": ".constructor()"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L163",
       "id": "src_app_refreshauditlogs",
-      "community": 15,
+      "community": 8,
       "norm_label": "refreshauditlogs()"
     },
     {
@@ -1593,7 +1593,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L468",
       "id": "src_app_handlecreaterentals",
-      "community": 3,
+      "community": 8,
       "norm_label": "handlecreaterentals()"
     },
     {
@@ -1602,7 +1602,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L505",
       "id": "src_app_handleupdaterentalstatus",
-      "community": 15,
+      "community": 8,
       "norm_label": "handleupdaterentalstatus()"
     },
     {
@@ -1611,7 +1611,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L533",
       "id": "src_app_handledeleterental",
-      "community": 15,
+      "community": 8,
       "norm_label": "handledeleterental()"
     },
     {
@@ -1683,7 +1683,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L625",
       "id": "src_app_handleloadauditlogs",
-      "community": 15,
+      "community": 8,
       "norm_label": "handleloadauditlogs()"
     },
     {
@@ -2664,7 +2664,7 @@
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L48",
       "id": "rentals_rentalremote_createremoterentals",
-      "community": 3,
+      "community": 8,
       "norm_label": "createremoterentals()"
     },
     {
@@ -2682,7 +2682,7 @@
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L81",
       "id": "rentals_rentalremote_updateremoterentalstatus",
-      "community": 15,
+      "community": 8,
       "norm_label": "updateremoterentalstatus()"
     },
     {
@@ -2691,7 +2691,7 @@
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L94",
       "id": "rentals_rentalremote_deleteremoterental",
-      "community": 15,
+      "community": 8,
       "norm_label": "deleteremoterental()"
     },
     {
@@ -3055,10 +3055,19 @@
       "norm_label": "formatbaht()"
     },
     {
+      "label": "getDiscountAmount()",
+      "file_type": "code",
+      "source_file": "src/features/rentals/RentalsPage.tsx",
+      "source_location": "L376",
+      "id": "rentals_rentalspage_getdiscountamount",
+      "community": 1,
+      "norm_label": "getdiscountamount()"
+    },
+    {
       "label": "nextStatusMap",
       "file_type": "code",
       "source_file": "src/features/rentals/RentalsPage.tsx",
-      "source_location": "L648",
+      "source_location": "L663",
       "id": "rentals_rentalspage_nextstatusmap",
       "community": 1,
       "norm_label": "nextstatusmap"
@@ -3546,7 +3555,7 @@
       "source_file": "src/features/audit/auditRemote.ts",
       "source_location": "L31",
       "id": "audit_auditremote_loadauditlogs",
-      "community": 15,
+      "community": 8,
       "norm_label": "loadauditlogs()"
     },
     {
@@ -3726,7 +3735,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L1",
       "id": "src_features_inventory_stockremote_ts",
-      "community": 8,
+      "community": 13,
       "norm_label": "stockremote.ts"
     },
     {
@@ -3735,7 +3744,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L4",
       "id": "inventory_stockremote_stockitemrow",
-      "community": 8,
+      "community": 13,
       "norm_label": "stockitemrow"
     },
     {
@@ -3744,7 +3753,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L25",
       "id": "inventory_stockremote_getpathfromurl",
-      "community": 8,
+      "community": 13,
       "norm_label": "getpathfromurl()"
     },
     {
@@ -3753,7 +3762,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L46",
       "id": "inventory_stockremote_dataurltofile",
-      "community": 8,
+      "community": 13,
       "norm_label": "dataurltofile()"
     },
     {
@@ -3771,7 +3780,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L70",
       "id": "inventory_stockremote_mapstockitemrow",
-      "community": 8,
+      "community": 13,
       "norm_label": "mapstockitemrow()"
     },
     {
@@ -3780,7 +3789,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L105",
       "id": "inventory_stockremote_uploadstockimages",
-      "community": 8,
+      "community": 13,
       "norm_label": "uploadstockimages()"
     },
     {
@@ -3789,7 +3798,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L146",
       "id": "inventory_stockremote_cleanupunusedimages",
-      "community": 8,
+      "community": 13,
       "norm_label": "cleanupunusedimages()"
     },
     {
@@ -3798,7 +3807,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L161",
       "id": "inventory_stockremote_createremotestockitem",
-      "community": 8,
+      "community": 13,
       "norm_label": "createremotestockitem()"
     },
     {
@@ -3807,7 +3816,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L206",
       "id": "inventory_stockremote_updateremotestockitem",
-      "community": 8,
+      "community": 13,
       "norm_label": "updateremotestockitem()"
     },
     {
@@ -3843,7 +3852,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L307",
       "id": "inventory_stockremote_loadshopsettings",
-      "community": 8,
+      "community": 13,
       "norm_label": "loadshopsettings()"
     },
     {
@@ -3888,7 +3897,7 @@
       "source_file": "README.md",
       "source_location": "L1",
       "id": "readme_md",
-      "community": 12,
+      "community": 14,
       "norm_label": "readme.md"
     },
     {
@@ -3897,7 +3906,7 @@
       "source_file": "README.md",
       "source_location": "L1",
       "id": "precious_shop_readme_precious_shop",
-      "community": 12,
+      "community": 14,
       "norm_label": "precious shop"
     },
     {
@@ -3906,7 +3915,7 @@
       "source_file": "README.md",
       "source_location": "L5",
       "id": "precious_shop_readme_features",
-      "community": 12,
+      "community": 14,
       "norm_label": "features"
     },
     {
@@ -3915,7 +3924,7 @@
       "source_file": "README.md",
       "source_location": "L17",
       "id": "precious_shop_readme_development",
-      "community": 12,
+      "community": 14,
       "norm_label": "development"
     },
     {
@@ -3924,7 +3933,7 @@
       "source_file": "README.md",
       "source_location": "L19",
       "id": "precious_shop_readme_codeblock_1",
-      "community": 12,
+      "community": 14,
       "norm_label": "code:bash (npm install)"
     },
     {
@@ -3933,7 +3942,7 @@
       "source_file": "README.md",
       "source_location": "L26",
       "id": "precious_shop_readme_supabase",
-      "community": 12,
+      "community": 14,
       "norm_label": "supabase"
     },
     {
@@ -3942,7 +3951,7 @@
       "source_file": "README.md",
       "source_location": "L34",
       "id": "precious_shop_readme_codeblock_2",
-      "community": 12,
+      "community": 14,
       "norm_label": "code:bash (vite_supabase_url=https://your-project.supabase.co)"
     },
     {
@@ -3951,7 +3960,7 @@
       "source_file": "README.md",
       "source_location": "L41",
       "id": "precious_shop_readme_cloudflare_pages",
-      "community": 12,
+      "community": 14,
       "norm_label": "cloudflare pages"
     },
     {
@@ -3960,7 +3969,7 @@
       "source_file": "README.md",
       "source_location": "L47",
       "id": "precious_shop_readme_verification",
-      "community": 12,
+      "community": 14,
       "norm_label": "verification"
     },
     {
@@ -3969,7 +3978,7 @@
       "source_file": "README.md",
       "source_location": "L49",
       "id": "precious_shop_readme_codeblock_3",
-      "community": 12,
+      "community": 14,
       "norm_label": "code:bash (npm run test)"
     },
     {
@@ -10091,9 +10100,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L213",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_rentals_rentalspage_tsx",
-      "target": "rentals_rentalspage_getordergroupcode",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_getordergroupcode"
     },
     {
       "relation": "contains",
@@ -10164,6 +10173,16 @@
       "confidence_score": 1.0,
       "source": "src_features_rentals_rentalspage_tsx",
       "target": "rentals_rentalspage_formatbaht"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/rentals/RentalsPage.tsx",
+      "source_location": "L376",
+      "weight": 1.0,
+      "source": "src_features_rentals_rentalspage_tsx",
+      "target": "rentals_rentalspage_getdiscountamount",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -11290,5 +11309,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "77f342ffa0d98fd3e10dfcf75c8cad72027875ea"
+  "built_at_commit": "1721f58206620ad0ec83c2d3c38189d14b936243"
 }
