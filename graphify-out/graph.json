@@ -63,7 +63,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L369",
       "id": "dev_dist_workbox_f0c192c2_workboxerror",
-      "community": 23,
+      "community": 21,
       "norm_label": "workboxerror"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L378",
       "id": "dev_dist_workbox_f0c192c2_workboxerror_constructor",
-      "community": 23,
+      "community": 21,
       "norm_label": ".constructor()"
     },
     {
@@ -81,7 +81,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L399",
       "id": "dev_dist_workbox_f0c192c2_isarray",
-      "community": 19,
+      "community": 18,
       "norm_label": "isarray()"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L404",
       "id": "dev_dist_workbox_f0c192c2_hasmethod",
-      "community": 11,
+      "community": 12,
       "norm_label": "hasmethod()"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L411",
       "id": "dev_dist_workbox_f0c192c2_istype",
-      "community": 11,
+      "community": 12,
       "norm_label": "istype()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L417",
       "id": "dev_dist_workbox_f0c192c2_isinstance",
-      "community": 20,
+      "community": 19,
       "norm_label": "isinstance()"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L426",
       "id": "dev_dist_workbox_f0c192c2_isoneof",
-      "community": 11,
+      "community": 12,
       "norm_label": "isoneof()"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L432",
       "id": "dev_dist_workbox_f0c192c2_isarrayofclass",
-      "community": 19,
+      "community": 18,
       "norm_label": "isarrayofclass()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L500",
       "id": "dev_dist_workbox_f0c192c2_normalizehandler",
-      "community": 11,
+      "community": 12,
       "norm_label": "normalizehandler()"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L542",
       "id": "dev_dist_workbox_f0c192c2_route",
-      "community": 11,
+      "community": 12,
       "norm_label": "route"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L554",
       "id": "dev_dist_workbox_f0c192c2_route_constructor",
-      "community": 11,
+      "community": 12,
       "norm_label": ".constructor()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L579",
       "id": "dev_dist_workbox_f0c192c2_route_setcatchhandler",
-      "community": 11,
+      "community": 12,
       "norm_label": ".setcatchhandler()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L602",
       "id": "dev_dist_workbox_f0c192c2_regexproute",
-      "community": 20,
+      "community": 19,
       "norm_label": "regexproute"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L616",
       "id": "dev_dist_workbox_f0c192c2_regexproute_constructor",
-      "community": 20,
+      "community": 19,
       "norm_label": ".constructor()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L691",
       "id": "dev_dist_workbox_f0c192c2_router",
-      "community": 16,
+      "community": 15,
       "norm_label": "router"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L695",
       "id": "dev_dist_workbox_f0c192c2_router_constructor",
-      "community": 16,
+      "community": 15,
       "norm_label": ".constructor()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L704",
       "id": "dev_dist_workbox_f0c192c2_router_routes",
-      "community": 16,
+      "community": 15,
       "norm_label": ".routes()"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L711",
       "id": "dev_dist_workbox_f0c192c2_router_addfetchlistener",
-      "community": 16,
+      "community": 15,
       "norm_label": ".addfetchlistener()"
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L748",
       "id": "dev_dist_workbox_f0c192c2_router_addcachelistener",
-      "community": 16,
+      "community": 15,
       "norm_label": ".addcachelistener()"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1004",
       "id": "dev_dist_workbox_f0c192c2_router_setdefaulthandler",
-      "community": 11,
+      "community": 12,
       "norm_label": ".setdefaulthandler()"
     },
     {
@@ -288,7 +288,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1014",
       "id": "dev_dist_workbox_f0c192c2_router_setcatchhandler",
-      "community": 11,
+      "community": 12,
       "norm_label": ".setcatchhandler()"
     },
     {
@@ -297,7 +297,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1022",
       "id": "dev_dist_workbox_f0c192c2_router_registerroute",
-      "community": 11,
+      "community": 12,
       "norm_label": ".registerroute()"
     },
     {
@@ -306,7 +306,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1067",
       "id": "dev_dist_workbox_f0c192c2_router_unregisterroute",
-      "community": 16,
+      "community": 15,
       "norm_label": ".unregisterroute()"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1097",
       "id": "dev_dist_workbox_f0c192c2_getorcreatedefaultrouter",
-      "community": 16,
+      "community": 15,
       "norm_label": "getorcreatedefaultrouter()"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1132",
       "id": "dev_dist_workbox_f0c192c2_registerroute",
-      "community": 17,
+      "community": 16,
       "norm_label": "registerroute()"
     },
     {
@@ -495,7 +495,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1627",
       "id": "dev_dist_workbox_f0c192c2_deferred",
-      "community": 26,
+      "community": 25,
       "norm_label": "deferred"
     },
     {
@@ -504,7 +504,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1631",
       "id": "dev_dist_workbox_f0c192c2_deferred_constructor",
-      "community": 26,
+      "community": 25,
       "norm_label": ".constructor()"
     },
     {
@@ -558,7 +558,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L1739",
       "id": "dev_dist_workbox_f0c192c2_strategyhandler_constructor",
-      "community": 20,
+      "community": 19,
       "norm_label": ".constructor()"
     },
     {
@@ -909,7 +909,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L2946",
       "id": "dev_dist_workbox_f0c192c2_getorcreateprecachecontroller",
-      "community": 17,
+      "community": 16,
       "norm_label": "getorcreateprecachecontroller()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3047",
       "id": "dev_dist_workbox_f0c192c2_precacheroute",
-      "community": 25,
+      "community": 23,
       "norm_label": "precacheroute"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3064",
       "id": "dev_dist_workbox_f0c192c2_precacheroute_constructor",
-      "community": 25,
+      "community": 23,
       "norm_label": ".constructor()"
     },
     {
@@ -990,7 +990,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3109",
       "id": "dev_dist_workbox_f0c192c2_addroute",
-      "community": 17,
+      "community": 16,
       "norm_label": "addroute()"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3141",
       "id": "dev_dist_workbox_f0c192c2_precache",
-      "community": 17,
+      "community": 16,
       "norm_label": "precache()"
     },
     {
@@ -1008,7 +1008,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3167",
       "id": "dev_dist_workbox_f0c192c2_precacheandroute",
-      "community": 17,
+      "community": 16,
       "norm_label": "precacheandroute()"
     },
     {
@@ -1035,7 +1035,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3256",
       "id": "dev_dist_workbox_f0c192c2_navigationroute",
-      "community": 19,
+      "community": 18,
       "norm_label": "navigationroute"
     },
     {
@@ -1044,7 +1044,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3281",
       "id": "dev_dist_workbox_f0c192c2_navigationroute_constructor",
-      "community": 19,
+      "community": 18,
       "norm_label": ".constructor()"
     },
     {
@@ -1053,7 +1053,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3313",
       "id": "dev_dist_workbox_f0c192c2_navigationroute_match",
-      "community": 19,
+      "community": 18,
       "norm_label": "._match()"
     },
     {
@@ -1062,7 +1062,7 @@
       "source_file": "dev-dist/workbox-f0c192c2.js",
       "source_location": "L3366",
       "id": "dev_dist_workbox_f0c192c2_createhandlerboundtourl",
-      "community": 17,
+      "community": 16,
       "norm_label": "createhandlerboundtourl()"
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "dev-dist/sw.js",
       "source_location": "L1",
       "id": "dev_dist_sw_js",
-      "community": 18,
+      "community": 17,
       "norm_label": "sw.js"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "dev-dist/sw.js",
       "source_location": "L16",
       "id": "dev_dist_sw_registry",
-      "community": 18,
+      "community": 17,
       "norm_label": "registry"
     },
     {
@@ -1089,7 +1089,7 @@
       "source_file": "dev-dist/sw.js",
       "source_location": "L22",
       "id": "dev_dist_sw_singlerequire",
-      "community": 18,
+      "community": 17,
       "norm_label": "singlerequire()"
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "dev-dist/sw.js",
       "source_location": "L55",
       "id": "dev_dist_sw_exports",
-      "community": 18,
+      "community": 17,
       "norm_label": "exports"
     },
     {
@@ -1107,7 +1107,7 @@
       "source_file": "dev-dist/sw.js",
       "source_location": "L56",
       "id": "dev_dist_sw_require",
-      "community": 18,
+      "community": 17,
       "norm_label": "require()"
     },
     {
@@ -1116,7 +1116,7 @@
       "source_file": "dev-dist/sw.js",
       "source_location": "L57",
       "id": "dev_dist_sw_specialdeps",
-      "community": 18,
+      "community": 17,
       "norm_label": "specialdeps"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L163",
       "id": "src_app_refreshauditlogs",
-      "community": 14,
+      "community": 10,
       "norm_label": "refreshauditlogs()"
     },
     {
@@ -1512,7 +1512,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L369",
       "id": "src_app_handleaddbrand",
-      "community": 10,
+      "community": 11,
       "norm_label": "handleaddbrand()"
     },
     {
@@ -1521,7 +1521,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L382",
       "id": "src_app_handledeletebrand",
-      "community": 10,
+      "community": 11,
       "norm_label": "handledeletebrand()"
     },
     {
@@ -1530,7 +1530,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L395",
       "id": "src_app_handleaddcategory",
-      "community": 10,
+      "community": 11,
       "norm_label": "handleaddcategory()"
     },
     {
@@ -1539,7 +1539,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L408",
       "id": "src_app_handledeletecategory",
-      "community": 10,
+      "community": 11,
       "norm_label": "handledeletecategory()"
     },
     {
@@ -1548,7 +1548,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L421",
       "id": "src_app_handleaddcolor",
-      "community": 10,
+      "community": 11,
       "norm_label": "handleaddcolor()"
     },
     {
@@ -1557,7 +1557,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L434",
       "id": "src_app_handledeletecolor",
-      "community": 10,
+      "community": 11,
       "norm_label": "handledeletecolor()"
     },
     {
@@ -1593,7 +1593,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L468",
       "id": "src_app_handlecreaterentals",
-      "community": 14,
+      "community": 10,
       "norm_label": "handlecreaterentals()"
     },
     {
@@ -1602,7 +1602,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L505",
       "id": "src_app_handleupdaterentalstatus",
-      "community": 14,
+      "community": 10,
       "norm_label": "handleupdaterentalstatus()"
     },
     {
@@ -1611,7 +1611,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L533",
       "id": "src_app_handledeleterental",
-      "community": 14,
+      "community": 26,
       "norm_label": "handledeleterental()"
     },
     {
@@ -1683,7 +1683,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L625",
       "id": "src_app_handleloadauditlogs",
-      "community": 14,
+      "community": 10,
       "norm_label": "handleloadauditlogs()"
     },
     {
@@ -1764,7 +1764,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L730",
       "id": "src_app_closestockform",
-      "community": 15,
+      "community": 10,
       "norm_label": "closestockform()"
     },
     {
@@ -1800,7 +1800,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L775",
       "id": "src_app_closestockpreview",
-      "community": 15,
+      "community": 10,
       "norm_label": "closestockpreview()"
     },
     {
@@ -1809,7 +1809,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L780",
       "id": "src_app_handledeletestockitem",
-      "community": 15,
+      "community": 10,
       "norm_label": "handledeletestockitem()"
     },
     {
@@ -1845,7 +1845,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1041",
       "id": "src_app_handlesavestockitem",
-      "community": 15,
+      "community": 10,
       "norm_label": "handlesavestockitem()"
     },
     {
@@ -1854,7 +1854,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1294",
       "id": "src_app_updateselectedstatus",
-      "community": 10,
+      "community": 11,
       "norm_label": "updateselectedstatus()"
     },
     {
@@ -1863,7 +1863,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1322",
       "id": "src_app_updateselectedrisk",
-      "community": 10,
+      "community": 11,
       "norm_label": "updateselectedrisk()"
     },
     {
@@ -1872,7 +1872,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1343",
       "id": "src_app_archiveselectedcustomer",
-      "community": 10,
+      "community": 11,
       "norm_label": "archiveselectedcustomer()"
     },
     {
@@ -1962,7 +1962,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L2458",
       "id": "src_app_match",
-      "community": 15,
+      "community": 10,
       "norm_label": "match"
     },
     {
@@ -2034,7 +2034,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L2838",
       "id": "src_app_parseoptionalnumber",
-      "community": 15,
+      "community": 10,
       "norm_label": "parseoptionalnumber()"
     },
     {
@@ -2052,7 +2052,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L2852",
       "id": "src_app_geterrormessage",
-      "community": 10,
+      "community": 11,
       "norm_label": "geterrormessage()"
     },
     {
@@ -2313,7 +2313,7 @@
       "source_file": "src/features/customers/customerRemote.ts",
       "source_location": "L122",
       "id": "customers_customerremote_updateremotecustomerstatus",
-      "community": 10,
+      "community": 11,
       "norm_label": "updateremotecustomerstatus()"
     },
     {
@@ -2322,7 +2322,7 @@
       "source_file": "src/features/customers/customerRemote.ts",
       "source_location": "L135",
       "id": "customers_customerremote_updateremotecustomerrisk",
-      "community": 10,
+      "community": 11,
       "norm_label": "updateremotecustomerrisk()"
     },
     {
@@ -2331,7 +2331,7 @@
       "source_file": "src/features/customers/customerRemote.ts",
       "source_location": "L148",
       "id": "customers_customerremote_archiveremotecustomer",
-      "community": 10,
+      "community": 11,
       "norm_label": "archiveremotecustomer()"
     },
     {
@@ -2664,7 +2664,7 @@
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L48",
       "id": "rentals_rentalremote_createremoterentals",
-      "community": 14,
+      "community": 10,
       "norm_label": "createremoterentals()"
     },
     {
@@ -2682,7 +2682,7 @@
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L81",
       "id": "rentals_rentalremote_updateremoterentalstatus",
-      "community": 14,
+      "community": 10,
       "norm_label": "updateremoterentalstatus()"
     },
     {
@@ -2691,7 +2691,7 @@
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L94",
       "id": "rentals_rentalremote_deleteremoterental",
-      "community": 14,
+      "community": 26,
       "norm_label": "deleteremoterental()"
     },
     {
@@ -3373,7 +3373,7 @@
       "label": "filteredOngoing",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L607",
+      "source_location": "L644",
       "id": "calendar_calendarpage_filteredongoing",
       "community": 4,
       "norm_label": "filteredongoing"
@@ -3481,7 +3481,7 @@
       "label": "[activeSlipToReview, setActiveSlipToReview]",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L145",
+      "source_location": "L128",
       "id": "dashboard_dashboardpage_activesliptoreview_setactivesliptoreview",
       "community": 3,
       "norm_label": "[activesliptoreview, setactivesliptoreview]"
@@ -3490,7 +3490,7 @@
       "label": "[activeContactUser, setActiveContactUser]",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L146",
+      "source_location": "L129",
       "id": "dashboard_dashboardpage_activecontactuser_setactivecontactuser",
       "community": 3,
       "norm_label": "[activecontactuser, setactivecontactuser]"
@@ -3499,7 +3499,7 @@
       "label": "handleApproveSlip()",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L151",
+      "source_location": "L134",
       "id": "dashboard_dashboardpage_handleapproveslip",
       "community": 3,
       "norm_label": "handleapproveslip()"
@@ -3508,7 +3508,7 @@
       "label": "handleRejectSlip()",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L158",
+      "source_location": "L141",
       "id": "dashboard_dashboardpage_handlerejectslip",
       "community": 3,
       "norm_label": "handlerejectslip()"
@@ -3517,7 +3517,7 @@
       "label": "handleMarkPickedUp()",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L164",
+      "source_location": "L147",
       "id": "dashboard_dashboardpage_handlemarkpickedup",
       "community": 3,
       "norm_label": "handlemarkpickedup()"
@@ -3526,7 +3526,7 @@
       "label": "handleMarkReturned()",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L169",
+      "source_location": "L152",
       "id": "dashboard_dashboardpage_handlemarkreturned",
       "community": 3,
       "norm_label": "handlemarkreturned()"
@@ -3535,7 +3535,7 @@
       "label": "handleSettleOverdue()",
       "file_type": "code",
       "source_file": "src/features/dashboard/DashboardPage.tsx",
-      "source_location": "L174",
+      "source_location": "L157",
       "id": "dashboard_dashboardpage_handlesettleoverdue",
       "community": 3,
       "norm_label": "handlesettleoverdue()"
@@ -3582,7 +3582,7 @@
       "source_file": "src/features/audit/auditRemote.ts",
       "source_location": "L31",
       "id": "audit_auditremote_loadauditlogs",
-      "community": 14,
+      "community": 10,
       "norm_label": "loadauditlogs()"
     },
     {
@@ -3762,7 +3762,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L1",
       "id": "src_features_inventory_stockremote_ts",
-      "community": 12,
+      "community": 13,
       "norm_label": "stockremote.ts"
     },
     {
@@ -3771,7 +3771,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L4",
       "id": "inventory_stockremote_stockitemrow",
-      "community": 12,
+      "community": 13,
       "norm_label": "stockitemrow"
     },
     {
@@ -3780,7 +3780,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L25",
       "id": "inventory_stockremote_getpathfromurl",
-      "community": 12,
+      "community": 13,
       "norm_label": "getpathfromurl()"
     },
     {
@@ -3789,7 +3789,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L46",
       "id": "inventory_stockremote_dataurltofile",
-      "community": 12,
+      "community": 13,
       "norm_label": "dataurltofile()"
     },
     {
@@ -3798,7 +3798,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L58",
       "id": "inventory_stockremote_loadstockitems",
-      "community": 15,
+      "community": 10,
       "norm_label": "loadstockitems()"
     },
     {
@@ -3807,7 +3807,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L70",
       "id": "inventory_stockremote_mapstockitemrow",
-      "community": 12,
+      "community": 13,
       "norm_label": "mapstockitemrow()"
     },
     {
@@ -3816,7 +3816,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L105",
       "id": "inventory_stockremote_uploadstockimages",
-      "community": 12,
+      "community": 13,
       "norm_label": "uploadstockimages()"
     },
     {
@@ -3825,7 +3825,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L146",
       "id": "inventory_stockremote_cleanupunusedimages",
-      "community": 12,
+      "community": 13,
       "norm_label": "cleanupunusedimages()"
     },
     {
@@ -3834,7 +3834,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L161",
       "id": "inventory_stockremote_createremotestockitem",
-      "community": 12,
+      "community": 13,
       "norm_label": "createremotestockitem()"
     },
     {
@@ -3843,7 +3843,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L206",
       "id": "inventory_stockremote_updateremotestockitem",
-      "community": 12,
+      "community": 13,
       "norm_label": "updateremotestockitem()"
     },
     {
@@ -3852,7 +3852,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L251",
       "id": "inventory_stockremote_deleteremotestockitem",
-      "community": 15,
+      "community": 10,
       "norm_label": "deleteremotestockitem()"
     },
     {
@@ -3861,7 +3861,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L276",
       "id": "inventory_stockremote_countremoterentalsforstocksku",
-      "community": 15,
+      "community": 10,
       "norm_label": "countremoterentalsforstocksku()"
     },
     {
@@ -3870,7 +3870,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L289",
       "id": "inventory_stockremote_updateshopsettings",
-      "community": 10,
+      "community": 11,
       "norm_label": "updateshopsettings()"
     },
     {
@@ -3879,7 +3879,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L307",
       "id": "inventory_stockremote_loadshopsettings",
-      "community": 12,
+      "community": 13,
       "norm_label": "loadshopsettings()"
     },
     {
@@ -3888,7 +3888,7 @@
       "source_file": "src/lib/supabase.ts",
       "source_location": "L1",
       "id": "src_lib_supabase_ts",
-      "community": 21,
+      "community": 20,
       "norm_label": "supabase.ts"
     },
     {
@@ -3897,7 +3897,7 @@
       "source_file": "src/lib/supabase.ts",
       "source_location": "L3",
       "id": "lib_supabase_supabaseurl",
-      "community": 21,
+      "community": 20,
       "norm_label": "supabaseurl"
     },
     {
@@ -3906,7 +3906,7 @@
       "source_file": "src/lib/supabase.ts",
       "source_location": "L4",
       "id": "lib_supabase_supabaseanonkey",
-      "community": 21,
+      "community": 20,
       "norm_label": "supabaseanonkey"
     },
     {
@@ -3915,7 +3915,7 @@
       "source_file": "src/lib/supabase.ts",
       "source_location": "L6",
       "id": "lib_supabase_hassupabaseconfig",
-      "community": 21,
+      "community": 20,
       "norm_label": "hassupabaseconfig"
     },
     {
@@ -3924,7 +3924,7 @@
       "source_file": "README.md",
       "source_location": "L1",
       "id": "readme_md",
-      "community": 13,
+      "community": 14,
       "norm_label": "readme.md"
     },
     {
@@ -3933,7 +3933,7 @@
       "source_file": "README.md",
       "source_location": "L1",
       "id": "precious_shop_readme_precious_shop",
-      "community": 13,
+      "community": 14,
       "norm_label": "precious shop"
     },
     {
@@ -3942,7 +3942,7 @@
       "source_file": "README.md",
       "source_location": "L5",
       "id": "precious_shop_readme_features",
-      "community": 13,
+      "community": 14,
       "norm_label": "features"
     },
     {
@@ -3951,7 +3951,7 @@
       "source_file": "README.md",
       "source_location": "L17",
       "id": "precious_shop_readme_development",
-      "community": 13,
+      "community": 14,
       "norm_label": "development"
     },
     {
@@ -3960,7 +3960,7 @@
       "source_file": "README.md",
       "source_location": "L19",
       "id": "precious_shop_readme_codeblock_1",
-      "community": 13,
+      "community": 14,
       "norm_label": "code:bash (npm install)"
     },
     {
@@ -3969,7 +3969,7 @@
       "source_file": "README.md",
       "source_location": "L26",
       "id": "precious_shop_readme_supabase",
-      "community": 13,
+      "community": 14,
       "norm_label": "supabase"
     },
     {
@@ -3978,7 +3978,7 @@
       "source_file": "README.md",
       "source_location": "L34",
       "id": "precious_shop_readme_codeblock_2",
-      "community": 13,
+      "community": 14,
       "norm_label": "code:bash (vite_supabase_url=https://your-project.supabase.co)"
     },
     {
@@ -3987,7 +3987,7 @@
       "source_file": "README.md",
       "source_location": "L41",
       "id": "precious_shop_readme_cloudflare_pages",
-      "community": 13,
+      "community": 14,
       "norm_label": "cloudflare pages"
     },
     {
@@ -3996,7 +3996,7 @@
       "source_file": "README.md",
       "source_location": "L47",
       "id": "precious_shop_readme_verification",
-      "community": 13,
+      "community": 14,
       "norm_label": "verification"
     },
     {
@@ -4005,7 +4005,7 @@
       "source_file": "README.md",
       "source_location": "L49",
       "id": "precious_shop_readme_codeblock_3",
-      "community": 13,
+      "community": 14,
       "norm_label": "code:bash (npm run test)"
     },
     {
@@ -4043,6 +4043,15 @@
       "id": "supabase_readme_supabase_setup",
       "community": 29,
       "norm_label": "supabase setup"
+    },
+    {
+      "label": "totalRevenue",
+      "file_type": "code",
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "L54",
+      "community": 3,
+      "norm_label": "totalrevenue",
+      "id": "dashboard_dashboardpage_totalrevenue"
     },
     {
       "label": "handlePriceOrDepositChange()",
@@ -9996,9 +10005,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L81",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_rentals_rentalspage_tsx",
-      "target": "rentals_rentalspage_discountamount_setdiscountamount",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_discountamount_setdiscountamount"
     },
     {
       "relation": "contains",
@@ -10126,9 +10135,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L188",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_rentals_rentalspage_tsx",
-      "target": "rentals_rentalspage_parsemoneyinput",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_parsemoneyinput"
     },
     {
       "relation": "contains",
@@ -10136,9 +10145,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L192",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_rentals_rentalspage_tsx",
-      "target": "rentals_rentalspage_synccollectedamount",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_synccollectedamount"
     },
     {
       "relation": "contains",
@@ -10146,9 +10155,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L199",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_rentals_rentalspage_tsx",
-      "target": "rentals_rentalspage_syncdiscountamount",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_syncdiscountamount"
     },
     {
       "relation": "contains",
@@ -10298,9 +10307,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "rentals_rentalspage_synccollectedamount",
-      "target": "rentals_rentalspage_parsemoneyinput",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_parsemoneyinput"
     },
     {
       "relation": "calls",
@@ -10309,9 +10318,9 @@
       "source_file": "src/features/rentals/RentalsPage.tsx",
       "source_location": "L200",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "rentals_rentalspage_syncdiscountamount",
-      "target": "rentals_rentalspage_parsemoneyinput",
-      "confidence_score": 1.0
+      "target": "rentals_rentalspage_parsemoneyinput"
     },
     {
       "relation": "calls",
@@ -10804,6 +10813,16 @@
       "confidence_score": 1.0,
       "source": "src_features_dashboard_dashboardpage_tsx",
       "target": "dashboard_dashboardpage_handlesettleoverdue"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/dashboard/DashboardPage.tsx",
+      "source_location": "L54",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_features_dashboard_dashboardpage_tsx",
+      "target": "dashboard_dashboardpage_totalrevenue"
     },
     {
       "relation": "contains",
@@ -11407,5 +11426,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b5ca505974c71145b437f6f5cd4e05261c6b5925"
+  "built_at_commit": "5e08d5a784f220c3e16af19647c3c333abefec36"
 }

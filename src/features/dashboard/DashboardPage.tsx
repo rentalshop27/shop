@@ -122,24 +122,7 @@ export function DashboardPage({
     })
 
   // Bank slips state
-  const [slips, setSlips] = useState<BankSlip[]>([
-    {
-      id: 'slip-1',
-      customerName: 'คุณมนัสวี ใสสว่าง',
-      amount: 1500,
-      time: '19:30 น.',
-      slipUrl: 'https://images.unsplash.com/photo-1616077168079-7e09a677fb2c?w=400&auto=format&fit=crop&q=60',
-      refNo: 'REF-889210293'
-    },
-    {
-      id: 'slip-2',
-      customerName: 'คุณณิชารีย์ ศรีสุข',
-      amount: 2400,
-      time: '19:15 น.',
-      slipUrl: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=400&auto=format&fit=crop&q=60',
-      refNo: 'REF-901428371'
-    }
-  ])
+  const [slips, setSlips] = useState<BankSlip[]>([])
 
   // Modals management
   const [activeSlipToReview, setActiveSlipToReview] = useState<BankSlip | null>(null)

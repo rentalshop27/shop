@@ -516,40 +516,77 @@ export function CalendarPage({
                         <div className="cell-events-list" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'hidden' }}>
                           
                           {/* Pickups */}
-                          {filteredPickups.slice(0, 2).map((rental) => (
-                            <div
-                              key={`pickup-${rental.id}`}
-                              style={{
-                                fontSize: '10px',
-                                background: 'rgba(245, 158, 11, 0.08)',
-                                borderLeft: '3px solid var(--warning-color)',
-                                color: 'var(--warning-color)',
-                                padding: '2px 4px',
-                                borderRadius: '2px',
-                                whiteSpace: 'nowrap',
-                                textOverflow: 'ellipsis',
-                                overflow: 'hidden'
-                              }}
-                              title={`📦 รับ/ส่ง: ${rental.customer.fullName} - ${rental.costume.productName}`}
-                            >
-                              📦 {rental.customer.fullName.split(' ')[0]}
-                            </div>
-                          ))}
+                          {filteredPickups.slice(0, 2).map((rental) => {
+                            let badgeBg = 'rgba(245, 158, 11, 0.08)'
+                            let borderCol = 'var(--warning-color)'
+                            let textCol = 'var(--warning-color)'
+                            let icon = '📦'
+
+                            if (rental.status === 'active') {
+                              badgeBg = 'rgba(218, 165, 32, 0.08)'
+                              borderCol = 'rgba(218, 165, 32, 0.6)'
+                              textCol = '#ead483'
+                              icon = '✅'
+                            } else if (rental.status === 'returned') {
+                              badgeBg = 'rgba(16, 185, 129, 0.08)'
+                              borderCol = 'var(--success-color)'
+                              textCol = 'var(--success-color)'
+                              icon = '✅'
+                            } else if (rental.status === 'overdue') {
+                              badgeBg = 'rgba(239, 68, 68, 0.08)'
+                              borderCol = 'var(--danger-color)'
+                              textCol = 'var(--danger-color)'
+                              icon = '⚠️'
+                            }
+
+                            return (
+                              <div
+                                key={`pickup-${rental.id}`}
+                                style={{
+                                  fontSize: '10px',
+                                  background: badgeBg,
+                                  borderLeft: `3px solid ${borderCol}`,
+                                  color: textCol,
+                                  padding: '2px 4px',
+                                  borderRadius: '2px',
+                                  whiteSpace: 'nowrap',
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden'
+                                }}
+                                title={`📦 รับ/ส่ง: ${rental.customer.fullName} - ${rental.costume.productName} (${rental.status === 'booked' ? 'จอง' : rental.status === 'active' ? 'กำลังเช่า' : rental.status === 'returned' ? 'คืนแล้ว' : 'เกินกำหนด'})`}
+                              >
+                                {icon} {rental.customer.fullName.split(' ')[0]}
+                              </div>
+                            )
+                          })}
 
                           {/* Returns */}
                           {filteredReturns.slice(0, 2).map((rental) => {
                             let badgeBg = 'rgba(16, 185, 129, 0.08)'
                             let borderCol = 'var(--success-color)'
                             let textCol = 'var(--success-color)'
+                            let icon = '↩️'
 
                             if (rental.status === 'overdue') {
                               badgeBg = 'rgba(239, 68, 68, 0.08)'
                               borderCol = 'var(--danger-color)'
                               textCol = 'var(--danger-color)'
+                              icon = '⚠️'
                             } else if (rental.status === 'booked') {
                               badgeBg = 'rgba(245, 158, 11, 0.08)'
                               borderCol = 'var(--warning-color)'
                               textCol = 'var(--warning-color)'
+                              icon = '↩️'
+                            } else if (rental.status === 'active') {
+                              badgeBg = 'rgba(218, 165, 32, 0.08)'
+                              borderCol = 'rgba(218, 165, 32, 0.6)'
+                              textCol = '#ead483'
+                              icon = '↩️'
+                            } else if (rental.status === 'returned') {
+                              badgeBg = 'rgba(16, 185, 129, 0.08)'
+                              borderCol = 'var(--success-color)'
+                              textCol = 'var(--success-color)'
+                              icon = '✅'
                             }
 
                             return (
@@ -566,9 +603,9 @@ export function CalendarPage({
                                   textOverflow: 'ellipsis',
                                   overflow: 'hidden'
                                 }}
-                                title={`↩️ คืน: ${rental.customer.fullName} - ${rental.costume.productName}`}
+                                title={`↩️ คืน: ${rental.customer.fullName} - ${rental.costume.productName} (${rental.status === 'booked' ? 'จอง' : rental.status === 'active' ? 'กำลังเช่า' : rental.status === 'returned' ? 'คืนแล้ว' : 'เกินกำหนด'})`}
                               >
-                                ↩️ {rental.customer.fullName.split(' ')[0]}
+                                {icon} {rental.customer.fullName.split(' ')[0]}
                               </div>
                             );
                           })}
@@ -651,38 +688,103 @@ export function CalendarPage({
                         ) : (
                           <>
                             {/* Pickups */}
-                            {filteredPickups.map((r) => (
-                              <span
-                                key={`pk-${r.id}`}
-                                className="status-pill warning"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', background: 'rgba(245, 158, 11, 0.08)' }}
-                              >
-                                <span>📦 รับ/ส่งชุด:</span>
-                                <strong>{r.customer.fullName}</strong>
-                                <small>({r.costume.sku})</small>
-                              </span>
-                            ))}
+                            {filteredPickups.map((r) => {
+                              let badgeBg = 'rgba(245, 158, 11, 0.08)'
+                              let borderCol = 'rgba(245, 158, 11, 0.2)'
+                              let textCol = 'var(--warning-color)'
+                              let label = '📦 รับ/ส่งชุด:'
+
+                              if (r.status === 'active') {
+                                badgeBg = 'rgba(218, 165, 32, 0.08)'
+                                borderCol = 'rgba(218, 165, 32, 0.3)'
+                                textCol = '#ead483'
+                                label = '✅ รับมอบแล้ว:'
+                              } else if (r.status === 'returned') {
+                                badgeBg = 'rgba(16, 185, 129, 0.08)'
+                                borderCol = 'rgba(16, 185, 129, 0.2)'
+                                textCol = 'var(--success-color)'
+                                label = '✅ รับมอบแล้ว:'
+                              } else if (r.status === 'overdue') {
+                                badgeBg = 'rgba(239, 68, 68, 0.08)'
+                                borderCol = 'rgba(239, 68, 68, 0.2)'
+                                textCol = 'var(--danger-color)'
+                                label = '⚠️ เลยกำหนดส่งมอบ:'
+                              }
+
+                              return (
+                                <span
+                                  key={`pk-${r.id}`}
+                                  className="status-pill"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '12px',
+                                    background: badgeBg,
+                                    color: textCol,
+                                    borderColor: borderCol,
+                                    borderWidth: '1px',
+                                    borderStyle: 'solid'
+                                  }}
+                                >
+                                  <span>{label}</span>
+                                  <strong>{r.customer.fullName}</strong>
+                                  <small>({r.costume.sku})</small>
+                                </span>
+                              )
+                            })}
 
                             {/* Returns */}
-                            {filteredReturns.map((r) => (
-                              <span
-                                key={`rt-${r.id}`}
-                                className="status-pill success"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  fontSize: '12px',
-                                  background: r.status === 'overdue' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(16, 185, 129, 0.08)',
-                                  color: r.status === 'overdue' ? 'var(--danger-color)' : 'var(--success-color)',
-                                  borderColor: r.status === 'overdue' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'
-                                }}
-                              >
-                                <span>↩️ คืนชุด:</span>
-                                <strong>{r.customer.fullName}</strong>
-                                <small>({r.costume.sku})</small>
-                              </span>
-                            ))}
+                            {filteredReturns.map((r) => {
+                              let badgeBg = 'rgba(16, 185, 129, 0.08)'
+                              let borderCol = 'rgba(16, 185, 129, 0.2)'
+                              let textCol = 'var(--success-color)'
+                              let label = '↩️ คืนชุด:'
+
+                              if (r.status === 'overdue') {
+                                badgeBg = 'rgba(239, 68, 68, 0.08)'
+                                borderCol = 'rgba(239, 68, 68, 0.2)'
+                                textCol = 'var(--danger-color)'
+                                label = '⚠️ เลยกำหนดคืน:'
+                              } else if (r.status === 'booked') {
+                                badgeBg = 'rgba(245, 158, 11, 0.08)'
+                                borderCol = 'rgba(245, 158, 11, 0.2)'
+                                textCol = 'var(--warning-color)'
+                                label = '↩️ รอคืน (ยังไม่รับชุด):'
+                              } else if (r.status === 'active') {
+                                badgeBg = 'rgba(218, 165, 32, 0.08)'
+                                borderCol = 'rgba(218, 165, 32, 0.3)'
+                                textCol = '#ead483'
+                                label = '↩️ กำหนดคืน:'
+                              } else if (r.status === 'returned') {
+                                badgeBg = 'rgba(16, 185, 129, 0.08)'
+                                borderCol = 'rgba(16, 185, 129, 0.2)'
+                                textCol = 'var(--success-color)'
+                                label = '✅ คืนเรียบร้อย:'
+                              }
+
+                              return (
+                                <span
+                                  key={`rt-${r.id}`}
+                                  className="status-pill"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontSize: '12px',
+                                    background: badgeBg,
+                                    color: textCol,
+                                    borderColor: borderCol,
+                                    borderWidth: '1px',
+                                    borderStyle: 'solid'
+                                  }}
+                                >
+                                  <span>{label}</span>
+                                  <strong>{r.customer.fullName}</strong>
+                                  <small>({r.costume.sku})</small>
+                                </span>
+                              )
+                            })}
 
                             {/* Ongoing count */}
                             {filteredOngoing.length > 0 && (

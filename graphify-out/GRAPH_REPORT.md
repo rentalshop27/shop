@@ -1,16 +1,16 @@
 # Graph Report - Precious Shop  (2026-06-12)
 
 ## Corpus Check
-- 30 files · ~65,419 words
+- 30 files · ~65,776 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 451 nodes · 706 edges · 32 communities (22 shown, 10 thin omitted)
+- 452 nodes · 707 edges · 32 communities (21 shown, 11 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b5ca5059`
+- Built from commit: `5e08d5a7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -70,7 +70,7 @@
 - `refreshCustomerDocumentUrls()` --calls--> `loadCustomers()`  [EXTRACTED]
   src/App.tsx → src/features/customers/customerRemote.ts
 
-## Communities (32 total, 10 thin omitted)
+## Communities (32 total, 11 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
@@ -86,7 +86,7 @@ Nodes (32): createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemo
 
 ### Community 3 - "Community 3"
 Cohesion: 0.08
-Nodes (21): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], OverdueRental, overdues, pickups (+13 more)
+Nodes (22): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], OverdueRental, overdues, pickups (+14 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.07
@@ -113,61 +113,57 @@ Cohesion: 0.16
 Nodes (3): createCacheKey(), PrecacheController, waitUntil()
 
 ### Community 10 - "Community 10"
+Cohesion: 0.13
+Nodes (16): loadAuditLogs(), countRemoteRentalsForStockSku(), deleteRemoteStockItem(), loadStockItems(), createRemoteRentals(), updateRemoteRentalStatus(), closeStockForm(), closeStockPreview() (+8 more)
+
+### Community 11 - "Community 11"
 Cohesion: 0.2
 Nodes (14): archiveRemoteCustomer(), updateRemoteCustomerRisk(), updateRemoteCustomerStatus(), updateShopSettings(), archiveSelectedCustomer(), getErrorMessage(), handleAddBrand(), handleAddCategory() (+6 more)
 
-### Community 11 - "Community 11"
+### Community 12 - "Community 12"
 Cohesion: 0.27
 Nodes (5): hasMethod(), isOneOf(), isType(), normalizeHandler(), Route
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.36
 Nodes (9): cleanupUnusedImages(), createRemoteStockItem(), dataURLtoFile(), getPathFromUrl(), loadShopSettings(), mapStockItemRow(), StockItemRow, updateRemoteStockItem() (+1 more)
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.2
 Nodes (9): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+1 more)
 
-### Community 14 - "Community 14"
-Cohesion: 0.22
-Nodes (9): loadAuditLogs(), createRemoteRentals(), deleteRemoteRental(), updateRemoteRentalStatus(), handleCreateRentals(), handleDeleteRental(), handleLoadAuditLogs(), handleUpdateRentalStatus() (+1 more)
-
-### Community 15 - "Community 15"
-Cohesion: 0.22
-Nodes (9): countRemoteRentalsForStockSku(), deleteRemoteStockItem(), loadStockItems(), closeStockForm(), closeStockPreview(), handleDeleteStockItem(), handleSaveStockItem(), match (+1 more)
-
-### Community 17 - "Community 17"
+### Community 16 - "Community 16"
 Cohesion: 0.4
 Nodes (6): addRoute(), createHandlerBoundToURL(), getOrCreatePrecacheController(), precache(), precacheAndRoute(), registerRoute()
 
-### Community 18 - "Community 18"
+### Community 17 - "Community 17"
 Cohesion: 0.4
 Nodes (5): exports, registry, require(), singleRequire(), specialDeps
 
-### Community 19 - "Community 19"
+### Community 18 - "Community 18"
 Cohesion: 0.4
 Nodes (3): isArray(), isArrayOfClass(), NavigationRoute
 
-### Community 21 - "Community 21"
+### Community 20 - "Community 20"
 Cohesion: 0.5
 Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
 ## Knowledge Gaps
-- **182 isolated node(s):** `logger`, `messages`, `finalAssertExports`, `validMethods`, `_cacheNameDetails` (+177 more)
+- **183 isolated node(s):** `logger`, `messages`, `finalAssertExports`, `validMethods`, `_cacheNameDetails` (+178 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `PrecacheController` connect `Community 9` to `Community 6`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `StrategyHandler` connect `Community 5` to `Community 9`, `Community 20`, `Community 6`?**
+- **Why does `StrategyHandler` connect `Community 5` to `Community 9`, `Community 19`, `Community 6`?**
   _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Why does `RentalOrder` connect `Community 3` to `Community 0`, `Community 1`, `Community 4`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `logger`, `messages`, `finalAssertExports` to the rest of the system?**
-  _182 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _183 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.03 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
