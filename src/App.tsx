@@ -24,6 +24,7 @@ import {
   Search,
   Settings,
   ShieldAlert,
+  ShieldCheck,
   Trash2,
   UserRound,
   X,
@@ -159,12 +160,13 @@ const emptyStockDraft: StockDraft = {
 
 const demoStockItems: StockItem[] = demoStockItemsForRentals
 
-const statusOptions: Array<{ value: 'all' | CustomerProfileStatus; label: string }> = [
+const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; label: string }> = [
   { value: 'all', label: 'ทุกสถานะ' },
   { value: 'incomplete', label: profileStatusLabel.incomplete },
   { value: 'pending_review', label: profileStatusLabel.pending_review },
   { value: 'verified', label: profileStatusLabel.verified },
   { value: 'suspended', label: profileStatusLabel.suspended },
+  { value: 'has_risk', label: 'มีสัญญาณความเสี่ยง' },
 ]
 
 async function refreshAuditLogs(
@@ -271,7 +273,7 @@ function App() {
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [stockQuery, setStockQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | CustomerProfileStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | CustomerProfileStatus | 'has_risk'>('all')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isStockFormOpen, setIsStockFormOpen] = useState(false)
   const [editingStockId, setEditingStockId] = useState<string | null>(null)
@@ -684,7 +686,11 @@ function App() {
 
     return activeCustomers.filter((customer) => {
       const matchesStatus =
-        statusFilter === 'all' || customer.profileStatus === statusFilter
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'has_risk'
+          ? customer.riskFlag === 'has_risk'
+          : customer.profileStatus === statusFilter
       const searchable = [
         customer.customerCode,
         customer.fullName,
@@ -1659,13 +1665,55 @@ function App() {
             </header>
 
             <section className="system-strip" aria-label="สถานะระบบ">
-              <MetricCard label="ลูกค้าทั้งหมด" value={`${summary.total}`} icon={<UserRound />} type="total" unit="ราย" />
-              <MetricCard label="ตรวจแล้ว" value={`${summary.verified}`} icon={<BadgeCheck />} type="verified" unit="ราย" />
-              <MetricCard label="ข้อมูลไม่ครบ" value={`${summary.incomplete}`} icon={<AlertTriangle />} type="incomplete" unit="ราย" />
-              <MetricCard label="มีสัญญาณความเสี่ยง" value={`${summary.risk}`} icon={<ShieldAlert />} type="risk" unit="ราย" />
+              <MetricCard
+                label="ลูกค้าทั้งหมด"
+                value={`${summary.total}`}
+                icon={<UserRound />}
+                type="total"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('all')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'all'}
+              />
+              <MetricCard
+                label="ตรวจแล้ว"
+                value={`${summary.verified}`}
+                icon={<ShieldCheck />}
+                type="verified"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('verified')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'verified'}
+              />
+              <MetricCard
+                label="มีสัญญาณความเสี่ยง"
+                value={`${summary.risk}`}
+                icon={<ShieldAlert />}
+                type="risk"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('has_risk')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'has_risk'}
+              />
+              <MetricCard
+                label="ข้อมูลไม่ครบ"
+                value={`${summary.incomplete}`}
+                icon={<AlertTriangle />}
+                type="incomplete"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('incomplete')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'incomplete'}
+              />
             </section>
-
-
 
             {remoteError && <section className="remote-error">{remoteError}</section>}
 
@@ -1677,7 +1725,7 @@ function App() {
                     <input
                       value={query}
                       onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }}
-                      placeholder="ค้นหาด้วยชื่อ เบอร์โทร รหัสลูกค้า หรือ LINE ID"
+                      placeholder="ค้นหาด้วยชื่อ เบอร์โทร รหัสลูกค้า หรือ LINE"
                     />
                   </label>
                   <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setCurrentPage(1); }}>
@@ -2239,7 +2287,7 @@ function InventoryPage({
         </button>
       </header>
 
-      <section className="system-strip" aria-label="ภาพรวมคลังชุด">
+      <section className="system-strip inventory-summary-strip" aria-label="ภาพรวมคลังชุด">
         <MetricCard label="รายการสต๊อก" value={`${summary.total}`} icon={<Menu />} type="total" />
         <MetricCard label="จำนวนชุดรวม" value={`${summary.sets}`} icon={<Archive />} type="verified" unit="ชุด" />
         <MetricCard label="ตั้งราคาแล้ว" value={`${summary.priced}`} icon={<BadgeCheck />} type="incomplete" />
@@ -3139,15 +3187,24 @@ function MetricCard({
   icon,
   type,
   unit,
+  onClick,
+  isActive,
 }: {
   label: string
   value: string
   icon: ReactNode
   type?: 'total' | 'verified' | 'incomplete' | 'risk'
   unit?: string
+  onClick?: () => void
+  isActive?: boolean
 }) {
+  const Component = onClick ? 'button' : 'div'
   return (
-    <div className={`metric-card ${type || ''}`}>
+    <Component
+      className={`metric-card ${type || ''} ${isActive ? 'active' : ''} ${onClick ? 'clickable' : ''}`}
+      onClick={onClick}
+      type={onClick ? 'button' : undefined}
+    >
       <div className="metric-icon-wrapper">{icon}</div>
       <div className="card-content">
         <span>{label}</span>
@@ -3155,7 +3212,8 @@ function MetricCard({
           {value} {unit && <span className="unit">{unit}</span>}
         </strong>
       </div>
-    </div>
+      {onClick && <ChevronRight size={18} className="metric-chevron" />}
+    </Component>
   )
 }
 
