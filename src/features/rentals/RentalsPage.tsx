@@ -12,7 +12,7 @@ import {
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { StockItem } from '../../App'
-import { findOpenRentalConflict, findOpenRentalForStockSku } from './rentalRules'
+import { findOpenRentalConflict } from './rentalRules'
 
 interface RentalsPageProps {
   rentals: RentalOrder[]
@@ -30,6 +30,14 @@ interface RentalsPageProps {
   externalPickupDate?: string
   externalReturnDate?: string
   onClearExternalDates?: () => void
+}
+
+const getTodayString = () => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function RentalsPage({
@@ -75,7 +83,7 @@ export function RentalsPage({
   const [selectedCostumes, setSelectedCostumes] = useState<StockItem[]>([])
   const [showCostumeDropdown, setShowCostumeDropdown] = useState(false)
 
-  const [pickupDate, setPickupDate] = useState('')
+  const [pickupDate, setPickupDate] = useState(getTodayString())
   const [returnDate, setReturnDate] = useState('')
   const [rentalPrice, setRentalPrice] = useState('')
   const [depositAmount, setDepositAmount] = useState('')
@@ -153,11 +161,10 @@ export function RentalsPage({
   const filteredCostumesSuggestions = useMemo(() => {
     const query = costumeSearch.trim().toLowerCase()
     
-    // Filter out costumes that are already selected or still tied to an open rental.
     const availableCostumes = stockItems.filter(
       (item) =>
         !selectedCostumes.some((selected) => selected.id === item.id) &&
-        !findOpenRentalForStockSku(rentals, item.sku)
+        !findOpenRentalConflict(rentals, [item.sku], pickupDate, returnDate)
     )
 
     if (!query) {
@@ -169,7 +176,7 @@ export function RentalsPage({
         item.productName.toLowerCase().includes(query) ||
         item.sku.toLowerCase().includes(query)
     )
-  }, [stockItems, rentals, costumeSearch, selectedCostumes])
+  }, [stockItems, rentals, costumeSearch, selectedCostumes, pickupDate, returnDate])
 
   // Sync pricing when costumes are selected
   useEffect(() => {
@@ -228,7 +235,16 @@ export function RentalsPage({
   }
 
   const getOrderGroupCode = (orderCode: string) => {
-    return orderCode.replace(/-\d+$/, '')
+    if (/^PR-ORD-\d{6}-\d{3}-\d+$/.test(orderCode)) {
+      return orderCode.replace(/-\d+$/, '')
+    }
+    if (/^PR-ORD-\d{6}-\d{3}$/.test(orderCode)) {
+      return orderCode
+    }
+    if (/^PR-ORD-\d+-\d+$/.test(orderCode)) {
+      return orderCode.replace(/-\d+$/, '')
+    }
+    return orderCode
   }
 
   // Helper to get status of grouped rentals based on priority: overdue > active > booked > returned
@@ -237,6 +253,22 @@ export function RentalsPage({
     if (groupItems.some((r) => r.status === 'active')) return 'active'
     if (groupItems.some((r) => r.status === 'booked')) return 'booked'
     return 'returned'
+  }
+
+  const getTransitionableRentalIds = (groupItems: RentalOrder[], fromStatuses: RentalStatus[]) => {
+    return groupItems
+      .filter((rental) => fromStatuses.includes(rental.status))
+      .map((rental) => rental.id)
+  }
+
+  const updateRentalStatuses = (
+    groupItems: RentalOrder[],
+    fromStatuses: RentalStatus[],
+    nextStatus: RentalStatus
+  ) => {
+    const ids = getTransitionableRentalIds(groupItems, fromStatuses)
+    if (ids.length === 0) return
+    onUpdateRentalStatus(ids, nextStatus)
   }
 
   // Group line-item order codes such as PR-ORD-101-1 back into one displayed order.
@@ -258,20 +290,36 @@ export function RentalsPage({
       const totalCollected = groupItems.reduce((sum, r) => sum + r.collectedAmount, 0)
       const groupStatus = getGroupStatus(groupItems)
       const notes = groupItems.map((r) => r.notes).filter(Boolean).join('\n')
+      const pickupDate = groupItems.reduce(
+        (earliest, rental) => (rental.pickupDate < earliest ? rental.pickupDate : earliest),
+        first.pickupDate
+      )
+      const returnDate = groupItems.reduce(
+        (latest, rental) => (rental.returnDate > latest ? rental.returnDate : latest),
+        first.returnDate
+      )
+      const createdAt = groupItems.reduce(
+        (earliest, rental) => (rental.createdAt < earliest ? rental.createdAt : earliest),
+        first.createdAt
+      )
+      const updatedAt = groupItems.reduce(
+        (latest, rental) => (rental.updatedAt > latest ? rental.updatedAt : latest),
+        first.updatedAt
+      )
 
       return {
         id: first.id, // For backward compatibility
         orderCode,
         customer: first.customer,
-        pickupDate: first.pickupDate,
-        returnDate: first.returnDate,
+        pickupDate,
+        returnDate,
         rentalPrice: totalPrice, // Sum for compatibility with list display
         depositAmount: totalDeposit, // Sum for compatibility with list display
         collectedAmount: totalCollected, // Sum for compatibility with list display
         status: groupStatus,
         notes,
-        createdAt: first.createdAt,
-        updatedAt: first.updatedAt,
+        createdAt,
+        updatedAt,
         rentals: groupItems
       }
     })
@@ -328,7 +376,7 @@ export function RentalsPage({
       return
     }
     if (!pickupDate) {
-      setFormError('กรุณาระบุวันที่จอง/รับ/ส่งชุด')
+      setFormError('กรุณาระบุวันที่รับชุด')
       return
     }
     if (!returnDate) {
@@ -336,16 +384,34 @@ export function RentalsPage({
       return
     }
     if (new Date(returnDate) < new Date(pickupDate)) {
-      setFormError('วันที่คืนต้องอยู่หลังวันที่จอง/รับ/ส่งชุด')
+      setFormError('วันที่คืนต้องอยู่หลังวันที่รับชุด')
       return
     }
     const openRentalConflict = findOpenRentalConflict(
       rentals,
       selectedCostumes.map((item) => item.sku),
+      pickupDate,
+      returnDate,
     )
     if (openRentalConflict) {
-      setFormError(`ชุด ${openRentalConflict.costume.sku} ยังมีใบเช่าเปิดอยู่ (${openRentalConflict.orderCode}) ต้องรับคืนก่อนจึงจะเช่าซ้ำได้`)
+      setFormError(`ชุด ${openRentalConflict.costume.sku} มีคิวจองหรืออยู่ระหว่างเช่าในช่วงวันที่ระบุแล้ว (${openRentalConflict.orderCode}) ไม่สามารถเช่าซ้ำได้`)
       return
+    }
+
+    // Warning for repair or wash status items
+    const repairOrWashCostumes = selectedCostumes.filter(
+      (item) => item.status === 'repair' || item.status === 'wash'
+    )
+    if (repairOrWashCostumes.length > 0) {
+      const itemsWarningList = repairOrWashCostumes
+        .map((item) => `ชุด ${item.sku} มีสถานะเป็น "${item.status === 'repair' ? 'ซ่อม' : 'ซัก'}"`)
+        .join('\n')
+      const confirmed = window.confirm(
+        `${itemsWarningList}\nคุณยืนยันที่จะบันทึกใบเช่าสำหรับชุดดังกล่าวต่อไปหรือไม่?`
+      )
+      if (!confirmed) {
+        return
+      }
     }
 
     const price = parseFloat(rentalPrice) || 0
@@ -384,7 +450,7 @@ export function RentalsPage({
     setCustomerSearch('')
     setSelectedCostumes([])
     setCostumeSearch('')
-    setPickupDate('')
+    setPickupDate(getTodayString())
     setReturnDate('')
     setDiscountAmount('0')
     setNotes('')
@@ -399,15 +465,15 @@ export function RentalsPage({
     })}`
   }
 
-  const getDiscountAmount = (price: number, collected: number) => {
-    return Math.max(0, Number((price - collected).toFixed(2)))
+  const getDiscountAmount = (price: number, deposit: number, collected: number) => {
+    return Math.max(0, Number((price + deposit - collected).toFixed(2)))
   }
 
   // Get status translation
   const getStatusBadge = (status: RentalStatus) => {
     switch (status) {
       case 'booked':
-        return <span className="status-pill warning">จอง</span>
+        return <span className="status-pill warning">รอส่งมอบ</span>
       case 'active':
         return <span className="status-pill success" style={{ background: 'rgba(218, 165, 32, 0.15)', color: '#ead483', border: '1px solid rgba(218, 165, 32, 0.3)' }}>ใช้งานอยู่</span>
       case 'returned':
@@ -430,7 +496,7 @@ export function RentalsPage({
         <div>
           <p className="eyebrow">Precious Shop</p>
           <h1>หน้าเช่าชุด</h1>
-          <p className="subtitle">ลงทะเบียนจองชุด จัดทำประวัติการเช่า ติดตามช่วงรับ/ส่งชุดและส่งคืน</p>
+          <p className="subtitle">บันทึกข้อมูลการเช่าชุด จัดทำประวัติการเช่า ติดตามช่วงรับ/ส่งชุดและส่งคืน</p>
         </div>
         <button className="primary-button" type="button" onClick={() => setIsFormOpen(true)}>
           <Plus size={22} />
@@ -456,7 +522,7 @@ export function RentalsPage({
               onChange={(e) => { setStatusFilter(e.target.value as 'all' | RentalStatus); setCurrentPage(1); }}
             >
               <option value="all">ทุกสถานะ</option>
-              <option value="booked">จอง (รอส่งมอบ)</option>
+              <option value="booked">รอส่งมอบ</option>
               <option value="active">ใช้งานอยู่ (กำลังใช้งาน)</option>
               <option value="returned">คืนแล้ว</option>
               <option value="overdue">เกินกำหนดคืน</option>
@@ -494,9 +560,9 @@ export function RentalsPage({
                 </span>
                 <span>
                   {formatBaht(rental.collectedAmount)}
-                  {getDiscountAmount(rental.rentalPrice, rental.collectedAmount) > 0 ? (
+                  {getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.collectedAmount) > 0 ? (
                     <small style={{ display: 'block', color: 'var(--success-color)', fontSize: '11px' }}>
-                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.collectedAmount))}
+                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.collectedAmount))}
                     </small>
                   ) : (
                     <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
@@ -661,9 +727,9 @@ export function RentalsPage({
                       <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
                         {formatBaht(r.collectedAmount)}
                       </strong>
-                      {getDiscountAmount(r.rentalPrice, r.collectedAmount) > 0 && (
+                      {getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount) > 0 && (
                         <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
-                          ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.collectedAmount))}
+                          ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount))}
                         </small>
                       )}
                       {r.depositAmount > 0 && (
@@ -687,7 +753,7 @@ export function RentalsPage({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), 'active')}
+                    onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
                     style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
                   >
                     ส่งมอบชุด (ขนส่ง)
@@ -697,7 +763,7 @@ export function RentalsPage({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), 'returned')}
+                    onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
                     style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
                   >
                     รับคืนชุด (รับคืน)
@@ -716,12 +782,16 @@ export function RentalsPage({
                     onClick={() => {
                       const currentStatus = selectedRental.status
                       if (currentStatus === 'returned') return
-                      const nextStatusMap: Record<Exclude<RentalStatus, 'returned'>, RentalStatus> = {
-                        booked: 'active',
-                        active: 'overdue',
-                        overdue: 'returned'
+                      const nextTransitionMap: Record<Exclude<RentalStatus, 'returned'>, {
+                        from: RentalStatus[]
+                        to: RentalStatus
+                      }> = {
+                        booked: { from: ['booked'], to: 'active' },
+                        active: { from: ['active'], to: 'overdue' },
+                        overdue: { from: ['overdue'], to: 'returned' }
                       }
-                      onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), nextStatusMap[currentStatus])
+                      const transition = nextTransitionMap[currentStatus]
+                      updateRentalStatuses(selectedRental.rentals, transition.from, transition.to)
                     }}
                     style={{ fontSize: '14px' }}
                   >
@@ -1025,7 +1095,7 @@ export function RentalsPage({
               {/* RENTAL PERIOD DATES */}
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label className="field">
-                  <span>วันที่จอง / รับ/ส่งชุด<b style={{ color: 'red' }}> *</b></span>
+                  <span>วันที่รับชุด<b style={{ color: 'red' }}> *</b></span>
                   <input
                     type="date"
                     value={pickupDate}

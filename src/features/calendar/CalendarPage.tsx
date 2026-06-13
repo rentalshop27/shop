@@ -107,7 +107,16 @@ function getDisplayDayRentals(
 }
 
 function getOrderGroupCode(orderCode: string) {
-  return orderCode.replace(/-\d+$/, '')
+  if (/^PR-ORD-\d{6}-\d{3}-\d+$/.test(orderCode)) {
+    return orderCode.replace(/-\d+$/, '')
+  }
+  if (/^PR-ORD-\d{6}-\d{3}$/.test(orderCode)) {
+    return orderCode
+  }
+  if (/^PR-ORD-\d+-\d+$/.test(orderCode)) {
+    return orderCode.replace(/-\d+$/, '')
+  }
+  return orderCode
 }
 
 function getGroupStatus(groupItems: RentalOrder[]): RentalStatus {
@@ -547,7 +556,7 @@ export function CalendarPage({
   const getStatusBadge = (status: RentalStatus) => {
     switch (status) {
       case 'booked':
-        return <span className="status-pill warning" style={{ fontSize: '12px', padding: '4px 10px' }}>จอง</span>
+        return <span className="status-pill warning" style={{ fontSize: '12px', padding: '4px 10px' }}>รอส่งมอบ</span>
       case 'active':
         return <span className="status-pill success" style={{ fontSize: '12px', padding: '4px 10px', background: 'rgba(218, 165, 32, 0.15)', color: '#ead483', border: '1px solid rgba(218, 165, 32, 0.3)' }}>กำลังเช่า</span>
       case 'returned':
@@ -582,7 +591,7 @@ export function CalendarPage({
         <div>
           <p className="eyebrow">Precious Shop</p>
           <h1>หน้าปฏิทินเช่า/คืน</h1>
-          <p className="subtitle">ปฏิทินตรวจสอบรายการจอง รับ/ส่งชุด และส่งคืนเสื้อผ้าประจำเดือน</p>
+          <p className="subtitle">ปฏิทินตรวจสอบรายการเช่า รับ/ส่งชุด และส่งคืนเสื้อผ้าประจำเดือน</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           {/* View Mode Toggle */}
@@ -1349,7 +1358,7 @@ export function CalendarPage({
               </label>
             </div>
 
-            <div className="customer-table" role="table" aria-label="รายการจองเช่าชุด">
+            <div className="customer-table" role="table" aria-label="รายการเช่าชุด">
               <div className="table-row table-head" role="row" style={{ gridTemplateColumns: '120px 1fr 1.7fr 150px 120px 120px 90px', minWidth: '860px' }}>
                 <span>รหัสออเดอร์</span>
                 <span>ลูกค้า</span>

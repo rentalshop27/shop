@@ -39,6 +39,7 @@ import { AuditLogPage } from './features/audit/AuditLogPage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
+import { getInventoryDisplayStatus } from './features/inventory/inventoryStatus'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
@@ -101,6 +102,8 @@ const emptyDraft: CustomerDraft = {
 
 type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit'
 
+export type StockItemStatus = 'available' | 'repair' | 'wash'
+
 export type StockItem = {
   id: string
   sku: string
@@ -116,6 +119,7 @@ export type StockItem = {
   lateFeeRule: string
   depositAmount: number
   imageUrls: string[]
+  status: StockItemStatus
   createdAt: string
 }
 
@@ -133,6 +137,7 @@ type StockDraft = {
   lateFeeRule: string
   depositAmount: string
   imageUrls: string[]
+  status: string
 }
 
 const emptyStockDraft: StockDraft = {
@@ -149,6 +154,7 @@ const emptyStockDraft: StockDraft = {
   lateFeeRule: '',
   depositAmount: '',
   imageUrls: [],
+  status: 'available',
 }
 
 const demoStockItems: StockItem[] = demoStockItemsForRentals
@@ -469,22 +475,42 @@ function App() {
   async function handleCreateRentals(drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]): Promise<boolean> {
     if (drafts.length === 0) return false
 
+    const firstDraft = drafts[0]
     const openRentalConflict = findOpenRentalConflict(
       rentals,
       drafts.map((draft) => draft.costume.sku),
+      firstDraft.pickupDate,
+      firstDraft.returnDate
     )
     if (openRentalConflict) {
-      window.alert(`ชุด ${openRentalConflict.costume.sku} ยังมีใบเช่าเปิดอยู่ (${openRentalConflict.orderCode}) ต้องรับคืนก่อนจึงจะเช่าซ้ำได้`)
+      window.alert(`ชุด ${openRentalConflict.costume.sku} มีคิวจองหรือใช้งานในช่วงวันที่ระบุแล้ว (${openRentalConflict.orderCode}) ไม่สามารถเช่าซ้ำได้`)
       return false
     }
 
-    const maxOrderCode = rentals.reduce((max, r) => {
-      const match = r.orderCode.match(/PR-ORD-(\d+)/)
-      return match ? Math.max(max, Number(match[1])) : max
-    }, 100)
+    const nowLocal = new Date()
+    const yy = String(nowLocal.getFullYear()).slice(-2)
+    const mm = String(nowLocal.getMonth() + 1).padStart(2, '0')
+    const dd = String(nowLocal.getDate()).padStart(2, '0')
+    const dateStr = `${yy}${mm}${dd}`
+
+    const prefixRegex = new RegExp(`^PR-ORD-${dateStr}-(\\d+)(?:-\\d+)?$`)
+
+    let maxSeq = 0
+    rentals.forEach((r) => {
+      const match = r.orderCode.match(prefixRegex)
+      if (match) {
+        const seq = parseInt(match[1], 10)
+        if (seq > maxSeq) {
+          maxSeq = seq
+        }
+      }
+    })
+
+    const nextSeq = maxSeq + 1
+    const nextSeqStr = String(nextSeq).padStart(3, '0')
+    const nextCode = `PR-ORD-${dateStr}-${nextSeqStr}`
 
     const now = new Date().toISOString()
-    const nextCode = `PR-ORD-${maxOrderCode + 1}`
     const newRentals: RentalOrder[] = drafts.map((draft, index) => ({
       ...draft,
       id: crypto.randomUUID(),
@@ -732,6 +758,7 @@ function App() {
       lateFeeRule: item.lateFeeRule,
       depositAmount: item.depositAmount ? String(item.depositAmount) : '',
       imageUrls: item.imageUrls ?? [],
+      status: item.status || 'available',
     })
     setStockFormError('')
     setIsStockFormOpen(true)
@@ -837,6 +864,27 @@ function App() {
       window.alert(getErrorMessage(error))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleUpdateStockStatus(itemId: string, newStatus: StockItemStatus) {
+    try {
+      if (supabase && isAuthenticated) {
+        const { error } = await supabase
+          .from('stock_items')
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', itemId)
+        if (error) throw error
+        handleLoadAuditLogs()
+      }
+      setStockItems((current) =>
+        current.map((item) => (item.id === itemId ? { ...item, status: newStatus } : item))
+      )
+    } catch (error) {
+      window.alert(getErrorMessage(error))
     }
   }
 
@@ -1156,6 +1204,7 @@ function App() {
             lateFeeRule: stockDraft.lateFeeRule.trim(),
             depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
             imageUrls: stockDraft.imageUrls,
+            status: (stockDraft.status as StockItemStatus) || 'available',
           }
           const savedItem = await updateRemoteStockItem(
             supabase,
@@ -1188,6 +1237,7 @@ function App() {
                 lateFeeRule: stockDraft.lateFeeRule.trim(),
                 depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
                 imageUrls: stockDraft.imageUrls,
+                status: (stockDraft.status as StockItemStatus) || 'available',
               }
               await createRemoteStockItem(supabase, shopId, itemDraft)
             }
@@ -1208,6 +1258,7 @@ function App() {
               lateFeeRule: stockDraft.lateFeeRule.trim(),
               depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
               imageUrls: stockDraft.imageUrls,
+              status: (stockDraft.status as StockItemStatus) || 'available',
             }
             const savedItem = await createRemoteStockItem(supabase, shopId, itemDraft)
             setStockItems((current) => [savedItem, ...current])
@@ -1235,6 +1286,7 @@ function App() {
             imageUrls: stockDraft.imageUrls,
             id: editingStockId,
             createdAt: existingItem?.createdAt ?? new Date().toISOString(),
+            status: (stockDraft.status as StockItemStatus) || 'available',
           }
           setStockItems((current) =>
             current.map((item) => (item.id === editingStockId ? draftItem : item))
@@ -1263,6 +1315,7 @@ function App() {
                 imageUrls: stockDraft.imageUrls,
                 id: crypto.randomUUID(),
                 createdAt: new Date().toISOString(),
+                status: (stockDraft.status as StockItemStatus) || 'available',
               }
               savedItemsList.push(savedItem)
             }
@@ -1284,6 +1337,7 @@ function App() {
               imageUrls: stockDraft.imageUrls,
               id: crypto.randomUUID(),
               createdAt: new Date().toISOString(),
+              status: (stockDraft.status as StockItemStatus) || 'available',
             }
             setStockItems((current) => [savedItem, ...current])
           }
@@ -1558,6 +1612,8 @@ function App() {
             brands={brands}
             categories={categories}
             colors={colors}
+            rentals={rentals}
+            onUpdateStatus={handleUpdateStockStatus}
           />
         )}
 
@@ -2027,6 +2083,8 @@ function InventoryPage({
   brands,
   categories,
   colors,
+  rentals,
+  onUpdateStatus,
 }: {
   items: StockItem[]
   query: string
@@ -2054,15 +2112,62 @@ function InventoryPage({
   brands: string[]
   categories: string[]
   colors: string[]
+  rentals: RentalOrder[]
+  onUpdateStatus: (itemId: string, status: StockItemStatus) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
-    return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'table'
+    return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'card'
   })
 
   const handleViewModeChange = (mode: 'table' | 'card') => {
     setViewMode(mode)
     localStorage.setItem('inventoryViewMode', mode)
+  }
+
+  const today = (() => {
+    const date = new Date()
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  })()
+
+
+
+  function getStockStatusPill(status: string) {
+    switch (status) {
+      case 'rented':
+        return (
+          <span
+            className="status-pill"
+            style={{
+              background: 'rgba(218, 165, 32, 0.15)',
+              color: '#ead483',
+              border: '1px solid rgba(218, 165, 32, 0.3)'
+            }}
+          >
+            ถูกเช่า
+          </span>
+        )
+      case 'booked':
+        return (
+          <span
+            className="status-pill"
+            style={{
+              background: 'rgba(99, 102, 241, 0.15)',
+              color: '#a5b4fc',
+              border: '1px solid rgba(99, 102, 241, 0.3)'
+            }}
+          >
+            มีคิวจอง
+          </span>
+        )
+      case 'repair':
+        return <span className="status-pill danger">ซ่อม</span>
+      case 'wash':
+        return <span className="status-pill warning">ซัก</span>
+      case 'available':
+      default:
+        return <span className="status-pill success">ว่าง</span>
+    }
   }
 
   return (
@@ -2123,6 +2228,7 @@ function InventoryPage({
               <span>SKU</span>
               <span>สินค้า</span>
               <span>ไซซ์/สี</span>
+              <span>สถานะ</span>
               <span>ค่าเช่า</span>
               <span>ค่าปรับ</span>
               <span>ประกัน</span>
@@ -2166,6 +2272,21 @@ function InventoryPage({
                   {item.size || '-'}
                   <small>{item.primaryColor || '-'}</small>
                 </span>
+                <span>
+                  {(() => {
+                    const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
+                    return (
+                      <>
+                        {getStockStatusPill(primaryStatus)}
+                        {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
+                          <small style={{ display: 'block', marginTop: '4px', color: '#a5b4fc', fontSize: '0.75rem' }}>
+                            คิว: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}
+                          </small>
+                        )}
+                      </>
+                    )
+                  })()}
+                </span>
                 <span>{formatBaht(item.rentalPricePerDay)}</span>
                 <span>{item.lateFeeRule || '-'}</span>
                 <span>{formatBaht(item.depositAmount)}</span>
@@ -2193,74 +2314,115 @@ function InventoryPage({
           </div>
         ) : (
           <div className="stock-grid">
-            {items.map((item) => (
-              <div className="stock-card" key={item.id}>
-                <div className="stock-card-image">
-                  {item.imageUrls && item.imageUrls.length > 0 ? (
-                    <img
-                      src={item.imageUrls[0]}
-                      alt={item.productName}
-                      onClick={() => onPreview(item, 0)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  ) : (
-                    <div className="stock-card-image-placeholder">
-                      <FileImage size={32} />
+            {items.map((item) => {
+              const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
+              return (
+                <div className="stock-card" key={item.id}>
+                  <div className="stock-card-image">
+                    {item.imageUrls && item.imageUrls.length > 0 ? (
+                      <img
+                        src={item.imageUrls[0]}
+                        alt={item.productName}
+                        onClick={() => onPreview(item, 0)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    ) : (
+                      <div className="stock-card-image-placeholder">
+                        <FileImage size={32} />
+                      </div>
+                    )}
+                    <span className="stock-card-sku-badge">{item.sku}</span>
+                    <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2 }}>
+                      {getStockStatusPill(primaryStatus)}
                     </div>
-                  )}
-                  <span className="stock-card-sku-badge">{item.sku}</span>
-                </div>
-                <div className="stock-card-content">
-                  <div className="stock-card-title-section">
-                    <h3 className="stock-card-title">{item.productName}</h3>
-                    <p className="stock-card-subtitle">
-                      {[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}
-                    </p>
                   </div>
-                  
-                  <div className="stock-card-specs">
-                    {item.size && <span className="stock-card-spec-tag">ไซซ์: {item.size}</span>}
-                    {item.primaryColor && <span className="stock-card-spec-tag">สี: {item.primaryColor}</span>}
-                    {item.setCount && <span className="stock-card-spec-tag">จำนวน: {item.setCount} ชุด</span>}
-                  </div>
+                  <div className="stock-card-content">
+                    <div className="stock-card-title-section">
+                      <h3 className="stock-card-title">{item.productName}</h3>
+                      <p className="stock-card-subtitle">
+                        {[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}
+                      </p>
+                    </div>
+                    
+                    <div className="stock-card-specs">
+                      {item.size && <span className="stock-card-spec-tag">ไซซ์: {item.size}</span>}
+                      {item.primaryColor && <span className="stock-card-spec-tag">สี: {item.primaryColor}</span>}
+                      {item.setCount && <span className="stock-card-spec-tag">จำนวน: {item.setCount} ชุด</span>}
+                    </div>
+                    
+                    {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
+                      <div className="stock-card-next-booking" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <CalendarDays size={14} />
+                        <span>คิวถัดไป: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}</span>
+                      </div>
+                    )}
 
-                  <div className="stock-card-pricing">
-                    <div className="stock-card-price-item">
-                      <span className="stock-card-price-label">ค่าเช่า</span>
-                      <strong className="stock-card-price-value gold">{formatBaht(item.rentalPricePerDay)}</strong>
+                    <div className="stock-card-pricing">
+                      <div className="stock-card-price-item">
+                        <span className="stock-card-price-label">ค่าเช่า</span>
+                        <strong className="stock-card-price-value gold">{formatBaht(item.rentalPricePerDay)}</strong>
+                      </div>
+                      <div className="stock-card-price-item">
+                        <span className="stock-card-price-label">ค่าปรับ</span>
+                        <strong className="stock-card-price-value">{item.lateFeeRule || '-'}</strong>
+                      </div>
+                      <div className="stock-card-price-item">
+                        <span className="stock-card-price-label">ประกัน</span>
+                        <strong className="stock-card-price-value">{formatBaht(item.depositAmount)}</strong>
+                      </div>
                     </div>
-                    <div className="stock-card-price-item">
-                      <span className="stock-card-price-label">ค่าปรับ</span>
-                      <strong className="stock-card-price-value">{item.lateFeeRule || '-'}</strong>
+                  </div>
+                  <div className="stock-card-actions">
+                    <div className="stock-card-status-toggle">
+                      <button
+                        type="button"
+                        className={`status-toggle-btn available ${item.status === 'available' ? 'active' : ''}`}
+                        onClick={() => onUpdateStatus(item.id, 'available')}
+                        title="เปลี่ยนสถานะเป็น ว่าง"
+                      >
+                        ว่าง
+                      </button>
+                      <button
+                        type="button"
+                        className={`status-toggle-btn repair ${item.status === 'repair' ? 'active' : ''}`}
+                        onClick={() => onUpdateStatus(item.id, 'repair')}
+                        title="เปลี่ยนสถานะเป็น ซ่อม"
+                      >
+                        ซ่อม
+                      </button>
+                      <button
+                        type="button"
+                        className={`status-toggle-btn wash ${item.status === 'wash' ? 'active' : ''}`}
+                        onClick={() => onUpdateStatus(item.id, 'wash')}
+                        title="เปลี่ยนสถานะเป็น ซัก"
+                      >
+                        ซัก
+                      </button>
                     </div>
-                    <div className="stock-card-price-item">
-                      <span className="stock-card-price-label">ประกัน</span>
-                      <strong className="stock-card-price-value">{formatBaht(item.depositAmount)}</strong>
+                    <div className="stock-card-action-buttons" style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="icon-action-button compact"
+                        type="button"
+                        onClick={() => onEdit(item)}
+                        aria-label={`แก้ไข ${item.sku}`}
+                        title="แก้ไข"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        className="icon-action-button compact danger"
+                        type="button"
+                        onClick={() => onDelete(item)}
+                        aria-label={`ลบ ${item.sku}`}
+                        title="ลบชุด"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 </div>
-                <div className="stock-card-actions">
-                  <button
-                    className="icon-action-button compact"
-                    type="button"
-                    onClick={() => onEdit(item)}
-                    aria-label={`แก้ไข ${item.sku}`}
-                    title="แก้ไข"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    className="icon-action-button compact danger"
-                    type="button"
-                    onClick={() => onDelete(item)}
-                    aria-label={`ลบ ${item.sku}`}
-                    title="ลบชุด"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
             {items.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
           </div>
         )}
@@ -2389,6 +2551,17 @@ function InventoryPage({
                         {colorName}
                       </option>
                     ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>สถานะคลังสินค้า</span>
+                  <select
+                    value={draft.status}
+                    onChange={(event) => onDraftChange('status', event.target.value)}
+                  >
+                    <option value="available">ว่าง</option>
+                    <option value="repair">ซ่อม</option>
+                    <option value="wash">ซัก</option>
                   </select>
                 </label>
               </div>
