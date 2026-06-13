@@ -846,6 +846,27 @@ function App() {
     }
   }
 
+  async function handleUpdateStockStatus(itemId: string, newStatus: StockItemStatus) {
+    try {
+      if (supabase && isAuthenticated) {
+        const { error } = await supabase
+          .from('stock_items')
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', itemId)
+        if (error) throw error
+        handleLoadAuditLogs()
+      }
+      setStockItems((current) =>
+        current.map((item) => (item.id === itemId ? { ...item, status: newStatus } : item))
+      )
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    }
+  }
+
   function createCustomerCode() {
     const maxCode = customers.reduce((max, customer) => {
       const match = customer.customerCode.match(/PR-C(\d+)/)
@@ -1571,6 +1592,7 @@ function App() {
             categories={categories}
             colors={colors}
             rentals={rentals}
+            onUpdateStatus={handleUpdateStockStatus}
           />
         )}
 
@@ -2041,6 +2063,7 @@ function InventoryPage({
   categories,
   colors,
   rentals,
+  onUpdateStatus,
 }: {
   items: StockItem[]
   query: string
@@ -2069,10 +2092,11 @@ function InventoryPage({
   categories: string[]
   colors: string[]
   rentals: RentalOrder[]
+  onUpdateStatus: (itemId: string, status: StockItemStatus) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
-    return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'table'
+    return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'card'
   })
 
   const handleViewModeChange = (mode: 'table' | 'card') => {
@@ -2305,24 +2329,52 @@ function InventoryPage({
                     </div>
                   </div>
                   <div className="stock-card-actions">
-                    <button
-                      className="icon-action-button compact"
-                      type="button"
-                      onClick={() => onEdit(item)}
-                      aria-label={`แก้ไข ${item.sku}`}
-                      title="แก้ไข"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      className="icon-action-button compact danger"
-                      type="button"
-                      onClick={() => onDelete(item)}
-                      aria-label={`ลบ ${item.sku}`}
-                      title="ลบชุด"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="stock-card-status-toggle">
+                      <button
+                        type="button"
+                        className={`status-toggle-btn available ${item.status === 'available' ? 'active' : ''}`}
+                        onClick={() => onUpdateStatus(item.id, 'available')}
+                        title="เปลี่ยนสถานะเป็น ว่าง"
+                      >
+                        ว่าง
+                      </button>
+                      <button
+                        type="button"
+                        className={`status-toggle-btn repair ${item.status === 'repair' ? 'active' : ''}`}
+                        onClick={() => onUpdateStatus(item.id, 'repair')}
+                        title="เปลี่ยนสถานะเป็น ซ่อม"
+                      >
+                        ซ่อม
+                      </button>
+                      <button
+                        type="button"
+                        className={`status-toggle-btn wash ${item.status === 'wash' ? 'active' : ''}`}
+                        onClick={() => onUpdateStatus(item.id, 'wash')}
+                        title="เปลี่ยนสถานะเป็น ซัก"
+                      >
+                        ซัก
+                      </button>
+                    </div>
+                    <div className="stock-card-action-buttons" style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="icon-action-button compact"
+                        type="button"
+                        onClick={() => onEdit(item)}
+                        aria-label={`แก้ไข ${item.sku}`}
+                        title="แก้ไข"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        className="icon-action-button compact danger"
+                        type="button"
+                        onClick={() => onDelete(item)}
+                        aria-label={`ลบ ${item.sku}`}
+                        title="ลบชุด"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
