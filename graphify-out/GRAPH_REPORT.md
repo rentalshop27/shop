@@ -1,7 +1,7 @@
 # Graph Report - Precious-Shop-Test  (2026-06-13)
 
 ## Corpus Check
-- 38 files · ~68,528 words
+- 38 files · ~68,603 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0a40b3e3`
+- Built from commit: `ecdfba0f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

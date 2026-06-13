@@ -235,7 +235,13 @@ export function RentalsPage({
   }
 
   const getOrderGroupCode = (orderCode: string) => {
-    return orderCode.replace(/-\d+$/, '')
+    if (/^PR-ORD-\d{6}-\d{3}-\d+$/.test(orderCode)) {
+      return orderCode.replace(/-\d+$/, '')
+    }
+    if (/^PR-ORD-\d+-\d+$/.test(orderCode)) {
+      return orderCode.replace(/-\d+$/, '')
+    }
+    return orderCode
   }
 
   // Helper to get status of grouped rentals based on priority: overdue > active > booked > returned

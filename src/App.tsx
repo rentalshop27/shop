@@ -483,13 +483,30 @@ function App() {
       return false
     }
 
-    const maxOrderCode = rentals.reduce((max, r) => {
-      const match = r.orderCode.match(/PR-ORD-(\d+)/)
-      return match ? Math.max(max, Number(match[1])) : max
-    }, 100)
+    const nowLocal = new Date()
+    const yy = String(nowLocal.getFullYear()).slice(-2)
+    const mm = String(nowLocal.getMonth() + 1).padStart(2, '0')
+    const dd = String(nowLocal.getDate()).padStart(2, '0')
+    const dateStr = `${yy}${mm}${dd}`
+
+    const prefixRegex = new RegExp(`^PR-ORD-${dateStr}-(\\d+)(?:-\\d+)?$`)
+
+    let maxSeq = 0
+    rentals.forEach((r) => {
+      const match = r.orderCode.match(prefixRegex)
+      if (match) {
+        const seq = parseInt(match[1], 10)
+        if (seq > maxSeq) {
+          maxSeq = seq
+        }
+      }
+    })
+
+    const nextSeq = maxSeq + 1
+    const nextSeqStr = String(nextSeq).padStart(3, '0')
+    const nextCode = `PR-ORD-${dateStr}-${nextSeqStr}`
 
     const now = new Date().toISOString()
-    const nextCode = `PR-ORD-${maxOrderCode + 1}`
     const newRentals: RentalOrder[] = drafts.map((draft, index) => ({
       ...draft,
       id: crypto.randomUUID(),
