@@ -4637,7 +4637,7 @@ select {
 
 /* Document Preview Modal */
 .document-preview-backdrop {
-  z-index: 70;
+  z-index: 2000;
 }
 
 .document-preview-panel {
