@@ -280,6 +280,11 @@ function App() {
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [previewStockId, setPreviewStockId] = useState<string | null>(null)
   const [previewImageIndex, setPreviewImageIndex] = useState(0)
+  const [previewCustomerDocOwnerId, setPreviewCustomerDocOwnerId] = useState<string | null>(null)
+  const [previewCustomerDocIndex, setPreviewCustomerDocIndex] = useState<number>(0)
+  const previewCustomer = useMemo(() => {
+    return customers.find((c) => c.id === previewCustomerDocOwnerId)
+  }, [customers, previewCustomerDocOwnerId])
   const [draft, setDraft] = useState<CustomerDraft>(emptyDraft)
   const [draftDocuments, setDraftDocuments] = useState<Array<{ id: string; file: File; previewUrl: string }>>([])
   const [existingDocuments, setExistingDocuments] = useState<CustomerDocument[]>([])
@@ -1802,6 +1807,10 @@ function App() {
                       onDocumentPreviewError={refreshCustomerDocumentUrls}
                       onEdit={() => openEditCustomerForm(selectedCustomer)}
                       onClose={() => setIsMobileDetailOpen(false)}
+                      onPreviewDocument={(index) => {
+                        setPreviewCustomerDocOwnerId(selectedCustomer.id)
+                        setPreviewCustomerDocIndex(index)
+                      }}
                     />
                   </div>
                 </div>
@@ -2012,6 +2021,76 @@ function App() {
                       {isSaving ? 'กำลังบันทึก...' : (editingCustomerId ? 'บันทึกการแก้ไข' : 'บันทึกลูกค้า')}
                     </button>
                   </div>
+                </section>
+              </div>
+            )}
+
+            {previewCustomer && (
+              <div
+                className="modal-backdrop document-preview-backdrop"
+                role="presentation"
+                onClick={() => setPreviewCustomerDocOwnerId(null)}
+              >
+                <section
+                  className="modal-panel document-preview-panel"
+                  aria-label="ดูรูปเอกสารลูกค้า"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="modal-header">
+                    <div>
+                      <p className="eyebrow">เอกสารยืนยันตัวตน</p>
+                      <h2>{previewCustomer.fullName}</h2>
+                    </div>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => setPreviewCustomerDocOwnerId(null)}
+                    >
+                      ปิด
+                    </button>
+                  </div>
+
+                  <div className="document-preview-stage">
+                    {previewCustomer.documents[previewCustomerDocIndex]?.previewUrl ? (
+                      <img
+                        src={previewCustomer.documents[previewCustomerDocIndex].previewUrl}
+                        alt={`เอกสารลูกค้า รูปที่ ${previewCustomerDocIndex + 1} ของ ${previewCustomer.fullName}`}
+                      />
+                    ) : (
+                      <div className="file-placeholder" style={{ height: '100%' }}>
+                        <FileImage size={48} />
+                        <span>ไม่มีรูปตัวอย่าง</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="document-preview-meta">
+                    <span>รหัสลูกค้า: {previewCustomer.customerCode}</span>
+                    <span>
+                      รูปที่ {previewCustomerDocIndex + 1}/{previewCustomer.documents.length}
+                    </span>
+                  </div>
+
+                  {previewCustomer.documents.length > 1 && (
+                    <div className="document-preview-thumbs">
+                      {previewCustomer.documents.map((doc, index) => (
+                        <button
+                          key={`${previewCustomer.id}-doc-thumb-${index}`}
+                          className={`document-preview-thumb ${index === previewCustomerDocIndex ? 'active' : ''}`}
+                          type="button"
+                          onClick={() => setPreviewCustomerDocIndex(index)}
+                        >
+                          {doc.previewUrl ? (
+                            <img src={doc.previewUrl} alt={`ภาพย่อเอกสารรูปที่ ${index + 1}`} />
+                          ) : (
+                            <div className="file-placeholder" style={{ height: '100%' }}>
+                              <FileImage size={20} />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
             )}
@@ -2964,6 +3043,7 @@ function CustomerDetail({
   onDocumentPreviewError,
   onEdit,
   onClose,
+  onPreviewDocument,
 }: {
   customer: Customer
   onStatusChange: (status: CustomerProfileStatus) => void
@@ -2973,6 +3053,7 @@ function CustomerDetail({
   onDocumentPreviewError: (customerId: string) => void
   onEdit: () => void
   onClose?: () => void
+  onPreviewDocument?: (index: number) => void
 }) {
   const rentalGuard = canCreateRentalForCustomer(customer)
 
@@ -3095,8 +3176,12 @@ function CustomerDetail({
               ยังไม่มีรูปเอกสาร
             </div>
           )}
-          {customer.documents.map((document) => (
-            <figure key={document.id}>
+          {customer.documents.map((document, index) => (
+            <figure
+              key={document.id}
+              onClick={() => document.previewUrl && onPreviewDocument?.(index)}
+              style={document.previewUrl ? { cursor: 'pointer' } : undefined}
+            >
               {document.previewUrl ? (
                 <img
                   src={document.previewUrl}
