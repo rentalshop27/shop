@@ -13,6 +13,7 @@ import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { StockItem } from '../../App'
 import { findOpenRentalConflict } from './rentalRules'
+import { canCreateRentalForCustomer } from '../customers/customerRules'
 
 interface RentalsPageProps {
   rentals: RentalOrder[]
@@ -67,6 +68,15 @@ export function RentalsPage({
       setLocalSelectedRentalId(id)
     }
   }
+
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
+
+  // Auto-open detail panel on mobile if an external selected rental is provided
+  useEffect(() => {
+    if (externalSelectedRentalId) {
+      setIsMobileDetailOpen(true)
+    }
+  }, [externalSelectedRentalId])
   
   // Search & Filter
   const [orderQuery, setOrderQuery] = useState('')
@@ -371,6 +381,11 @@ export function RentalsPage({
       setFormError('กรุณาเลือกผู้เช่า')
       return
     }
+    const customerRentalGuard = canCreateRentalForCustomer(selectedCustomer)
+    if (!customerRentalGuard.allowed) {
+      setFormError(customerRentalGuard.message || 'ไม่สามารถสร้างรายการเช่าสำหรับลูกค้ารายนี้ได้')
+      return
+    }
     if (selectedCostumes.length === 0) {
       setFormError('กรุณาเลือกแบบชุดอย่างน้อย 1 ชุด')
       return
@@ -530,7 +545,7 @@ export function RentalsPage({
           </div>
 
           <div className="customer-table" role="table" aria-label="รายการออเดอร์เช่าชุด">
-            <div className="table-row table-head" role="row" style={{ gridTemplateColumns: '105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}>
+            <div className="table-row table-head rental-table-row" role="row">
               <span>รหัสออเดอร์</span>
               <span>ลูกค้า</span>
               <span>ช่วงเช่า</span>
@@ -541,12 +556,14 @@ export function RentalsPage({
 
             {paginatedRentals.map((rental) => (
               <button
-                className={`table-row table-button ${rental.orderCode === selectedRental?.orderCode ? 'selected' : ''}`}
+                className={`table-row table-button rental-table-row ${rental.orderCode === selectedRental?.orderCode ? 'selected' : ''}`}
                 key={rental.orderCode}
                 role="row"
                 type="button"
-                onClick={() => setSelectedRentalId(rental.orderCode)}
-                style={{ gridTemplateColumns: '105px 1.1fr 1.4fr 125px 95px 32px', minWidth: '700px' }}
+                onClick={() => {
+                  setSelectedRentalId(rental.orderCode)
+                  setIsMobileDetailOpen(true)
+                }}
               >
                 <strong>{rental.orderCode}</strong>
                 <span>
@@ -608,215 +625,222 @@ export function RentalsPage({
 
         {/* Right Side: Order & Customer Detail View */}
         {selectedRental && (
-          <aside className="panel detail-panel" style={{ width: '100%', maxWidth: '420px' }}>
-            <div className="profile-card-top">
-              <div className="profile-card-info">
-                <div className="profile-avatar">
-                  {selectedRental.customer.fullName.slice(0, 2).toLowerCase()}
+          <div className={`customer-detail-wrapper ${isMobileDetailOpen ? 'mobile-open' : ''}`} onClick={() => setIsMobileDetailOpen(false)}>
+            <div className="customer-detail-content" onClick={(e) => e.stopPropagation()}>
+              <aside className="panel detail-panel" style={{ width: '100%' }}>
+                <button className="close-detail-btn" type="button" onClick={() => setIsMobileDetailOpen(false)} aria-label="ปิด">
+                  <X size={20} />
+                </button>
+                <div className="profile-card-top">
+                  <div className="profile-card-info">
+                    <div className="profile-avatar">
+                      {selectedRental.customer.fullName.slice(0, 2).toLowerCase()}
+                    </div>
+                    <div className="profile-meta">
+                      <h2>รายละเอียดโปรไฟล์ลูกค้า</h2>
+                      <p>
+                        <strong>{selectedRental.customer.fullName}</strong> ({selectedRental.customer.phone})
+                      </p>
+                      <p>LINE: {selectedRental.customer.lineAccount || '-'}</p>
+                    </div>
+                  </div>
+                  {getStatusBadge(selectedRental.status)}
                 </div>
-                <div className="profile-meta">
-                  <h2>รายละเอียดโปรไฟล์ลูกค้า</h2>
-                  <p>
-                    <strong>{selectedRental.customer.fullName}</strong> ({selectedRental.customer.phone})
-                  </p>
-                  <p>LINE: {selectedRental.customer.lineAccount || '-'}</p>
-                </div>
-              </div>
-              {getStatusBadge(selectedRental.status)}
-            </div>
 
-            {/* Measurements Grid */}
-            <section className="detail-section" style={{ marginTop: '20px' }}>
-              <div className="section-title-row">
-                <h3 style={{ fontSize: '15px', color: '#fff', margin: 0 }}>ขนาดสัดส่วน</h3>
-              </div>
-              <div className="measurement-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginTop: '10px' }}>
-                <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบอก</span>
-                  <strong style={{ fontSize: '16px', color: '#fff' }}>
-                    {selectedRental.customer.bustIn ? `${selectedRental.customer.bustIn}"` : '-'}
-                  </strong>
-                </div>
-                <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบเอว</span>
-                  <strong style={{ fontSize: '16px', color: '#fff' }}>
-                    {selectedRental.customer.waistIn ? `${selectedRental.customer.waistIn}"` : '-'}
-                  </strong>
-                </div>
-                <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>สะโพก</span>
-                  <strong style={{ fontSize: '16px', color: '#fff' }}>
-                    {selectedRental.customer.hipIn ? `${selectedRental.customer.hipIn}"` : '-'}
-                  </strong>
-                </div>
-                <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>ส่วนสูง</span>
-                  <strong style={{ fontSize: '16px', color: '#fff' }}>
-                    {selectedRental.customer.heightCm ? `${selectedRental.customer.heightCm} cm` : '-'}
-                  </strong>
-                </div>
-              </div>
-            </section>
+                {/* Measurements Grid */}
+                <section className="detail-section" style={{ marginTop: '20px' }}>
+                  <div className="section-title-row">
+                    <h3 style={{ fontSize: '15px', color: '#fff', margin: 0 }}>ขนาดสัดส่วน</h3>
+                  </div>
+                  <div className="measurement-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginTop: '10px' }}>
+                    <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบอก</span>
+                      <strong style={{ fontSize: '16px', color: '#fff' }}>
+                        {selectedRental.customer.bustIn ? `${selectedRental.customer.bustIn}"` : '-'}
+                      </strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบเอว</span>
+                      <strong style={{ fontSize: '16px', color: '#fff' }}>
+                        {selectedRental.customer.waistIn ? `${selectedRental.customer.waistIn}"` : '-'}
+                      </strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>สะโพก</span>
+                      <strong style={{ fontSize: '16px', color: '#fff' }}>
+                        {selectedRental.customer.hipIn ? `${selectedRental.customer.hipIn}"` : '-'}
+                      </strong>
+                    </div>
+                    <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>ส่วนสูง</span>
+                      <strong style={{ fontSize: '16px', color: '#fff' }}>
+                        {selectedRental.customer.heightCm ? `${selectedRental.customer.heightCm} cm` : '-'}
+                      </strong>
+                    </div>
+                  </div>
+                </section>
 
-            {/* Costume Detail Items */}
-            <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-              <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการออเดอร์และวงจรสินค้า</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {selectedRental.rentals.map((r) => {
-                  const costumeImageUrl = r.costume.imageUrls.find((url) => url.trim().length > 0)
+                {/* Costume Detail Items */}
+                <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการออเดอร์และวงจรสินค้า</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {selectedRental.rentals.map((r) => {
+                      const costumeImageUrl = r.costume.imageUrls.find((url) => url.trim().length > 0)
 
-                  return (
-                    <div
-                      key={r.id}
-                      style={{
-                        display: 'flex',
-                        gap: '16px',
-                        background: 'var(--bg-input)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        alignItems: 'center'
-                      }}
-                    >
-                    {costumeImageUrl ? (
-                      <img
-                        src={costumeImageUrl}
-                        alt={r.costume.productName}
-                        style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
-                      />
-                    ) : (
-                      <div
-                        aria-label="ยังไม่มีรูปสินค้า"
-                        style={{
-                          width: '60px',
-                          height: '60px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
-                          background: 'rgba(255, 255, 255, 0.02)',
-                          color: 'var(--text-muted)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          flexShrink: 0,
-                          fontSize: '10px',
-                          textAlign: 'center',
-                          lineHeight: 1.2
-                        }}
+                      return (
+                        <div
+                          key={r.id}
+                          style={{
+                            display: 'flex',
+                            gap: '16px',
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            alignItems: 'center'
+                          }}
+                        >
+                        {costumeImageUrl ? (
+                          <img
+                            src={costumeImageUrl}
+                            alt={r.costume.productName}
+                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
+                          />
+                        ) : (
+                          <div
+                            aria-label="ยังไม่มีรูปสินค้า"
+                            style={{
+                              width: '60px',
+                              height: '60px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-color)',
+                              background: 'rgba(255, 255, 255, 0.02)',
+                              color: 'var(--text-muted)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              flexShrink: 0,
+                              fontSize: '10px',
+                              textAlign: 'center',
+                              lineHeight: 1.2
+                            }}
+                          >
+                            <Shirt size={16} />
+                            <span>ไม่มีรูป</span>
+                          </div>
+                        )}
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                            {r.costume.productName}
+                          </h4>
+                          <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            รหัส: {r.costume.sku} | <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4169e1' }}></span>
+                              {r.costume.primaryColor}
+                            </span>
+                          </p>
+                          <div style={{ marginTop: '6px' }}>
+                            {getStatusBadge(r.status)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
+                            {formatBaht(r.collectedAmount)}
+                          </strong>
+                          {getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount) > 0 && (
+                            <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
+                              ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount))}
+                            </small>
+                          )}
+                          {r.depositAmount > 0 && (
+                            <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                              ประกัน: {formatBaht(r.depositAmount)}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                {/* Lifecycle Controls */}
+                <section className="detail-section controls-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                  <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>การควบคุมและจัดส่ง</h3>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {selectedRental.status === 'booked' && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
+                        style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
                       >
-                        <Shirt size={16} />
-                        <span>ไม่มีรูป</span>
+                        ส่งมอบชุด (ขนส่ง)
+                      </button>
+                    )}
+                    {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
+                        style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
+                      >
+                        รับคืนชุด (รับคืน)
+                      </button>
+                    )}
+                    {selectedRental.status === 'returned' && (
+                      <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--success-color)', background: 'var(--success-bg)', borderRadius: '8px', padding: '12px', fontWeight: 600 }}>
+                        ออเดอร์นี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
                       </div>
                     )}
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
-                        {r.costume.productName}
-                      </h4>
-                      <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        รหัส: {r.costume.sku} | <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4169e1' }}></span>
-                          {r.costume.primaryColor}
-                        </span>
-                      </p>
-                      <div style={{ marginTop: '6px' }}>
-                        {getStatusBadge(r.status)}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
-                        {formatBaht(r.collectedAmount)}
-                      </strong>
-                      {getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount) > 0 && (
-                        <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
-                          ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount))}
-                        </small>
-                      )}
-                      {r.depositAmount > 0 && (
-                        <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                          ประกัน: {formatBaht(r.depositAmount)}
-                        </small>
-                      )}
-                    </div>
+
+                    {selectedRental.status !== 'returned' && (
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => {
+                          const currentStatus = selectedRental.status
+                          if (currentStatus === 'returned') return
+                          const nextTransitionMap: Record<Exclude<RentalStatus, 'returned'>, {
+                            from: RentalStatus[]
+                            to: RentalStatus
+                          }> = {
+                            booked: { from: ['booked'], to: 'active' },
+                            active: { from: ['active'], to: 'overdue' },
+                            overdue: { from: ['overdue'], to: 'returned' }
+                          }
+                          const transition = nextTransitionMap[currentStatus]
+                          updateRentalStatuses(selectedRental.rentals, transition.from, transition.to)
+                        }}
+                        style={{ fontSize: '14px' }}
+                      >
+                        เปลี่ยนสถานะถัดไป
+                      </button>
+                    )}
                   </div>
-                  )
-                })}
-              </div>
-            </section>
 
-            {/* Lifecycle Controls */}
-            <section className="detail-section controls-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-              <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>การควบคุมและจัดส่ง</h3>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {selectedRental.status === 'booked' && (
-                  <button
-                    className="primary-button"
-                    type="button"
-                    onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
-                    style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
-                  >
-                    ส่งมอบชุด (ขนส่ง)
-                  </button>
-                )}
-                {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
-                  <button
-                    className="primary-button"
-                    type="button"
-                    onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
-                    style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
-                  >
-                    รับคืนชุด (รับคืน)
-                  </button>
-                )}
-                {selectedRental.status === 'returned' && (
-                  <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--success-color)', background: 'var(--success-bg)', borderRadius: '8px', padding: '12px', fontWeight: 600 }}>
-                    ออเดอร์นี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
-                  </div>
-                )}
-
-                {selectedRental.status !== 'returned' && (
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => {
-                      const currentStatus = selectedRental.status
-                      if (currentStatus === 'returned') return
-                      const nextTransitionMap: Record<Exclude<RentalStatus, 'returned'>, {
-                        from: RentalStatus[]
-                        to: RentalStatus
-                      }> = {
-                        booked: { from: ['booked'], to: 'active' },
-                        active: { from: ['active'], to: 'overdue' },
-                        overdue: { from: ['overdue'], to: 'returned' }
-                      }
-                      const transition = nextTransitionMap[currentStatus]
-                      updateRentalStatuses(selectedRental.rentals, transition.from, transition.to)
-                    }}
-                    style={{ fontSize: '14px' }}
-                  >
-                    เปลี่ยนสถานะถัดไป
-                  </button>
-                )}
-              </div>
-
-              {onDeleteRental && (
-                <button
-                  className="archive-button"
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm(`ต้องการลบใบเช่า ${selectedRental.orderCode} ใช่หรือไม่?`)) {
-                      onDeleteRental(selectedRental.rentals.map((r) => r.id))
-                    }
-                  }}
-                  style={{ marginTop: '16px' }}
-                >
-                  <Trash2 size={16} />
-                  ลบใบเช่านี้
-                </button>
-              )}
-            </section>
-          </aside>
+                  {onDeleteRental && (
+                    <button
+                      className="archive-button"
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`ต้องการลบใบเช่า ${selectedRental.orderCode} ใช่หรือไม่?`)) {
+                          onDeleteRental(selectedRental.rentals.map((r) => r.id))
+                        }
+                      }}
+                      style={{ marginTop: '16px' }}
+                    >
+                      <Trash2 size={16} />
+                      ลบใบเช่านี้
+                    </button>
+                  )}
+                </section>
+              </aside>
+            </div>
+          </div>
         )}
       </section>
 
