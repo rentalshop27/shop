@@ -12,7 +12,7 @@ import {
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { StockItem } from '../../App'
-import { findOpenRentalConflict, findOpenRentalForStockSku } from './rentalRules'
+import { findOpenRentalConflict } from './rentalRules'
 
 interface RentalsPageProps {
   rentals: RentalOrder[]
@@ -30,6 +30,14 @@ interface RentalsPageProps {
   externalPickupDate?: string
   externalReturnDate?: string
   onClearExternalDates?: () => void
+}
+
+const getTodayString = () => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function RentalsPage({
@@ -75,7 +83,7 @@ export function RentalsPage({
   const [selectedCostumes, setSelectedCostumes] = useState<StockItem[]>([])
   const [showCostumeDropdown, setShowCostumeDropdown] = useState(false)
 
-  const [pickupDate, setPickupDate] = useState('')
+  const [pickupDate, setPickupDate] = useState(getTodayString())
   const [returnDate, setReturnDate] = useState('')
   const [rentalPrice, setRentalPrice] = useState('')
   const [depositAmount, setDepositAmount] = useState('')
@@ -153,11 +161,10 @@ export function RentalsPage({
   const filteredCostumesSuggestions = useMemo(() => {
     const query = costumeSearch.trim().toLowerCase()
     
-    // Filter out costumes that are already selected or still tied to an open rental.
     const availableCostumes = stockItems.filter(
       (item) =>
         !selectedCostumes.some((selected) => selected.id === item.id) &&
-        !findOpenRentalForStockSku(rentals, item.sku)
+        !findOpenRentalConflict(rentals, [item.sku], pickupDate, returnDate)
     )
 
     if (!query) {
@@ -169,7 +176,7 @@ export function RentalsPage({
         item.productName.toLowerCase().includes(query) ||
         item.sku.toLowerCase().includes(query)
     )
-  }, [stockItems, rentals, costumeSearch, selectedCostumes])
+  }, [stockItems, rentals, costumeSearch, selectedCostumes, pickupDate, returnDate])
 
   // Sync pricing when costumes are selected
   useEffect(() => {
@@ -342,10 +349,28 @@ export function RentalsPage({
     const openRentalConflict = findOpenRentalConflict(
       rentals,
       selectedCostumes.map((item) => item.sku),
+      pickupDate,
+      returnDate,
     )
     if (openRentalConflict) {
-      setFormError(`ชุด ${openRentalConflict.costume.sku} ยังมีใบเช่าเปิดอยู่ (${openRentalConflict.orderCode}) ต้องรับคืนก่อนจึงจะเช่าซ้ำได้`)
+      setFormError(`ชุด ${openRentalConflict.costume.sku} ถูกจองหรือใช้งานในช่วงวันที่ระบุแล้ว (${openRentalConflict.orderCode}) ไม่สามารถเช่าซ้ำได้`)
       return
+    }
+
+    // Warning for repair or wash status items
+    const repairOrWashCostumes = selectedCostumes.filter(
+      (item) => item.status === 'repair' || item.status === 'wash'
+    )
+    if (repairOrWashCostumes.length > 0) {
+      const itemsWarningList = repairOrWashCostumes
+        .map((item) => `ชุด ${item.sku} มีสถานะเป็น "${item.status === 'repair' ? 'ซ่อม' : 'ซัก'}"`)
+        .join('\n')
+      const confirmed = window.confirm(
+        `${itemsWarningList}\nคุณยืนยันที่จะทำรายการจองสำหรับชุดดังกล่าวต่อไปหรือไม่?`
+      )
+      if (!confirmed) {
+        return
+      }
     }
 
     const price = parseFloat(rentalPrice) || 0
@@ -384,7 +409,7 @@ export function RentalsPage({
     setCustomerSearch('')
     setSelectedCostumes([])
     setCostumeSearch('')
-    setPickupDate('')
+    setPickupDate(getTodayString())
     setReturnDate('')
     setDiscountAmount('0')
     setNotes('')

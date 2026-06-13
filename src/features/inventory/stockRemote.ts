@@ -17,6 +17,7 @@ type StockItemRow = {
   late_fee_rule: string
   deposit_amount: number
   image_urls: string[]
+  status?: string
   created_at: string
   updated_at: string
 }
@@ -102,6 +103,7 @@ async function mapStockItemRow(supabase: SupabaseClient, row: StockItemRow): Pro
     lateFeeRule: row.late_fee_rule ?? '',
     depositAmount: Number(row.deposit_amount) || 0,
     imageUrls: imageUrls.filter(Boolean),
+    status: (row.status as any) || 'available',
     createdAt: row.created_at,
   }
 }
@@ -204,6 +206,7 @@ export async function createRemoteStockItem(
     late_fee_rule: item.lateFeeRule,
     deposit_amount: item.depositAmount,
     image_urls: imagePaths,
+    status: item.status || 'available',
   }
 
   const { data, error } = await supabase
@@ -253,6 +256,7 @@ export async function updateRemoteStockItem(
     late_fee_rule: item.lateFeeRule,
     deposit_amount: item.depositAmount,
     image_urls: newPaths,
+    status: item.status || 'available',
     updated_at: new Date().toISOString(),
   }
 

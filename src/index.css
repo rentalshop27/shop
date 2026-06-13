@@ -1083,7 +1083,7 @@ h1 {
   font-size: 14px;
   font-weight: 600;
   gap: 16px;
-  grid-template-columns: 60px 120px minmax(240px, 1.5fr) minmax(130px, 0.8fr) 110px 150px 110px 92px;
+  grid-template-columns: 60px 120px minmax(240px, 1.5fr) minmax(130px, 0.8fr) 100px 110px 150px 110px 92px;
   min-height: 70px;
   padding: 12px 18px;
 }
@@ -1468,7 +1468,7 @@ h1 {
   }
 
   .stock-row {
-    grid-template-columns: 50px 100px minmax(180px, 1.3fr) minmax(120px, 0.8fr) 100px 130px 100px 92px;
+    grid-template-columns: 50px 100px minmax(180px, 1.3fr) minmax(120px, 0.8fr) 90px 100px 130px 100px 92px;
   }
 
   .stock-image-grid {

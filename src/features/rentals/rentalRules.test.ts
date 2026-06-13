@@ -6,6 +6,7 @@ import {
   findOpenRentalConflict,
   findOpenRentalForStockSku,
   isOpenRentalStatus,
+  findConflictingRentalForStockSku,
 } from './rentalRules'
 
 const customer: Customer = {
@@ -41,16 +42,17 @@ const stockItem: StockItem = {
   depositAmount: 2000,
   imageUrls: [],
   createdAt: '2026-06-11T00:00:00.000Z',
+  status: 'available',
 }
 
-function makeRental(status: RentalStatus): RentalOrder {
+function makeRental(status: RentalStatus, pickupDate = '2026-06-12', returnDate = '2026-06-15'): RentalOrder {
   return {
     id: `rental_${status}`,
     orderCode: `PR-ORD-${status}`,
     customer,
     costume: stockItem,
-    pickupDate: '2026-06-12',
-    returnDate: '2026-06-15',
+    pickupDate,
+    returnDate,
     rentalPrice: 1200,
     depositAmount: 2000,
     collectedAmount: 3200,
@@ -75,9 +77,34 @@ describe('rental rules', () => {
     expect(findOpenRentalForStockSku([makeRental('returned')], 'SKU-001')).toBeUndefined()
   })
 
-  it('finds conflicts for selected stock SKUs', () => {
-    const conflict = findOpenRentalConflict([makeRental('active')], ['SKU-001'])
+  it('finds conflicts for selected stock SKUs with dates', () => {
+    const conflict = findOpenRentalConflict([makeRental('active')], ['SKU-001'], '2026-06-12', '2026-06-15')
 
     expect(conflict?.orderCode).toBe('PR-ORD-active')
   })
+
+  it('verifies that active today blocks same-day booking', () => {
+    const activeRental = makeRental('active', '2026-06-13', '2026-06-16')
+    const conflict = findConflictingRentalForStockSku([activeRental], 'SKU-001', '2026-06-13', '2026-06-13')
+    expect(conflict).toBeDefined()
+  })
+
+  it('verifies that active today/tomorrow allows later non-overlapping booking', () => {
+    const activeRental = makeRental('active', '2026-06-13', '2026-06-14')
+    const conflict = findConflictingRentalForStockSku([activeRental], 'SKU-001', '2026-06-15', '2026-06-18')
+    expect(conflict).toBeUndefined()
+  })
+
+  it('verifies that future booked rental blocks overlapping future booking', () => {
+    const futureRental = makeRental('booked', '2026-06-20', '2026-06-25')
+    const conflict = findConflictingRentalForStockSku([futureRental], 'SKU-001', '2026-06-22', '2026-06-27')
+    expect(conflict).toBeDefined()
+  })
+
+  it('verifies that returned rental does not block overlapping future booking', () => {
+    const returnedRental = makeRental('returned', '2026-06-12', '2026-06-15')
+    const conflict = findConflictingRentalForStockSku([returnedRental], 'SKU-001', '2026-06-13', '2026-06-14')
+    expect(conflict).toBeUndefined()
+  })
 })
+

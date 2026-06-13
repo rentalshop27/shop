@@ -37,6 +37,7 @@ const stockItem: StockItem = {
   depositAmount: 2000,
   imageUrls: [],
   createdAt: '2026-06-11T00:00:00.000Z',
+  status: 'available',
 }
 
 function makeRental(

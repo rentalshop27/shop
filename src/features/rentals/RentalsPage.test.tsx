@@ -42,6 +42,7 @@ function makeStockItem(imageUrls: string[]): StockItem {
     depositAmount: 1000,
     imageUrls,
     createdAt: '2026-06-11T00:00:00.000Z',
+    status: 'available',
   }
 }
 
