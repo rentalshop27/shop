@@ -238,6 +238,9 @@ export function RentalsPage({
     if (/^PR-ORD-\d{6}-\d{3}-\d+$/.test(orderCode)) {
       return orderCode.replace(/-\d+$/, '')
     }
+    if (/^PR-ORD-\d{6}-\d{3}$/.test(orderCode)) {
+      return orderCode
+    }
     if (/^PR-ORD-\d+-\d+$/.test(orderCode)) {
       return orderCode.replace(/-\d+$/, '')
     }
