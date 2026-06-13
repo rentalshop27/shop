@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StockItem } from '../../App'
 import type { Customer } from '../customers/customerTypes'
 import type { RentalOrder } from './rentalTypes'
 import { RentalsPage } from './RentalsPage'
+
+type RentalDraft = Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>
+type CreateRentalsHandler = (drafts: RentalDraft[]) => boolean | Promise<boolean>
 
 const customer: Customer = {
   id: 'cus_1',
@@ -67,15 +70,23 @@ function makeRental(imageUrls: string[], overrides: Partial<RentalOrder> = {}): 
   }
 }
 
-function renderRentalsPage(rentalsOrRental: RentalOrder | RentalOrder[], onUpdateRentalStatus = vi.fn()) {
+function renderRentalsPage(
+  rentalsOrRental: RentalOrder | RentalOrder[],
+  onUpdateRentalStatus = vi.fn(),
+  options: {
+    customers?: Customer[]
+    stockItems?: StockItem[]
+    onCreateRentals?: CreateRentalsHandler
+  } = {},
+) {
   const rentals = Array.isArray(rentalsOrRental) ? rentalsOrRental : [rentalsOrRental]
 
   render(
     <RentalsPage
       rentals={rentals}
-      customers={[customer]}
-      stockItems={rentals.map((rental) => rental.costume)}
-      onCreateRentals={vi.fn()}
+      customers={options.customers ?? [customer]}
+      stockItems={options.stockItems ?? rentals.map((rental) => rental.costume)}
+      onCreateRentals={options.onCreateRentals ?? vi.fn(() => true)}
       onUpdateRentalStatus={onUpdateRentalStatus}
       onSelectRental={vi.fn()}
       externalSelectedRentalId={rentals[0].orderCode}
@@ -175,5 +186,43 @@ describe('RentalsPage grouped rental display', () => {
     await user.click(screen.getByRole('button', { name: 'รับคืนชุด (รับคืน)' }))
 
     expect(onUpdateRentalStatus).toHaveBeenCalledWith(['active_rental'], 'returned')
+  })
+})
+
+describe('RentalsPage customer rental guard', () => {
+  it('blocks rental creation for suspended customers', async () => {
+    const user = userEvent.setup()
+    const onCreateRentals = vi.fn(() => true)
+    const existingRental = makeRental([])
+    const availableCostume = makeStockItem([], {
+      id: 'stock_2',
+      sku: 'S1-02',
+      productName: 'Second Gown',
+    })
+    const suspendedCustomer: Customer = { ...customer, profileStatus: 'suspended' }
+
+    renderRentalsPage(existingRental, vi.fn(), {
+      customers: [suspendedCustomer],
+      stockItems: [existingRental.costume, availableCostume],
+      onCreateRentals,
+    })
+
+    await user.click(screen.getByRole('button', { name: 'สร้างใบเช่าชุด' }))
+    await user.click(screen.getByPlaceholderText('เช่น pun, PR-C001'))
+    await user.click(screen.getByRole('button', { name: /นนท์.*PR-C001/ }))
+    await user.click(screen.getByPlaceholderText('เช่น Midnight, PR-8130'))
+    await user.click(screen.getByRole('button', { name: /Second Gown/ }))
+
+    fireEvent.change(screen.getByLabelText(/วันที่รับชุด/), {
+      target: { value: '2026-06-12' },
+    })
+    fireEvent.change(screen.getByLabelText(/วันที่คืน/), {
+      target: { value: '2026-06-15' },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'บันทึกการเช่า' }))
+
+    expect(screen.getByText('ลูกค้าถูกระงับ ไม่สามารถสร้างรายการเช่าใหม่ได้')).toBeInTheDocument()
+    expect(onCreateRentals).not.toHaveBeenCalled()
   })
 })

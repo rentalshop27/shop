@@ -24,6 +24,7 @@ import {
   Search,
   Settings,
   ShieldAlert,
+  ShieldCheck,
   Trash2,
   UserRound,
   X,
@@ -159,12 +160,13 @@ const emptyStockDraft: StockDraft = {
 
 const demoStockItems: StockItem[] = demoStockItemsForRentals
 
-const statusOptions: Array<{ value: 'all' | CustomerProfileStatus; label: string }> = [
+const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; label: string }> = [
   { value: 'all', label: 'ทุกสถานะ' },
   { value: 'incomplete', label: profileStatusLabel.incomplete },
   { value: 'pending_review', label: profileStatusLabel.pending_review },
   { value: 'verified', label: profileStatusLabel.verified },
   { value: 'suspended', label: profileStatusLabel.suspended },
+  { value: 'has_risk', label: 'มีสัญญาณความเสี่ยง' },
 ]
 
 async function refreshAuditLogs(
@@ -271,7 +273,7 @@ function App() {
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [stockQuery, setStockQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | CustomerProfileStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | CustomerProfileStatus | 'has_risk'>('all')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isStockFormOpen, setIsStockFormOpen] = useState(false)
   const [editingStockId, setEditingStockId] = useState<string | null>(null)
@@ -477,6 +479,12 @@ function App() {
     if (drafts.length === 0) return false
 
     const firstDraft = drafts[0]
+    const customerRentalGuard = canCreateRentalForCustomer(firstDraft.customer)
+    if (!customerRentalGuard.allowed) {
+      window.alert(customerRentalGuard.message || 'ไม่สามารถสร้างรายการเช่าสำหรับลูกค้ารายนี้ได้')
+      return false
+    }
+
     const openRentalConflict = findOpenRentalConflict(
       rentals,
       drafts.map((draft) => draft.costume.sku),
@@ -678,7 +686,11 @@ function App() {
 
     return activeCustomers.filter((customer) => {
       const matchesStatus =
-        statusFilter === 'all' || customer.profileStatus === statusFilter
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'has_risk'
+          ? customer.riskFlag === 'has_risk'
+          : customer.profileStatus === statusFilter
       const searchable = [
         customer.customerCode,
         customer.fullName,
@@ -939,6 +951,14 @@ function App() {
       setIsMobileDetailOpen(true)
       setFormError(`เบอร์นี้มีอยู่แล้วในลูกค้า ${duplicate.customer.customerCode}`)
       return
+    }
+
+    const documentCount = existingDocuments.length + draftDocuments.length
+    if (draft.profileStatus === 'verified' && documentCount === 0) {
+      const confirmed = window.confirm(
+        'ลูกค้ายังไม่มีรูปเอกสาร ต้องการบันทึกเป็นตรวจแล้วใช่ไหม?',
+      )
+      if (!confirmed) return
     }
 
     setIsSaving(true)
@@ -1416,6 +1436,12 @@ function App() {
   async function archiveSelectedCustomer() {
     if (!selectedCustomer) return
 
+    const relatedRentalCount = rentals.filter((rental) => rental.customer.id === selectedCustomer.id).length
+    if (relatedRentalCount > 0) {
+      window.alert(`ยังลบลูกค้า ${selectedCustomer.customerCode} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงลูกค้ารายนี้อยู่ ${relatedRentalCount} รายการ`)
+      return
+    }
+
     const confirmed = window.confirm(
       `คุณต้องการลบข้อมูลลูกค้ารายนี้ใช่หรือไม่?\n\nข้อมูลลูกค้า ${selectedCustomer.fullName} (${selectedCustomer.customerCode}) จะถูกลบ/ซ่อนออกจากระบบ`
     )
@@ -1639,13 +1665,55 @@ function App() {
             </header>
 
             <section className="system-strip" aria-label="สถานะระบบ">
-              <MetricCard label="ลูกค้าทั้งหมด" value={`${summary.total}`} icon={<UserRound />} type="total" unit="ราย" />
-              <MetricCard label="ตรวจแล้ว" value={`${summary.verified}`} icon={<BadgeCheck />} type="verified" unit="ราย" />
-              <MetricCard label="ข้อมูลไม่ครบ" value={`${summary.incomplete}`} icon={<AlertTriangle />} type="incomplete" unit="ราย" />
-              <MetricCard label="มีสัญญาณความเสี่ยง" value={`${summary.risk}`} icon={<ShieldAlert />} type="risk" unit="ราย" />
+              <MetricCard
+                label="ลูกค้าทั้งหมด"
+                value={`${summary.total}`}
+                icon={<UserRound />}
+                type="total"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('all')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'all'}
+              />
+              <MetricCard
+                label="ตรวจแล้ว"
+                value={`${summary.verified}`}
+                icon={<ShieldCheck />}
+                type="verified"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('verified')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'verified'}
+              />
+              <MetricCard
+                label="มีสัญญาณความเสี่ยง"
+                value={`${summary.risk}`}
+                icon={<ShieldAlert />}
+                type="risk"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('has_risk')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'has_risk'}
+              />
+              <MetricCard
+                label="ข้อมูลไม่ครบ"
+                value={`${summary.incomplete}`}
+                icon={<AlertTriangle />}
+                type="incomplete"
+                unit="ราย"
+                onClick={() => {
+                  setStatusFilter('incomplete')
+                  setCurrentPage(1)
+                }}
+                isActive={statusFilter === 'incomplete'}
+              />
             </section>
-
-
 
             {remoteError && <section className="remote-error">{remoteError}</section>}
 
@@ -1657,7 +1725,7 @@ function App() {
                     <input
                       value={query}
                       onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }}
-                      placeholder="ค้นหาด้วยชื่อ เบอร์โทร รหัสลูกค้า หรือ LINE ID"
+                      placeholder="ค้นหาด้วยชื่อ เบอร์โทร รหัสลูกค้า หรือ LINE"
                     />
                   </label>
                   <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as typeof statusFilter); setCurrentPage(1); }}>
@@ -2135,6 +2203,9 @@ function InventoryPage({
     return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'card'
   })
 
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [activeStatusDropdownId, setActiveStatusDropdownId] = useState<string | null>(null)
+
   const handleViewModeChange = (mode: 'table' | 'card') => {
     setViewMode(mode)
     localStorage.setItem('inventoryViewMode', mode)
@@ -2145,7 +2216,24 @@ function InventoryPage({
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   })()
 
+  const statusCounts = useMemo(() => {
+    const counts = { all: items.length, available: 0, rented: 0, booked: 0, repair: 0, wash: 0 }
+    items.forEach((item) => {
+      const { primaryStatus } = getInventoryDisplayStatus(item, rentals, today)
+      if (primaryStatus in counts) {
+        counts[primaryStatus as keyof typeof counts] += 1
+      }
+    })
+    return counts
+  }, [items, rentals, today])
 
+  const filteredItems = useMemo(() => {
+    if (statusFilter === 'all') return items
+    return items.filter((item) => {
+      const { primaryStatus } = getInventoryDisplayStatus(item, rentals, today)
+      return primaryStatus === statusFilter
+    })
+  }, [items, statusFilter, rentals, today])
 
   function getStockStatusPill(status: string) {
     switch (status) {
@@ -2199,7 +2287,7 @@ function InventoryPage({
         </button>
       </header>
 
-      <section className="system-strip" aria-label="ภาพรวมคลังชุด">
+      <section className="system-strip inventory-summary-strip" aria-label="ภาพรวมคลังชุด">
         <MetricCard label="รายการสต๊อก" value={`${summary.total}`} icon={<Menu />} type="total" />
         <MetricCard label="จำนวนชุดรวม" value={`${summary.sets}`} icon={<Archive />} type="verified" unit="ชุด" />
         <MetricCard label="ตั้งราคาแล้ว" value={`${summary.priced}`} icon={<BadgeCheck />} type="incomplete" />
@@ -2236,6 +2324,56 @@ function InventoryPage({
           </div>
         </div>
 
+        <div className="status-filter-container">
+          <button
+            type="button"
+            className={`filter-chip ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            ทั้งหมด ({statusCounts.all})
+          </button>
+          <button
+            type="button"
+            className={`filter-chip available ${statusFilter === 'available' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('available')}
+          >
+            <span className="dot success" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#4ade80', marginRight: 4 }}></span>
+            ว่าง ({statusCounts.available})
+          </button>
+          <button
+            type="button"
+            className={`filter-chip rented ${statusFilter === 'rented' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('rented')}
+          >
+            <span className="dot rented" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#ead483', marginRight: 4 }}></span>
+            ถูกเช่า ({statusCounts.rented})
+          </button>
+          <button
+            type="button"
+            className={`filter-chip booked ${statusFilter === 'booked' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('booked')}
+          >
+            <span className="dot booked" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#a5b4fc', marginRight: 4 }}></span>
+            มีคิวจอง ({statusCounts.booked})
+          </button>
+          <button
+            type="button"
+            className={`filter-chip repair ${statusFilter === 'repair' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('repair')}
+          >
+            <span className="dot danger" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#f87171', marginRight: 4 }}></span>
+            ซ่อม ({statusCounts.repair})
+          </button>
+          <button
+            type="button"
+            className={`filter-chip wash ${statusFilter === 'wash' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('wash')}
+          >
+            <span className="dot warning" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#fbbf24', marginRight: 4 }}></span>
+            ซัก ({statusCounts.wash})
+          </button>
+        </div>
+
         {viewMode === 'table' ? (
           <div className="stock-table" role="table" aria-label="รายการคลังชุด">
             <div className="stock-row stock-head" role="row">
@@ -2249,87 +2387,131 @@ function InventoryPage({
               <span>ประกัน</span>
               <span>จัดการ</span>
             </div>
-            {items.map((item) => (
-              <div className="stock-row" key={item.id} role="row">
-                <div className="stock-image-thumbnail">
-                  {item.imageUrls && item.imageUrls.length > 0 ? (
-                    <img
-                      src={item.imageUrls[0]}
-                      alt={item.productName}
-                      onClick={() => onPreview(item, 0)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  ) : (
-                    <div className="stock-image-placeholder">
-                      <FileImage size={20} />
-                    </div>
-                  )}
-                </div>
-                <strong>{item.sku}</strong>
-                <div className="stock-product-cell">
+            {filteredItems.map((item) => {
+              const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
+              return (
+                <div className="stock-row" key={item.id} role="row">
+                  <div className="stock-image-thumbnail">
+                    {item.imageUrls && item.imageUrls.length > 0 ? (
+                      <img
+                        src={item.imageUrls[0]}
+                        alt={item.productName}
+                        onClick={() => onPreview(item, 0)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    ) : (
+                      <div className="stock-image-placeholder">
+                        <FileImage size={20} />
+                      </div>
+                    )}
+                  </div>
+                  <strong>{item.sku}</strong>
+                  <div className="stock-product-cell">
+                    <span>
+                      {item.productName}
+                      <small>{[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}</small>
+                    </span>
+                    {item.imageUrls.length > 0 && (
+                      <button
+                        className="inline-link-button"
+                        type="button"
+                        onClick={() => onPreview(item, 0)}
+                        aria-label={`ดูรูป ${item.sku}`}
+                      >
+                        <Images size={14} />
+                        ดูรูป {item.imageUrls.length}
+                      </button>
+                    )}
+                  </div>
                   <span>
-                    {item.productName}
-                    <small>{[item.brand, item.category, item.serialNumber].filter(Boolean).join(' | ') || '-'}</small>
+                    {item.size || '-'}
+                    <small>{item.primaryColor || '-'}</small>
                   </span>
-                  {item.imageUrls.length > 0 && (
-                    <button
-                      className="inline-link-button"
-                      type="button"
-                      onClick={() => onPreview(item, 0)}
-                      aria-label={`ดูรูป ${item.sku}`}
+                  <span style={{ position: 'relative' }}>
+                    <div 
+                      className="stock-card-status-badge-wrapper"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setActiveStatusDropdownId(activeStatusDropdownId === item.id ? null : item.id)
+                      }}
                     >
-                      <Images size={14} />
-                      ดูรูป {item.imageUrls.length}
-                    </button>
-                  )}
-                </div>
-                <span>
-                  {item.size || '-'}
-                  <small>{item.primaryColor || '-'}</small>
-                </span>
-                <span>
-                  {(() => {
-                    const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
-                    return (
+                      {getStockStatusPill(primaryStatus)}
+                    </div>
+                    {activeStatusDropdownId === item.id && (
                       <>
-                        {getStockStatusPill(primaryStatus)}
-                        {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
-                          <small style={{ display: 'block', marginTop: '4px', color: '#a5b4fc', fontSize: '0.75rem' }}>
-                            คิว: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}
-                          </small>
-                        )}
+                        <div 
+                          className="dropdown-overlay-fixed" 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setActiveStatusDropdownId(null)
+                          }} 
+                        />
+                        <div className="status-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              onUpdateStatus(item.id, 'available') 
+                              setActiveStatusDropdownId(null) 
+                            }}
+                          >
+                            <span className="dot success"></span> ว่าง
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              onUpdateStatus(item.id, 'repair') 
+                              setActiveStatusDropdownId(null) 
+                            }}
+                          >
+                            <span className="dot danger"></span> ซ่อม
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              onUpdateStatus(item.id, 'wash') 
+                              setActiveStatusDropdownId(null) 
+                            }}
+                          >
+                            <span className="dot warning"></span> ซัก
+                          </button>
+                        </div>
                       </>
-                    )
-                  })()}
-                </span>
-                <span>{formatBaht(item.rentalPricePerDay)}</span>
-                <span>{item.lateFeeRule || '-'}</span>
-                <span>{formatBaht(item.depositAmount)}</span>
-                <div className="stock-action-group">
-                  <button
-                    className="icon-action-button compact"
-                    type="button"
-                    onClick={() => onEdit(item)}
-                    aria-label={`แก้ไข ${item.sku}`}
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    className="icon-action-button compact danger"
-                    type="button"
-                    onClick={() => onDelete(item)}
-                    aria-label={`ลบ ${item.sku}`}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                    )}
+                    {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
+                      <small style={{ display: 'block', marginTop: '4px', color: '#a5b4fc', fontSize: '0.75rem' }}>
+                        คิว: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}
+                      </small>
+                    )}
+                  </span>
+                  <span>{formatBaht(item.rentalPricePerDay)}</span>
+                  <span>{item.lateFeeRule || '-'}</span>
+                  <span>{formatBaht(item.depositAmount)}</span>
+                  <div className="stock-action-group">
+                    <button
+                      className="icon-action-button compact"
+                      type="button"
+                      onClick={() => onEdit(item)}
+                      aria-label={`แก้ไข ${item.sku}`}
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      className="icon-action-button compact danger"
+                      type="button"
+                      onClick={() => onDelete(item)}
+                      aria-label={`ลบ ${item.sku}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {items.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+              )
+            })}
+            {filteredItems.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
           </div>
         ) : (
           <div className="stock-grid">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
               return (
                 <div className="stock-card" key={item.id}>
@@ -2347,8 +2529,54 @@ function InventoryPage({
                       </div>
                     )}
                     <span className="stock-card-sku-badge">{item.sku}</span>
-                    <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2 }}>
+                    <div 
+                      className="stock-card-status-badge-wrapper"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setActiveStatusDropdownId(activeStatusDropdownId === item.id ? null : item.id)
+                      }}
+                    >
                       {getStockStatusPill(primaryStatus)}
+                      {activeStatusDropdownId === item.id && (
+                        <>
+                          <div 
+                            className="dropdown-overlay-fixed" 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setActiveStatusDropdownId(null)
+                            }} 
+                          />
+                          <div className="status-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              type="button" 
+                              onClick={() => { 
+                                onUpdateStatus(item.id, 'available') 
+                                setActiveStatusDropdownId(null) 
+                              }}
+                            >
+                              <span className="dot success"></span> ว่าง
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => { 
+                                onUpdateStatus(item.id, 'repair') 
+                                setActiveStatusDropdownId(null) 
+                              }}
+                            >
+                              <span className="dot danger"></span> ซ่อม
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => { 
+                                onUpdateStatus(item.id, 'wash') 
+                                setActiveStatusDropdownId(null) 
+                              }}
+                            >
+                              <span className="dot warning"></span> ซัก
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="stock-card-content">
@@ -2366,9 +2594,9 @@ function InventoryPage({
                     </div>
                     
                     {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
-                      <div className="stock-card-next-booking" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <CalendarDays size={14} />
-                        <span>คิวถัดไป: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}</span>
+                      <div className="stock-card-next-booking">
+                        <CalendarDays size={12} />
+                        <span>คิว: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}</span>
                       </div>
                     )}
 
@@ -2388,33 +2616,7 @@ function InventoryPage({
                     </div>
                   </div>
                   <div className="stock-card-actions">
-                    <div className="stock-card-status-toggle">
-                      <button
-                        type="button"
-                        className={`status-toggle-btn available ${item.status === 'available' ? 'active' : ''}`}
-                        onClick={() => onUpdateStatus(item.id, 'available')}
-                        title="เปลี่ยนสถานะเป็น ว่าง"
-                      >
-                        ว่าง
-                      </button>
-                      <button
-                        type="button"
-                        className={`status-toggle-btn repair ${item.status === 'repair' ? 'active' : ''}`}
-                        onClick={() => onUpdateStatus(item.id, 'repair')}
-                        title="เปลี่ยนสถานะเป็น ซ่อม"
-                      >
-                        ซ่อม
-                      </button>
-                      <button
-                        type="button"
-                        className={`status-toggle-btn wash ${item.status === 'wash' ? 'active' : ''}`}
-                        onClick={() => onUpdateStatus(item.id, 'wash')}
-                        title="เปลี่ยนสถานะเป็น ซัก"
-                      >
-                        ซัก
-                      </button>
-                    </div>
-                    <div className="stock-card-action-buttons" style={{ display: 'flex', gap: '8px' }}>
+                    <div className="stock-card-action-buttons">
                       <button
                         className="icon-action-button compact"
                         type="button"
@@ -2422,7 +2624,7 @@ function InventoryPage({
                         aria-label={`แก้ไข ${item.sku}`}
                         title="แก้ไข"
                       >
-                        <Pencil size={16} />
+                        <Pencil size={15} />
                       </button>
                       <button
                         className="icon-action-button compact danger"
@@ -2431,14 +2633,14 @@ function InventoryPage({
                         aria-label={`ลบ ${item.sku}`}
                         title="ลบชุด"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
                 </div>
               )
             })}
-            {items.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+            {filteredItems.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
           </div>
         )}
       </section>
@@ -2985,15 +3187,24 @@ function MetricCard({
   icon,
   type,
   unit,
+  onClick,
+  isActive,
 }: {
   label: string
   value: string
   icon: ReactNode
   type?: 'total' | 'verified' | 'incomplete' | 'risk'
   unit?: string
+  onClick?: () => void
+  isActive?: boolean
 }) {
+  const Component = onClick ? 'button' : 'div'
   return (
-    <div className={`metric-card ${type || ''}`}>
+    <Component
+      className={`metric-card ${type || ''} ${isActive ? 'active' : ''} ${onClick ? 'clickable' : ''}`}
+      onClick={onClick}
+      type={onClick ? 'button' : undefined}
+    >
       <div className="metric-icon-wrapper">{icon}</div>
       <div className="card-content">
         <span>{label}</span>
@@ -3001,7 +3212,8 @@ function MetricCard({
           {value} {unit && <span className="unit">{unit}</span>}
         </strong>
       </div>
-    </div>
+      {onClick && <ChevronRight size={18} className="metric-chevron" />}
+    </Component>
   )
 }
 
