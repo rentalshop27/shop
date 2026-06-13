@@ -1,16 +1,16 @@
 # Graph Report - Precious-Shop-Test  (2026-06-13)
 
 ## Corpus Check
-- 40 files · ~71,689 words
+- 40 files · ~72,017 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 586 nodes · 1161 edges · 27 communities (21 shown, 6 thin omitted)
+- 587 nodes · 1162 edges · 26 communities (21 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fd3d798a`
+- Built from commit: `2cc370ee`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -36,7 +36,6 @@
 - [[_COMMUNITY_Community 18|Community 18]]
 - [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 20|Community 20]]
-- [[_COMMUNITY_Community 21|Community 21]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `Customer` - 20 edges
@@ -62,15 +61,15 @@
 - `updateSelectedRisk()` --calls--> `updateRemoteCustomerRisk()`  [EXTRACTED]
   src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/customers/customerRemote.ts
 
-## Communities (27 total, 6 thin omitted)
+## Communities (26 total, 5 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.02
-Nodes (63): activeCustomers, [activeTab, setActiveTab], [auditLogs, setAuditLogs], baseSku, [brands, setBrands], [categories, setCategories], [colors, setColors], count (+55 more)
+Cohesion: 0.05
+Nodes (54): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+46 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.06
-Nodes (54): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+46 more)
+Cohesion: 0.02
+Nodes (63): activeCustomers, [activeTab, setActiveTab], [auditLogs, setAuditLogs], baseSku, [brands, setBrands], [categories, setCategories], [colors, setColors], count (+55 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
@@ -78,7 +77,7 @@ Nodes (52): customer, metrics, stockItem, getInventoryDisplayStatus(), item, ite
 
 ### Community 3 - "Community 3"
 Cohesion: 0.03
-Nodes (46): calendarDays, CalendarPageProps, categories, [currentDate, setCurrentDate], currentWeekDays, dayEvents, DayRentalBuckets, DayRentalCategory (+38 more)
+Nodes (47): calendarDays, CalendarPageProps, categories, [currentDate, setCurrentDate], currentWeekDays, dayEvents, DayRentalBuckets, DayRentalCategory (+39 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.07
@@ -89,8 +88,8 @@ Cohesion: 0.12
 Nodes (36): archiveRemoteCustomer(), createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemoteCustomerDocuments(), loadCustomers(), loadOwnerShopId(), mapCustomerRow() (+28 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.15
-Nodes (5): getFriendlyURL(), PrecacheStrategy, Strategy, StrategyHandler, toRequest()
+Cohesion: 0.17
+Nodes (6): getFriendlyURL(), PrecacheStrategy, Strategy, StrategyHandler, timeout(), toRequest()
 
 ### Community 7 - "Community 7"
 Cohesion: 0.12
@@ -101,12 +100,16 @@ Cohesion: 0.15
 Nodes (22): [actionFilter, setActionFilter], actionTranslations, allKeys, AuditLogPageProps, [currentPage, setCurrentPage], fieldTranslations, filteredLogs, formatDateTime() (+14 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.17
-Nodes (21): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadShopSettings(), loadStockItems() (+13 more)
+Cohesion: 0.22
+Nodes (17): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadShopSettings(), mapStockItemRow() (+9 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.21
 Nodes (16): [brandError, setBrandError], [brandSuccess, setBrandSuccess], [categoryError, setCategoryError], [categorySuccess, setCategorySuccess], [colorError, setColorError], [colorSuccess, setColorSuccess], handleAddBrandSubmit(), handleAddCategorySubmit() (+8 more)
+
+### Community 11 - "Community 11"
+Cohesion: 0.18
+Nodes (12): loadStockItems(), closeStockForm(), closeStockPreview(), handleDeleteRental(), handleDeleteStockItem(), handleLoadAuditLogs(), handleSaveStockItem(), handleUpdateRentalStatus() (+4 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.27
@@ -117,36 +120,32 @@ Cohesion: 0.18
 Nodes (9): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+1 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.25
-Nodes (8): closeStockForm(), closeStockPreview(), handleDeleteRental(), handleDeleteStockItem(), handleLoadAuditLogs(), handleUpdateRentalStatus(), handleUpdateStockStatus(), refreshAuditLogs()
-
-### Community 15 - "Community 15"
 Cohesion: 0.52
 Nodes (5): exports, registry, require(), singleRequire(), specialDeps
 
-### Community 16 - "Community 16"
+### Community 15 - "Community 15"
 Cohesion: 0.6
 Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
 ## Knowledge Gaps
-- **150 isolated node(s):** `emptyDraft`, `ViewKey`, `StockDraft`, `emptyStockDraft`, `statusOptions` (+145 more)
+- **151 isolated node(s):** `emptyDraft`, `ViewKey`, `StockDraft`, `emptyStockDraft`, `statusOptions` (+146 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `RentalOrder` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 7`?**
+- **Why does `RentalOrder` connect `Community 2` to `Community 1`, `Community 3`, `Community 4`, `Community 7`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Why does `RentalStatus` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 7`?**
+- **Why does `RentalStatus` connect `Community 2` to `Community 1`, `Community 3`, `Community 4`, `Community 7`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Why does `Customer` connect `Community 5` to `Community 0`, `Community 2`, `Community 4`?**
+- **Why does `Customer` connect `Community 5` to `Community 1`, `Community 2`, `Community 4`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **What connects `emptyDraft`, `ViewKey`, `StockDraft` to the rest of the system?**
-  _150 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _151 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._

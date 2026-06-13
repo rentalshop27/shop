@@ -1581,6 +1581,7 @@ function App() {
             onUpdateRentalStatus={handleUpdateRentalStatus}
             onNavigateToRentals={handleNavigateToRentals}
             onNavigateToCreateRental={handleNavigateToCreateRental}
+            onNavigateToTab={setActiveTab}
           />
         )}
 
