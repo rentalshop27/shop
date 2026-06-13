@@ -268,6 +268,7 @@ function App() {
     return demoStockItems
   })
   const [selectedCustomerId, setSelectedCustomerId] = useState(demoCustomers[0]?.id ?? '')
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [stockQuery, setStockQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | CustomerProfileStatus>('all')
@@ -935,6 +936,7 @@ function App() {
 
     if (duplicate.kind === 'phone') {
       setSelectedCustomerId(duplicate.customer.id)
+      setIsMobileDetailOpen(true)
       setFormError(`เบอร์นี้มีอยู่แล้วในลูกค้า ${duplicate.customer.customerCode}`)
       return
     }
@@ -953,6 +955,11 @@ function App() {
             }
           }
 
+          if (docsPendingDelete.length > 0) {
+            const pathsToDelete = docsPendingDelete.map((doc) => doc.storagePath).filter(Boolean)
+            await deleteRemoteCustomerDocuments(supabase, docsPendingDelete.map((doc) => doc.id), pathsToDelete)
+          }
+
           const updatedCustomer = await updateRemoteCustomer(supabase, editingCustomerId, draft)
           if (draftDocuments.length > 0) {
             await uploadRemoteCustomerDocuments(
@@ -961,14 +968,11 @@ function App() {
               draftDocuments.map((d) => d.file),
             )
           }
-          if (docsPendingDelete.length > 0) {
-            const pathsToDelete = docsPendingDelete.map((doc) => doc.storagePath).filter(Boolean)
-            await deleteRemoteCustomerDocuments(supabase, docsPendingDelete.map((doc) => doc.id), pathsToDelete)
-          }
 
           const loadedCustomers = await loadCustomers(supabase)
           setCustomers(loadedCustomers)
           setSelectedCustomerId(updatedCustomer.id)
+          setIsMobileDetailOpen(true)
 
           setDraft(emptyDraft)
           setDraftDocuments([])
@@ -983,18 +987,18 @@ function App() {
         const existingCustomer = customers.find((c) => c.id === editingCustomerId)
         if (!existingCustomer) return
 
+        const remainingExistingDocs = existingCustomer.documents.filter(
+          (doc) => !deletedDocumentIds.includes(doc.id)
+        )
+
         const newDocsFromDraft = draftDocuments.map((doc, index) => ({
           id: doc.id,
           customerId: editingCustomerId,
           storagePath: `customer-documents/demo/${doc.file.name}`,
           previewUrl: doc.previewUrl,
-          sortOrder: existingCustomer.documents.length + index + 1,
+          sortOrder: remainingExistingDocs.length + index + 1,
           createdAt: now,
         }))
-
-        const remainingExistingDocs = existingCustomer.documents.filter(
-          (doc) => !deletedDocumentIds.includes(doc.id)
-        )
 
         const updatedCustomer: Customer = {
           ...existingCustomer,
@@ -1020,6 +1024,7 @@ function App() {
           )
         )
         setSelectedCustomerId(updatedCustomer.id)
+        setIsMobileDetailOpen(true)
         setDraft(emptyDraft)
         setDraftDocuments([])
         setExistingDocuments([])
@@ -1433,6 +1438,7 @@ function App() {
       ),
     )
     setSelectedCustomerId(activeCustomers.find((customer) => customer.id !== selectedCustomer.id)?.id ?? '')
+    setIsMobileDetailOpen(false)
   }
 
   async function addDocuments(files: FileList | null) {
@@ -1581,6 +1587,7 @@ function App() {
             onUpdateRentalStatus={handleUpdateRentalStatus}
             onNavigateToRentals={handleNavigateToRentals}
             onNavigateToCreateRental={handleNavigateToCreateRental}
+            onNavigateToTab={setActiveTab}
           />
         )}
 
@@ -1676,7 +1683,10 @@ function App() {
                       key={customer.id}
                       role="row"
                       type="button"
-                      onClick={() => setSelectedCustomerId(customer.id)}
+                      onClick={() => {
+                        setSelectedCustomerId(customer.id)
+                        setIsMobileDetailOpen(true)
+                      }}
                     >
                       <strong>{customer.customerCode}</strong>
                       <span>{customer.fullName}</span>
@@ -1713,15 +1723,20 @@ function App() {
               </div>
 
               {selectedCustomer && (
-                <CustomerDetail
-                  customer={selectedCustomer}
-                  onStatusChange={updateSelectedStatus}
-                  onRiskChange={updateSelectedRisk}
-                  onArchive={archiveSelectedCustomer}
-                  onDocumentUpload={addDocuments}
-                  onDocumentPreviewError={refreshCustomerDocumentUrls}
-                  onEdit={() => openEditCustomerForm(selectedCustomer)}
-                />
+                <div className={`customer-detail-wrapper ${isMobileDetailOpen ? 'mobile-open' : ''}`} onClick={() => setIsMobileDetailOpen(false)}>
+                  <div className="customer-detail-content" onClick={(e) => e.stopPropagation()}>
+                    <CustomerDetail
+                      customer={selectedCustomer}
+                      onStatusChange={updateSelectedStatus}
+                      onRiskChange={updateSelectedRisk}
+                      onArchive={archiveSelectedCustomer}
+                      onDocumentUpload={addDocuments}
+                      onDocumentPreviewError={refreshCustomerDocumentUrls}
+                      onEdit={() => openEditCustomerForm(selectedCustomer)}
+                      onClose={() => setIsMobileDetailOpen(false)}
+                    />
+                  </div>
+                </div>
               )}
             </section>
 
@@ -2746,6 +2761,7 @@ function CustomerDetail({
   onDocumentUpload,
   onDocumentPreviewError,
   onEdit,
+  onClose,
 }: {
   customer: Customer
   onStatusChange: (status: CustomerProfileStatus) => void
@@ -2754,6 +2770,7 @@ function CustomerDetail({
   onDocumentUpload: (files: FileList | null) => void
   onDocumentPreviewError: (customerId: string) => void
   onEdit: () => void
+  onClose?: () => void
 }) {
   const rentalGuard = canCreateRentalForCustomer(customer)
 
@@ -2761,6 +2778,11 @@ function CustomerDetail({
 
   return (
     <aside className="panel detail-panel">
+      {onClose && (
+        <button className="close-detail-btn" type="button" onClick={onClose} aria-label="ปิด">
+          <X size={20} />
+        </button>
+      )}
       <div className="profile-card-top">
         <div className="profile-card-info">
           <div className="profile-avatar">

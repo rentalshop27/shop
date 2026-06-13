@@ -11,6 +11,10 @@
     "mtime": 1781269137.696254,
     "hash": "1499120ccec5ad82f722169ef487e893"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0007_allow_archived_customer_phone_reuse.sql": {
+    "mtime": 1781368293.4182022,
+    "hash": "572b92d06350aa1c268e41a402926853"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0006_date_aware_stock_and_bookings.sql": {
     "mtime": 1781327671.9375565,
     "hash": "2def17b44dbed97be79305a25415c111"
@@ -40,8 +44,8 @@
     "hash": "997ff55a1554ad1846439a92a291bb77"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1781345996.0598838,
-    "hash": "8855b96ec63cae40d8be5bc9112ac35d"
+    "mtime": 1781368293.4170907,
+    "hash": "29c230f86f4119c088440b317ad49c65"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -104,8 +108,12 @@
     "hash": "df84230e15a857ae632161169f08ec66"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/calendar/CalendarPage.tsx": {
-    "mtime": 1781345962.4743645,
-    "hash": "0c395d205fc0cdcba74aa333d6fa656e"
+    "mtime": 1781356812.8155286,
+    "hash": "59f259d151141998c3ea1ec9fcd1e33a"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/calendar/CalendarPage.test.tsx": {
+    "mtime": 1781356806.6150053,
+    "hash": "14c6f890b4e259eca8c0eaf82d884c4c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.test.ts": {
     "mtime": 1781327689.0219843,

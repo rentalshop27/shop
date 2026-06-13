@@ -11,15 +11,18 @@ import {
   Shirt,
   Calendar as CalendarIcon,
   RefreshCw,
-  ListTodo
+  ListTodo,
+  History,
+  Settings
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
 
 interface CalendarPageProps {
   rentals: RentalOrder[]
-  onUpdateRentalStatus: (rentalId: string, status: RentalStatus) => void
+  onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus) => void
   onNavigateToRentals: (rentalId: string) => void
   onNavigateToCreateRental: (pickupDate: string, returnDate: string) => void
+  onNavigateToTab?: (tab: 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit') => void
 }
 
 type DayRentalBuckets = {
@@ -223,7 +226,8 @@ export function CalendarPage({
   rentals,
   onUpdateRentalStatus,
   onNavigateToRentals,
-  onNavigateToCreateRental
+  onNavigateToCreateRental,
+  onNavigateToTab
 }: CalendarPageProps) {
   // Calendar View states
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
@@ -236,6 +240,17 @@ export function CalendarPage({
   const [listCurrentPage, setListCurrentPage] = useState(1)
   const listPageSize = 10
   const todayStr = toLocalDateStr(new Date())
+
+  // Mobile states
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false)
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Reset list page to 1 on search query change
   useEffect(() => {
@@ -484,6 +499,53 @@ export function CalendarPage({
     return selectedDayRentalGroups.find((group) => group.orderCode === selectedOrderCode) ?? selectedDayRentalGroups[0] ?? null
   }, [selectedDayRentalGroups, selectedOrderCode])
 
+  // Today's Rentals calculations for mobile persistent today's list
+  const todayRentals = useMemo(() => {
+    const dayEvents = rentalsByDate[todayStr] ?? emptyDayRentals
+    return getDisplayDayRentals(dayEvents, todayStr, todayStr)
+  }, [rentalsByDate, todayStr])
+
+  const groupedTodayRentals = useMemo(() => {
+    return groupDayRentals(todayRentals)
+  }, [todayRentals])
+
+  const todayRentalGroups = useMemo<SelectedDayRentalGroup[]>(() => {
+    const groups = new Map<string, SelectedDayRentalGroup>()
+
+    const appendGroups = (items: GroupedRentalOrder[], category: DayRentalCategory) => {
+      items.forEach((group) => {
+        const existing = groups.get(group.orderCode)
+        if (existing) {
+          if (!existing.dayCategories.includes(category)) {
+            existing.dayCategories.push(category)
+          }
+          return
+        }
+
+        groups.set(group.orderCode, {
+          ...group,
+          dayCategories: [category]
+        })
+      })
+    }
+
+    appendGroups(groupedTodayRentals.pickups, 'pickup')
+    appendGroups(groupedTodayRentals.returns, 'return')
+    appendGroups(groupedTodayRentals.ongoing, 'ongoing')
+
+    return Array.from(groups.values()).sort(
+      (a, b) => a.pickupDate.localeCompare(b.pickupDate) || a.orderCode.localeCompare(b.orderCode)
+    )
+  }, [groupedTodayRentals])
+
+  const selectedMobileRental = useMemo(() => {
+    if (!selectedOrderCode) return null
+    let found = selectedDayRentalGroups.find((g) => g.orderCode === selectedOrderCode)
+    if (found) return found
+    found = todayRentalGroups.find((g) => g.orderCode === selectedOrderCode)
+    return found || null
+  }, [selectedDayRentalGroups, todayRentalGroups, selectedOrderCode])
+
   useEffect(() => {
     if (selectedDayRentalGroups.length === 0) {
       if (selectedOrderCode) {
@@ -533,10 +595,17 @@ export function CalendarPage({
     onNavigateToRentals(group.rentals[0]?.id ?? group.id)
   }
 
-  const updateRentalGroupStatus = (group: GroupedRentalOrder, status: RentalStatus) => {
-    group.rentals.forEach((rental) => {
-      onUpdateRentalStatus(rental.id, status)
-    })
+  const updateRentalGroupStatus = (
+    group: GroupedRentalOrder,
+    fromStatuses: RentalStatus[],
+    nextStatus: RentalStatus
+  ) => {
+    const ids = group.rentals
+      .filter((rental) => fromStatuses.includes(rental.status))
+      .map((rental) => rental.id)
+
+    if (ids.length === 0) return
+    onUpdateRentalStatus(ids, nextStatus)
   }
 
   const getDayCategoryLabel = (category: DayRentalCategory) => {
@@ -583,6 +652,637 @@ export function CalendarPage({
 
   const isToday = (dateStr: string) => {
     return dateStr === toLocalDateStr(new Date())
+  }
+
+  const getStableTime = (orderCode: string) => {
+    const codeNum = parseInt(orderCode.split('-').pop() ?? '0') || 0
+    const times = ['09:00 น.', '10:00 น.', '11:30 น.', '13:00 น.', '14:30 น.', '16:00 น.', '17:30 น.']
+    if (codeNum === 1) return '10:00 น.'
+    if (codeNum === 4) return '14:30 น.'
+    if (codeNum === 5) return '16:00 น.'
+    return times[codeNum % times.length]
+  }
+
+  // Mobile Render Helper Functions
+  const renderMobileRentalCard = (group: SelectedDayRentalGroup) => {
+    return (
+      <div
+        key={group.orderCode}
+        className="mobile-rental-item-card"
+        onClick={() => {
+          setSelectedOrderCode(group.orderCode)
+          setIsMobileDetailOpen(true)
+        }}
+      >
+        <div className="mobile-rental-left">
+          <strong style={{ fontSize: '14px', color: '#fff' }}>{group.orderCode}</strong>
+          <span style={{ fontSize: '12px', color: 'var(--text-bright)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <User size={12} />
+            {group.customer.fullName}
+          </span>
+          <div className="mobile-badge-row">
+            {group.dayCategories.map((cat) => (
+              <span key={cat} className={`mobile-badge ${cat}`}>
+                {getDayCategoryLabel(cat)}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="mobile-rental-right">
+          {getStatusBadge(group.status)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{group.rentals.length} ชุด</span>
+            <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderMobileListView = () => {
+    return (
+      <div className="mobile-list-view" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', margin: 0, textAlign: 'left' }}>
+            รายการใบเช่าทั้งหมด ({filteredTimelineRentals.length} ใบเช่า)
+          </h2>
+          <label className="search-box" style={{ minHeight: '36px', padding: '0 12px', background: 'var(--bg-card)' }}>
+            <Search size={16} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ค้นหาชื่อชุด, รหัสออเดอร์, ชื่อลูกค้า..."
+              style={{ fontSize: '13px' }}
+            />
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {paginatedListRentals.map((group) => {
+            const categories: DayRentalCategory[] = []
+            if (group.pickupDate === todayStr) categories.push('pickup')
+            if (group.returnDate === todayStr) categories.push('return')
+            if (todayStr > group.pickupDate && todayStr < group.returnDate) categories.push('ongoing')
+
+            const groupWithCats = {
+              ...group,
+              dayCategories: categories
+            }
+
+            return renderMobileRentalCard(groupWithCats)
+          })}
+
+          {filteredTimelineRentals.length === 0 && (
+             <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+               ไม่พบรายการเช่าชุดที่ค้นหา
+             </div>
+          )}
+        </div>
+
+        {listTotalPages > 1 && (
+          <div className="pagination-footer" style={{ marginTop: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px' }}>
+            <button
+              className="pagination-btn"
+              disabled={listCurrentPage <= 1}
+              onClick={() => setListCurrentPage((p) => Math.max(p - 1, 1))}
+              type="button"
+              style={{ minHeight: '32px', width: '32px', padding: 0 }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="page-number-box" style={{ height: '32px', width: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>{listCurrentPage}</div>
+            <button
+              className="pagination-btn"
+              disabled={listCurrentPage >= listTotalPages}
+              onClick={() => setListCurrentPage((p) => Math.min(p + 1, listTotalPages))}
+              type="button"
+              style={{ minHeight: '32px', width: '32px', padding: 0 }}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderMobileDetailContent = (group: SelectedDayRentalGroup) => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
+        {/* Customer Meta */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="profile-avatar" style={{ width: '44px', height: '44px', fontSize: '15px' }}>
+            {group.customer.fullName.slice(0, 2).toLowerCase()}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h4 style={{ margin: 0, fontSize: '15px', color: '#fff', fontWeight: 700 }}>
+              {group.customer.fullName}
+            </h4>
+            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+              โทร: {group.customer.phone} | LINE: {group.customer.lineAccount || '-'}
+            </p>
+          </div>
+        </div>
+
+        {/* Summary Cards Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>ช่วงเช่า</span>
+            <strong style={{ fontSize: '13px', color: '#fff', display: 'block', marginTop: '2px' }}>
+              {formatThaiDate(group.pickupDate)} - {formatThaiDate(group.returnDate)}
+            </strong>
+          </div>
+          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>ยอดเก็บจริง</span>
+            <strong style={{ fontSize: '13px', color: 'var(--text-gold)', display: 'block', marginTop: '2px' }}>
+              {formatBaht(group.collectedAmount)}
+            </strong>
+          </div>
+          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>มัดจำรวม</span>
+            <strong style={{ fontSize: '13px', color: '#fff', display: 'block', marginTop: '2px' }}>
+              {formatBaht(group.depositAmount)}
+            </strong>
+          </div>
+          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>จำนวนชุด</span>
+            <strong style={{ fontSize: '13px', color: '#fff', display: 'block', marginTop: '2px' }}>
+              {group.rentals.length} ชุด
+            </strong>
+          </div>
+        </div>
+
+        {/* Sizing Info */}
+        <div>
+          <h4 style={{ fontSize: '13px', color: '#fff', margin: '0 0 8px', fontWeight: 700 }}>ขนาดสัดส่วน</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+            <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>อก</span>
+              <strong style={{ fontSize: '13px', color: '#fff' }}>
+                {group.customer.bustIn ? `${group.customer.bustIn}"` : '-'}
+              </strong>
+            </div>
+            <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>เอว</span>
+              <strong style={{ fontSize: '13px', color: '#fff' }}>
+                {group.customer.waistIn ? `${group.customer.waistIn}"` : '-'}
+              </strong>
+            </div>
+            <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>สะโพก</span>
+              <strong style={{ fontSize: '13px', color: '#fff' }}>
+                {group.customer.hipIn ? `${group.customer.hipIn}"` : '-'}
+              </strong>
+            </div>
+            <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>สูง</span>
+              <strong style={{ fontSize: '13px', color: '#fff' }}>
+                {group.customer.heightCm ? `${group.customer.heightCm}` : '-'}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Items in order */}
+        <div>
+          <h4 style={{ fontSize: '13px', color: '#fff', margin: '0 0 8px', fontWeight: 700 }}>รายการชุดในใบเช่า</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {group.rentals.map((rental) => (
+              <div
+                key={rental.id}
+                style={{
+                  display: 'grid',
+                  gap: '6px',
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  padding: '12px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                  <div>
+                    <h5 style={{ fontSize: '13px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                      {rental.costume.productName}
+                    </h5>
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+                      SKU: {rental.costume.sku} | สี: {rental.costume.primaryColor} | ไซส์: {rental.costume.size}
+                    </p>
+                  </div>
+                  {getStatusBadge(rental.status)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notes */}
+        {group.notes && (
+          <div>
+            <h4 style={{ fontSize: '13px', color: '#fff', margin: '0 0 4px', fontWeight: 700 }}>หมายเหตุ</h4>
+            <p style={{ margin: 0, color: 'var(--text-bright)', whiteSpace: 'pre-wrap', fontSize: '12px', background: 'var(--bg-input)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+               {group.notes}
+            </p>
+          </div>
+        )}
+
+        {/* Controls */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                openRentalGroup(group)
+                setIsMobileDetailOpen(false)
+              }}
+              style={{ fontSize: '13px', minHeight: '38px' }}
+            >
+              <Eye size={14} /> ดูใบเช่าชุด
+            </button>
+
+            {group.status === 'booked' && (
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => {
+                  updateRentalGroupStatus(group, ['booked'], 'active')
+                  setIsMobileDetailOpen(false)
+                }}
+                style={{ fontSize: '13px', minHeight: '38px', background: 'var(--text-gold)', color: '#000' }}
+              >
+                <Check size={14} /> ส่งมอบชุด
+              </button>
+            )}
+
+            {(group.status === 'active' || group.status === 'overdue') && (
+              <button
+                className="primary-button"
+                type="button"
+                onClick={() => {
+                  updateRentalGroupStatus(group, ['active', 'overdue'], 'returned')
+                  setIsMobileDetailOpen(false)
+                }}
+                style={{ fontSize: '13px', minHeight: '38px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
+              >
+                <Check size={14} /> รับคืนชุด
+              </button>
+            )}
+          </div>
+
+          {group.status === 'returned' && (
+            <div style={{ textAlign: 'center', color: 'var(--success-color)', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 600 }}>
+              ใบเช่านี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <div className="mobile-calendar-container">
+        {/* Brand Top Bar */}
+        <div className="mobile-brand-header">
+          <div className="mobile-brand-logo">
+            <span className="brand-precious">PRECIOUS</span>
+            <span className="brand-rental">RENTAL</span>
+          </div>
+          <div className="mobile-header-actions">
+            <button 
+              type="button" 
+              className="header-icon-btn" 
+              onClick={() => onNavigateToTab?.('settings')} 
+              title="ตั้งค่า"
+            >
+              <Settings size={20} />
+            </button>
+            <button 
+              type="button" 
+              className="header-icon-btn" 
+              onClick={() => onNavigateToTab?.('audit')} 
+              title="ประวัติระบบ"
+            >
+              <History size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Page Title Header */}
+        <div className="mobile-calendar-header" style={{ textAlign: 'left' }}>
+          <span className="eyebrow" style={{ color: 'var(--text-gold)' }}>PRECIOUS SHOP</span>
+          <h1 style={{ color: '#fff' }}>หน้าปฏิทินเช่า/คืน</h1>
+          <p className="subtitle">
+            ปฏิทินตรวจสอบรายการเช่า รับ/ส่งชุด และส่งคืนเสื้อผ้าประจำเดือน
+          </p>
+        </div>
+
+        {/* Segment Control Tab Bar */}
+        <div className="mobile-segment-control">
+          <button
+            type="button"
+            className={`segment-btn ${viewMode === 'month' ? 'active' : ''}`}
+            onClick={() => setViewMode('month')}
+          >
+            <CalendarIcon size={16} />
+            <span>รายเดือน</span>
+          </button>
+          <button
+            type="button"
+            className={`segment-btn ${viewMode === 'week' ? 'active' : ''}`}
+            onClick={() => setViewMode('week')}
+          >
+            <RefreshCw size={16} />
+            <span>รายสัปดาห์</span>
+          </button>
+          <button
+            type="button"
+            className={`segment-btn ${viewMode === 'list' ? 'active' : ''}`}
+            onClick={() => setViewMode('list')}
+          >
+            <ListTodo size={16} />
+            <span>รายการทั้งหมด</span>
+          </button>
+        </div>
+
+        {/* Quick Action Button */}
+        <button
+          type="button"
+          className="mobile-action-card"
+          onClick={() => triggerCreateRentalForDate(selectedDateStr || todayStr)}
+        >
+          <div className="action-card-left">
+            <Plus size={18} className="gold-icon" />
+            <span>สร้างใบเช่าจากปฏิทิน</span>
+          </div>
+          <ChevronRight size={18} className="gold-icon" />
+        </button>
+
+        {/* Weekly View Date Strip */}
+        {viewMode === 'week' && (
+          <div className="mobile-week-navigator" style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--bg-card)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button type="button" onClick={handlePrevWeek} className="secondary-button" style={{ minHeight: '32px', padding: '0 8px', borderRadius: '6px' }}>
+                <ChevronLeft size={16} />
+              </button>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-gold)' }}>
+                {`สัปดาห์ที่ ${currentWeekDays[0].date.getDate()} - ${currentWeekDays[6].date.getDate()} ${thaiMonths[currentWeekDays[6].date.getMonth()]} ${currentWeekDays[6].date.getFullYear() + 543}`}
+              </span>
+              <button type="button" onClick={handleNextWeek} className="secondary-button" style={{ minHeight: '32px', padding: '0 8px', borderRadius: '6px' }}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+              {currentWeekDays.map(({ date, dateStr, dayName }) => {
+                const isSel = selectedDateStr === dateStr
+                const isTod = isToday(dateStr)
+                const dayEventsCount = (rentalsByDate[dateStr]?.pickups.length ?? 0) + (rentalsByDate[dateStr]?.returns.length ?? 0)
+                
+                return (
+                  <button
+                    key={dateStr}
+                    type="button"
+                    onClick={() => setSelectedDateStr(dateStr)}
+                    className="mobile-week-day-btn"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '8px 4px',
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: isSel ? 'var(--border-gold)' : isTod ? 'rgba(223, 183, 80, 0.3)' : 'transparent',
+                      background: isSel ? 'rgba(223, 183, 80, 0.15)' : isTod ? 'rgba(223, 183, 80, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                      cursor: 'pointer',
+                      position: 'relative'
+                    }}
+                  >
+                    <span style={{ fontSize: '10px', color: isSel ? 'var(--text-gold)' : 'var(--text-muted)', fontWeight: 600 }}>{dayName}</span>
+                    <strong style={{ fontSize: '15px', color: isSel ? 'var(--text-gold)' : '#fff', marginTop: '2px' }}>{date.getDate()}</strong>
+                    {dayEventsCount > 0 && (
+                      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#fbbf24', position: 'absolute', bottom: '4px' }} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Monthly Calendar Grid Card */}
+        {viewMode === 'month' && (
+          <div className="mobile-calendar-card">
+            {/* Month Navigator Header */}
+            <div className="mobile-month-nav">
+              <div className="month-nav-left">
+                <button type="button" onClick={handlePrevMonth} className="nav-arrow-btn">
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="month-year-label">
+                  {thaiMonths[month]} {year + 543}
+                </span>
+                <button type="button" onClick={handleNextMonth} className="nav-arrow-btn">
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setCurrentDate(new Date())
+                  setSelectedDateStr(toLocalDateStr(new Date()))
+                }} 
+                className="today-pill-btn"
+              >
+                วันนี้
+              </button>
+            </div>
+
+            {/* Weekday headers */}
+            <div className="mobile-week-days">
+              {thaiDays.map((d, idx) => (
+                <span key={d} className={`week-day-cell ${idx === 0 ? 'sun' : idx === 6 ? 'sat' : ''}`}>
+                  {d}
+                </span>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="mobile-calendar-grid">
+              {calendarDays.map(({ date, dateStr, isCurrentMonth }) => {
+                const dayNumber = date.getDate()
+                const rawDayEvents = rentalsByDate[dateStr] ?? emptyDayRentals
+                const dayEvents = getDisplayDayRentals(rawDayEvents, dateStr, todayStr)
+                const groupedDayEvents = groupDayRentals(dayEvents)
+                
+                const filteredPickups = groupedDayEvents.pickups.filter((group) => matchesRentalGroupQuery(group, searchQuery))
+                const filteredReturns = groupedDayEvents.returns.filter((group) => matchesRentalGroupQuery(group, searchQuery))
+                
+                const isSel = selectedDateStr === dateStr
+                const isTod = isToday(dateStr)
+
+                const pickupsCount = filteredPickups.length
+                const returnsCount = filteredReturns.length
+
+                return (
+                  <button
+                    key={dateStr}
+                    type="button"
+                    className={`mobile-day-cell ${isCurrentMonth ? 'current-month' : 'other-month'} ${isSel ? 'selected' : ''} ${isTod ? 'today' : ''}`}
+                    onClick={() => setSelectedDateStr(dateStr)}
+                  >
+                    <span className="day-number-text">{dayNumber}</span>
+                    
+                    {/* Badge/Dot Indicators */}
+                    <div className="indicator-container">
+                      {pickupsCount > 0 && returnsCount === 0 && (
+                        <span className="indicator-pill pickup">● {pickupsCount} เช่า</span>
+                      )}
+                      {returnsCount > 0 && pickupsCount === 0 && (
+                        <span className="indicator-pill return">● {returnsCount} คืน</span>
+                      )}
+                      {pickupsCount > 0 && returnsCount > 0 && (
+                        <span className="indicator-dot both" />
+                      )}
+                      {pickupsCount === 0 && returnsCount === 0 && isTod && (
+                        <span className="indicator-dot today-dot" />
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="mobile-legend">
+              <span className="legend-item"><span className="legend-dot pickup" />เช่า</span>
+              <span className="legend-item"><span className="legend-dot return" />คืน</span>
+              <span className="legend-item"><span className="legend-dot both" />ทั้งเช่าและคืน</span>
+            </div>
+          </div>
+        )}
+
+        {/* Selected Date Appointments Card */}
+        {viewMode !== 'list' && (
+          <div className="mobile-appointment-card">
+            <div className="mobile-card-header">
+              <div className="mobile-card-icon-container">
+                <CalendarIcon size={20} />
+              </div>
+              <div className="mobile-card-title-block">
+                <span className="mobile-card-title">รายการนัดหมายประจำวัน</span>
+                <strong className="mobile-card-date">
+                  {formatThaiDate(selectedDateStr)}
+                </strong>
+              </div>
+              <button 
+                type="button" 
+                className="mobile-card-count-badge"
+                onClick={() => setViewMode('list')}
+              >
+                <span>{selectedDayRentalGroups.length} รายการ</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            <div className="mobile-card-body">
+              {selectedDayRentalGroups.length === 0 ? (
+                <div className="mobile-empty-state-body">
+                  <svg width="80" height="80" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '8px' }}>
+                    <rect x="25" y="30" width="70" height="70" rx="12" fill="#8b5cf6" fillOpacity="0.15" />
+                    <rect x="25" y="30" width="70" height="70" rx="12" stroke="#8b5cf6" strokeWidth="2" />
+                    <path d="M25 48H95" stroke="#8b5cf6" strokeWidth="2" />
+                    <rect x="38" y="22" width="6" height="12" rx="3" fill="#8b5cf6" />
+                    <rect x="76" y="22" width="6" height="12" rx="3" fill="#8b5cf6" />
+                    <circle cx="42" cy="62" r="3" fill="#a78bfa" />
+                    <circle cx="60" cy="62" r="3" fill="#a78bfa" />
+                    <circle cx="78" cy="62" r="3" fill="#a78bfa" />
+                    <circle cx="42" cy="78" r="3" fill="#a78bfa" />
+                    <circle cx="60" cy="78" r="3" fill="#a78bfa" />
+                    <circle cx="78" cy="78" r="3" fill="#a78bfa" />
+                    <circle cx="85" cy="85" r="18" fill="#0c0e17" stroke="#8b5cf6" strokeWidth="2" />
+                    <path d="M85 75V85H93" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M15 50L17 54L21 55L17 56L15 60L13 56L9 55L13 54L15 50Z" fill="#a78bfa" fillOpacity="0.6" />
+                    <path d="M105 35L106.5 38L109.5 38.5L106.5 39L105 42L103.5 39L100.5 38.5L103.5 38L105 35Z" fill="#a78bfa" fillOpacity="0.8" />
+                  </svg>
+                  <strong style={{ fontSize: '15px', color: '#fff', marginTop: '8px', marginBottom: '4px' }}>ไม่มีนัดหมายในวันที่เลือก</strong>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px', display: 'block' }}>สร้างใบเช่าสำหรับวันนี้ เพื่อเพิ่มรายการนัดหมายของคุณ</span>
+                  <button
+                    type="button"
+                    className="mobile-gradient-btn"
+                    onClick={() => triggerCreateRentalForDate(selectedDateStr)}
+                  >
+                    <Plus size={16} />
+                    <span>สร้างใบเช่าวันนี้</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="mobile-appointment-list">
+                  {selectedDayRentalGroups.map((group) => {
+                    const statusClass = group.status === 'returned' || group.status === 'active' ? 'accent-green' : group.status === 'booked' ? 'accent-gold' : 'accent-red'
+                    
+                    return (
+                      <div
+                        key={group.orderCode}
+                        className={`mobile-appointment-item ${statusClass}`}
+                        onClick={() => {
+                          setSelectedOrderCode(group.orderCode)
+                          setIsMobileDetailOpen(true)
+                        }}
+                      >
+                        <div className="appointment-item-left">
+                          <strong className="appointment-order-code">{group.orderCode}</strong>
+                          <div className="appointment-customer-info">
+                            <User size={13} className="gray-icon" />
+                            <span>{group.customer.fullName}</span>
+                          </div>
+                        </div>
+                        <div className="appointment-item-right">
+                          <span className={`appointment-status-badge ${group.status}`}>
+                            {group.status === 'returned' ? 'คืนแล้ว' : group.status === 'active' ? 'กำลังเช่า' : group.status === 'booked' ? 'รอส่งมอบ' : 'เกินกำหนด'}
+                          </span>
+                          <span className="appointment-time-text">{getStableTime(group.orderCode)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {selectedDayRentalGroups.length > 0 && (
+              <button
+                type="button"
+                className="mobile-see-all-link"
+                onClick={() => setViewMode('list')}
+              >
+                ดูรายการทั้งหมดของวันนี้ <ChevronRight size={14} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Timeline / All list view on mobile */}
+        {viewMode === 'list' && renderMobileListView()}
+
+        {/* Bottom Details Sheet Modal */}
+        {isMobileDetailOpen && selectedMobileRental && (
+          <div className="mobile-detail-modal-overlay" onClick={() => setIsMobileDetailOpen(false)}>
+            <div className="mobile-detail-modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-handle" />
+              <div className="modal-header">
+                <h3>รายละเอียดใบเช่า {selectedMobileRental.orderCode}</h3>
+                <button type="button" className="close-btn" onClick={() => setIsMobileDetailOpen(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                {/* Render Details content (Sizing, costumes list, controls) */}
+                {renderMobileDetailContent(selectedMobileRental)}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -1305,7 +2005,7 @@ export function CalendarPage({
                             <button
                               className="primary-button"
                               type="button"
-                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, 'active')}
+                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, ['booked'], 'active')}
                               style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
                             >
                               <Check size={14} /> ส่งมอบชุด
@@ -1316,7 +2016,7 @@ export function CalendarPage({
                             <button
                               className="primary-button"
                               type="button"
-                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, 'returned')}
+                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, ['active', 'overdue'], 'returned')}
                               style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
                             >
                               <Check size={14} /> รับคืนชุด
