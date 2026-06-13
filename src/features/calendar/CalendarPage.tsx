@@ -19,7 +19,7 @@ import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
 
 interface CalendarPageProps {
   rentals: RentalOrder[]
-  onUpdateRentalStatus: (rentalId: string, status: RentalStatus) => void
+  onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus) => void
   onNavigateToRentals: (rentalId: string) => void
   onNavigateToCreateRental: (pickupDate: string, returnDate: string) => void
   onNavigateToTab?: (tab: 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit') => void
@@ -595,10 +595,17 @@ export function CalendarPage({
     onNavigateToRentals(group.rentals[0]?.id ?? group.id)
   }
 
-  const updateRentalGroupStatus = (group: GroupedRentalOrder, status: RentalStatus) => {
-    group.rentals.forEach((rental) => {
-      onUpdateRentalStatus(rental.id, status)
-    })
+  const updateRentalGroupStatus = (
+    group: GroupedRentalOrder,
+    fromStatuses: RentalStatus[],
+    nextStatus: RentalStatus
+  ) => {
+    const ids = group.rentals
+      .filter((rental) => fromStatuses.includes(rental.status))
+      .map((rental) => rental.id)
+
+    if (ids.length === 0) return
+    onUpdateRentalStatus(ids, nextStatus)
   }
 
   const getDayCategoryLabel = (category: DayRentalCategory) => {
@@ -717,7 +724,6 @@ export function CalendarPage({
             if (group.pickupDate === todayStr) categories.push('pickup')
             if (group.returnDate === todayStr) categories.push('return')
             if (todayStr > group.pickupDate && todayStr < group.returnDate) categories.push('ongoing')
-            if (categories.length === 0) categories.push('ongoing')
 
             const groupWithCats = {
               ...group,
@@ -900,7 +906,7 @@ export function CalendarPage({
                 className="primary-button"
                 type="button"
                 onClick={() => {
-                  updateRentalGroupStatus(group, 'active')
+                  updateRentalGroupStatus(group, ['booked'], 'active')
                   setIsMobileDetailOpen(false)
                 }}
                 style={{ fontSize: '13px', minHeight: '38px', background: 'var(--text-gold)', color: '#000' }}
@@ -914,7 +920,7 @@ export function CalendarPage({
                 className="primary-button"
                 type="button"
                 onClick={() => {
-                  updateRentalGroupStatus(group, 'returned')
+                  updateRentalGroupStatus(group, ['active', 'overdue'], 'returned')
                   setIsMobileDetailOpen(false)
                 }}
                 style={{ fontSize: '13px', minHeight: '38px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
@@ -1999,7 +2005,7 @@ export function CalendarPage({
                             <button
                               className="primary-button"
                               type="button"
-                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, 'active')}
+                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, ['booked'], 'active')}
                               style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
                             >
                               <Check size={14} /> ส่งมอบชุด
@@ -2010,7 +2016,7 @@ export function CalendarPage({
                             <button
                               className="primary-button"
                               type="button"
-                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, 'returned')}
+                              onClick={() => updateRentalGroupStatus(selectedCalendarRental, ['active', 'overdue'], 'returned')}
                               style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
                             >
                               <Check size={14} /> รับคืนชุด
