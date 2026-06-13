@@ -626,7 +626,20 @@ export function CalendarPage({
     }
   }
 
-  // Create new ren  const isToday = (dateStr: string) => {
+  // Create new rental redirect helper
+  const triggerCreateRentalForDate = (dateStr: string) => {
+    // Return date defaults to 3 days after pickup date
+    const pickup = new Date(dateStr)
+    const returnDt = new Date(pickup)
+    returnDt.setDate(pickup.getDate() + 3)
+    
+    onNavigateToCreateRental(
+      dateStr,
+      toLocalDateStr(returnDt)
+    )
+  }
+
+  const isToday = (dateStr: string) => {
     return dateStr === toLocalDateStr(new Date())
   }
 

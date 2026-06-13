@@ -1,16 +1,16 @@
 # Graph Report - Precious-Shop-Test  (2026-06-13)
 
 ## Corpus Check
-- 40 files · ~71,652 words
+- 40 files · ~71,689 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 586 nodes · 1161 edges · 28 communities (22 shown, 6 thin omitted)
+- 586 nodes · 1161 edges · 27 communities (21 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `211b989c`
+- Built from commit: `fd3d798a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -37,7 +37,6 @@
 - [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 20|Community 20]]
 - [[_COMMUNITY_Community 21|Community 21]]
-- [[_COMMUNITY_Community 22|Community 22]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `Customer` - 20 edges
@@ -63,7 +62,7 @@
 - `updateSelectedRisk()` --calls--> `updateRemoteCustomerRisk()`  [EXTRACTED]
   src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/customers/customerRemote.ts
 
-## Communities (28 total, 6 thin omitted)
+## Communities (27 total, 6 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
@@ -74,8 +73,8 @@ Cohesion: 0.06
 Nodes (54): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+46 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.05
-Nodes (55): buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, customer, metrics, stockItem (+47 more)
+Cohesion: 0.06
+Nodes (52): customer, metrics, stockItem, getInventoryDisplayStatus(), item, itemRepair, itemWash, makeRental() (+44 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.03
@@ -94,42 +93,38 @@ Cohesion: 0.15
 Nodes (5): getFriendlyURL(), PrecacheStrategy, Strategy, StrategyHandler, toRequest()
 
 ### Community 7 - "Community 7"
+Cohesion: 0.12
+Nodes (26): buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, toUtcDay(), [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview] (+18 more)
+
+### Community 8 - "Community 8"
 Cohesion: 0.15
 Nodes (22): [actionFilter, setActionFilter], actionTranslations, allKeys, AuditLogPageProps, [currentPage, setCurrentPage], fieldTranslations, filteredLogs, formatDateTime() (+14 more)
 
-### Community 8 - "Community 8"
+### Community 9 - "Community 9"
 Cohesion: 0.17
 Nodes (21): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadShopSettings(), loadStockItems() (+13 more)
 
-### Community 9 - "Community 9"
+### Community 10 - "Community 10"
 Cohesion: 0.21
 Nodes (16): [brandError, setBrandError], [brandSuccess, setBrandSuccess], [categoryError, setCategoryError], [categorySuccess, setCategorySuccess], [colorError, setColorError], [colorSuccess, setColorSuccess], handleAddBrandSubmit(), handleAddCategorySubmit() (+8 more)
-
-### Community 10 - "Community 10"
-Cohesion: 0.18
-Nodes (14): findConflictingRentalForStockSku(), findOpenRentalConflict(), findOpenRentalForStockSku(), hasRentalConflict(), isDateOverlap(), isOpenRental(), isOpenRentalStatus(), openRentalStatuses (+6 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.27
 Nodes (11): updateShopSettings(), archiveSelectedCustomer(), getErrorMessage(), handleAddBrand(), handleAddCategory(), handleAddColor(), handleDeleteBrand(), handleDeleteCategory() (+3 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.35
-Nodes (9): createRemoteRental(), createRemoteRentals(), deleteRemoteRental(), loadRentals(), mapRentalRow(), RentalRow, toRentalInsert(), updateRemoteRentalStatus() (+1 more)
-
-### Community 14 - "Community 14"
 Cohesion: 0.18
 Nodes (9): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+1 more)
 
-### Community 15 - "Community 15"
+### Community 14 - "Community 14"
 Cohesion: 0.25
 Nodes (8): closeStockForm(), closeStockPreview(), handleDeleteRental(), handleDeleteStockItem(), handleLoadAuditLogs(), handleUpdateRentalStatus(), handleUpdateStockStatus(), refreshAuditLogs()
 
-### Community 16 - "Community 16"
+### Community 15 - "Community 15"
 Cohesion: 0.52
 Nodes (5): exports, registry, require(), singleRequire(), specialDeps
 
-### Community 17 - "Community 17"
+### Community 16 - "Community 16"
 Cohesion: 0.6
 Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
@@ -141,11 +136,11 @@ Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `RentalOrder` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 10`, `Community 13`?**
+- **Why does `RentalOrder` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 7`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Why does `RentalStatus` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 10`, `Community 13`?**
+- **Why does `RentalStatus` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 7`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Why does `Customer` connect `Community 5` to `Community 0`, `Community 2`, `Community 4`, `Community 10`, `Community 13`?**
+- **Why does `Customer` connect `Community 5` to `Community 0`, `Community 2`, `Community 4`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **What connects `emptyDraft`, `ViewKey`, `StockDraft` to the rest of the system?**
   _150 weakly-connected nodes found - possible documentation gaps or missing edges._
@@ -154,4 +149,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
