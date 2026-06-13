@@ -3627,7 +3627,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L70",
       "id": "calendar_calendarpage_tolocaldatestr",
-      "community": 19,
+      "community": 20,
       "norm_label": "tolocaldatestr()"
     },
     {
@@ -3663,7 +3663,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L132",
       "id": "calendar_calendarpage_grouprentalsbyorder",
-      "community": 20,
+      "community": 19,
       "norm_label": "grouprentalsbyorder()"
     },
     {
@@ -3672,7 +3672,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L188",
       "id": "calendar_calendarpage_groupdayrentals",
-      "community": 20,
+      "community": 19,
       "norm_label": "groupdayrentals()"
     },
     {
@@ -3816,7 +3816,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L264",
       "id": "calendar_calendarpage_handlegototoday",
-      "community": 19,
+      "community": 20,
       "norm_label": "handlegototoday()"
     },
     {
@@ -17881,5 +17881,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a90f1f5c4f12f0bd5dfe700d34518c8a3ef3f391"
+  "built_at_commit": "abf0f435ff34f26c6f664de41ad66b9686c4a940"
 }

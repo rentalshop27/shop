@@ -1402,19 +1402,22 @@ select {
 }
 
 .stock-preview-thumbs {
-  display: grid;
+  display: flex;
   gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  justify-content: center;
   margin-top: 18px;
+  flex-wrap: wrap;
 }
 
 .stock-preview-thumb {
-  aspect-ratio: 1;
+  width: 96px;
+  height: 96px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   overflow: hidden;
   padding: 0;
+  flex-shrink: 0;
 }
 
 .stock-preview-thumb.active {
@@ -4669,20 +4672,23 @@ select {
 }
 
 .document-preview-thumbs {
-  display: grid;
+  display: flex;
   gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  justify-content: center;
   margin-top: 18px;
+  flex-wrap: wrap;
 }
 
 .document-preview-thumb {
-  aspect-ratio: 1;
+  width: 96px;
+  height: 96px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   overflow: hidden;
   padding: 0;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .document-preview-thumb.active {
