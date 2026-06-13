@@ -39,6 +39,7 @@ import { AuditLogPage } from './features/audit/AuditLogPage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
+import { getInventoryDisplayStatus } from './features/inventory/inventoryStatus'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
@@ -474,12 +475,15 @@ function App() {
   async function handleCreateRentals(drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]): Promise<boolean> {
     if (drafts.length === 0) return false
 
+    const firstDraft = drafts[0]
     const openRentalConflict = findOpenRentalConflict(
       rentals,
       drafts.map((draft) => draft.costume.sku),
+      firstDraft.pickupDate,
+      firstDraft.returnDate
     )
     if (openRentalConflict) {
-      window.alert(`ชุด ${openRentalConflict.costume.sku} ยังมีใบเช่าเปิดอยู่ (${openRentalConflict.orderCode}) ต้องรับคืนก่อนจึงจะเช่าซ้ำได้`)
+      window.alert(`ชุด ${openRentalConflict.costume.sku} มีคิวจองหรือใช้งานในช่วงวันที่ระบุแล้ว (${openRentalConflict.orderCode}) ไม่สามารถเช่าซ้ำได้`)
       return false
     }
 
@@ -2126,18 +2130,7 @@ function InventoryPage({
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   })()
 
-  function getDisplayStatus(item: StockItem): 'rented' | StockItemStatus {
-    const isRented = (rentals || []).some((rental) => {
-      return (
-        rental.costume.sku === item.sku &&
-        (rental.status === 'active' || rental.status === 'overdue') &&
-        rental.pickupDate <= today &&
-        rental.returnDate >= today
-      )
-    })
-    if (isRented) return 'rented'
-    return item.status || 'available'
-  }
+
 
   function getStockStatusPill(status: string) {
     switch (status) {
@@ -2152,6 +2145,19 @@ function InventoryPage({
             }}
           >
             ถูกเช่า
+          </span>
+        )
+      case 'booked':
+        return (
+          <span
+            className="status-pill"
+            style={{
+              background: 'rgba(99, 102, 241, 0.15)',
+              color: '#a5b4fc',
+              border: '1px solid rgba(99, 102, 241, 0.3)'
+            }}
+          >
+            มีคิวจอง
           </span>
         )
       case 'repair':
@@ -2266,7 +2272,21 @@ function InventoryPage({
                   {item.size || '-'}
                   <small>{item.primaryColor || '-'}</small>
                 </span>
-                <span>{getStockStatusPill(getDisplayStatus(item))}</span>
+                <span>
+                  {(() => {
+                    const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
+                    return (
+                      <>
+                        {getStockStatusPill(primaryStatus)}
+                        {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
+                          <small style={{ display: 'block', marginTop: '4px', color: '#a5b4fc', fontSize: '0.75rem' }}>
+                            คิว: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}
+                          </small>
+                        )}
+                      </>
+                    )
+                  })()}
+                </span>
                 <span>{formatBaht(item.rentalPricePerDay)}</span>
                 <span>{item.lateFeeRule || '-'}</span>
                 <span>{formatBaht(item.depositAmount)}</span>
@@ -2295,7 +2315,7 @@ function InventoryPage({
         ) : (
           <div className="stock-grid">
             {items.map((item) => {
-              const displayStatus = getDisplayStatus(item)
+              const { primaryStatus, nextBookedRental } = getInventoryDisplayStatus(item, rentals, today)
               return (
                 <div className="stock-card" key={item.id}>
                   <div className="stock-card-image">
@@ -2313,7 +2333,7 @@ function InventoryPage({
                     )}
                     <span className="stock-card-sku-badge">{item.sku}</span>
                     <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2 }}>
-                      {getStockStatusPill(displayStatus)}
+                      {getStockStatusPill(primaryStatus)}
                     </div>
                   </div>
                   <div className="stock-card-content">
@@ -2329,6 +2349,13 @@ function InventoryPage({
                       {item.primaryColor && <span className="stock-card-spec-tag">สี: {item.primaryColor}</span>}
                       {item.setCount && <span className="stock-card-spec-tag">จำนวน: {item.setCount} ชุด</span>}
                     </div>
+                    
+                    {nextBookedRental && (primaryStatus === 'booked' || primaryStatus === 'repair' || primaryStatus === 'wash') && (
+                      <div className="stock-card-next-booking" style={{ marginTop: '8px', fontSize: '0.85rem', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <CalendarDays size={14} />
+                        <span>คิวถัดไป: {nextBookedRental.pickupDate} ถึง {nextBookedRental.returnDate}</span>
+                      </div>
+                    )}
 
                     <div className="stock-card-pricing">
                       <div className="stock-card-price-item">

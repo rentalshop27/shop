@@ -1,16 +1,16 @@
 # Graph Report - Precious-Shop-Test  (2026-06-13)
 
 ## Corpus Check
-- 38 files · ~68,961 words
+- 40 files · ~69,584 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 561 nodes · 1125 edges · 26 communities (21 shown, 5 thin omitted)
+- 576 nodes · 1151 edges · 26 communities (21 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 4 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0ea7c6b9`
+- Built from commit: `f2834e33`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,11 +39,11 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `Customer` - 20 edges
-2. `getErrorMessage()` - 18 edges
-3. `RentalOrder` - 17 edges
-4. `StrategyHandler` - 15 edges
-5. `PrecacheController` - 14 edges
-6. `StockItem` - 14 edges
+2. `RentalOrder` - 19 edges
+3. `getErrorMessage()` - 18 edges
+4. `StockItem` - 16 edges
+5. `StrategyHandler` - 15 edges
+6. `PrecacheController` - 14 edges
 7. `handleSaveCustomer()` - 13 edges
 8. `RentalStatus` - 13 edges
 9. `Router` - 12 edges
@@ -72,8 +72,8 @@ Cohesion: 0.05
 Nodes (52): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+44 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.06
-Nodes (51): buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, customer, metrics, stockItem (+43 more)
+Cohesion: 0.05
+Nodes (64): buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, customer, metrics, stockItem (+56 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
@@ -128,7 +128,7 @@ Cohesion: 0.6
 Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
 ## Knowledge Gaps
-- **132 isolated node(s):** `emptyDraft`, `ViewKey`, `StockItemStatus`, `StockDraft`, `emptyStockDraft` (+127 more)
+- **141 isolated node(s):** `emptyDraft`, `ViewKey`, `StockDraft`, `emptyStockDraft`, `statusOptions` (+136 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -136,16 +136,16 @@ Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `RentalOrder` connect `Community 2` to `Community 0`, `Community 10`, `Community 3`, `Community 4`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
 - **Why does `RentalStatus` connect `Community 2` to `Community 0`, `Community 10`, `Community 3`, `Community 4`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `Customer` connect `Community 5` to `Community 0`, `Community 2`, `Community 10`, `Community 4`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **What connects `emptyDraft`, `ViewKey`, `StockItemStatus` to the rest of the system?**
-  _132 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **What connects `emptyDraft`, `ViewKey`, `StockDraft` to the rest of the system?**
+  _141 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._

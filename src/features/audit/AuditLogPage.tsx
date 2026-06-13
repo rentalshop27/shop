@@ -55,7 +55,7 @@ const fieldTranslations: Record<string, string> = {
   order_code: 'รหัสออเดอร์',
   customer_id: 'รหัสลูกค้า',
   stock_item_sku: 'SKU ชุด',
-  pickup_date: 'วันที่จอง/รับ',
+  pickup_date: 'วันที่รับชุด',
   return_date: 'วันที่คืน',
   rental_price: 'ราคาเช่า',
   deposit_amount: 'เงินประกัน/มัดจำ',

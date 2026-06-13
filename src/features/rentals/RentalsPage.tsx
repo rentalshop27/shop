@@ -376,7 +376,7 @@ export function RentalsPage({
       return
     }
     if (!pickupDate) {
-      setFormError('กรุณาระบุวันที่จอง/รับ/ส่งชุด')
+      setFormError('กรุณาระบุวันที่รับชุด')
       return
     }
     if (!returnDate) {
@@ -384,7 +384,7 @@ export function RentalsPage({
       return
     }
     if (new Date(returnDate) < new Date(pickupDate)) {
-      setFormError('วันที่คืนต้องอยู่หลังวันที่จอง/รับ/ส่งชุด')
+      setFormError('วันที่คืนต้องอยู่หลังวันที่รับชุด')
       return
     }
     const openRentalConflict = findOpenRentalConflict(
@@ -394,7 +394,7 @@ export function RentalsPage({
       returnDate,
     )
     if (openRentalConflict) {
-      setFormError(`ชุด ${openRentalConflict.costume.sku} ถูกจองหรือใช้งานในช่วงวันที่ระบุแล้ว (${openRentalConflict.orderCode}) ไม่สามารถเช่าซ้ำได้`)
+      setFormError(`ชุด ${openRentalConflict.costume.sku} มีคิวจองหรืออยู่ระหว่างเช่าในช่วงวันที่ระบุแล้ว (${openRentalConflict.orderCode}) ไม่สามารถเช่าซ้ำได้`)
       return
     }
 
@@ -407,7 +407,7 @@ export function RentalsPage({
         .map((item) => `ชุด ${item.sku} มีสถานะเป็น "${item.status === 'repair' ? 'ซ่อม' : 'ซัก'}"`)
         .join('\n')
       const confirmed = window.confirm(
-        `${itemsWarningList}\nคุณยืนยันที่จะทำรายการจองสำหรับชุดดังกล่าวต่อไปหรือไม่?`
+        `${itemsWarningList}\nคุณยืนยันที่จะบันทึกใบเช่าสำหรับชุดดังกล่าวต่อไปหรือไม่?`
       )
       if (!confirmed) {
         return
@@ -473,7 +473,7 @@ export function RentalsPage({
   const getStatusBadge = (status: RentalStatus) => {
     switch (status) {
       case 'booked':
-        return <span className="status-pill warning">จอง</span>
+        return <span className="status-pill warning">รอส่งมอบ</span>
       case 'active':
         return <span className="status-pill success" style={{ background: 'rgba(218, 165, 32, 0.15)', color: '#ead483', border: '1px solid rgba(218, 165, 32, 0.3)' }}>ใช้งานอยู่</span>
       case 'returned':
@@ -496,7 +496,7 @@ export function RentalsPage({
         <div>
           <p className="eyebrow">Precious Shop</p>
           <h1>หน้าเช่าชุด</h1>
-          <p className="subtitle">ลงทะเบียนจองชุด จัดทำประวัติการเช่า ติดตามช่วงรับ/ส่งชุดและส่งคืน</p>
+          <p className="subtitle">บันทึกข้อมูลการเช่าชุด จัดทำประวัติการเช่า ติดตามช่วงรับ/ส่งชุดและส่งคืน</p>
         </div>
         <button className="primary-button" type="button" onClick={() => setIsFormOpen(true)}>
           <Plus size={22} />
@@ -522,7 +522,7 @@ export function RentalsPage({
               onChange={(e) => { setStatusFilter(e.target.value as 'all' | RentalStatus); setCurrentPage(1); }}
             >
               <option value="all">ทุกสถานะ</option>
-              <option value="booked">จอง (รอส่งมอบ)</option>
+              <option value="booked">รอส่งมอบ</option>
               <option value="active">ใช้งานอยู่ (กำลังใช้งาน)</option>
               <option value="returned">คืนแล้ว</option>
               <option value="overdue">เกินกำหนดคืน</option>
@@ -1095,7 +1095,7 @@ export function RentalsPage({
               {/* RENTAL PERIOD DATES */}
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label className="field">
-                  <span>วันที่จอง / รับ/ส่งชุด<b style={{ color: 'red' }}> *</b></span>
+                  <span>วันที่รับชุด<b style={{ color: 'red' }}> *</b></span>
                   <input
                     type="date"
                     value={pickupDate}

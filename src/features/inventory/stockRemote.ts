@@ -103,7 +103,7 @@ async function mapStockItemRow(supabase: SupabaseClient, row: StockItemRow): Pro
     lateFeeRule: row.late_fee_rule ?? '',
     depositAmount: Number(row.deposit_amount) || 0,
     imageUrls: imageUrls.filter(Boolean),
-    status: (row.status as any) || 'available',
+    status: (row.status as 'available' | 'repair' | 'wash') || 'available',
     createdAt: row.created_at,
   }
 }
