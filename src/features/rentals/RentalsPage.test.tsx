@@ -2,6 +2,7 @@
 
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StockItem } from '../../App'
 import type { Customer } from '../customers/customerTypes'
@@ -25,12 +26,12 @@ const customer: Customer = {
   updatedAt: '2026-06-11T00:00:00.000Z',
 }
 
-function makeStockItem(imageUrls: string[]): StockItem {
+function makeStockItem(imageUrls: string[], overrides: Partial<StockItem> = {}): StockItem {
   return {
-    id: 'stock_1',
-    sku: 'S1-01',
+    id: overrides.id ?? 'stock_1',
+    sku: overrides.sku ?? 'S1-01',
     serialNumber: 'SN-001',
-    productName: 'Evening Gown',
+    productName: overrides.productName ?? 'Evening Gown',
     brand: 'Precious',
     category: 'ชุดราตรี',
     size: 'M',
@@ -46,36 +47,42 @@ function makeStockItem(imageUrls: string[]): StockItem {
   }
 }
 
-function makeRental(imageUrls: string[]): RentalOrder {
+function makeRental(imageUrls: string[], overrides: Partial<RentalOrder> = {}): RentalOrder {
+  const costume = overrides.costume ?? makeStockItem(imageUrls)
+
   return {
-    id: 'rental_1',
-    orderCode: 'PR-ORD-101',
+    id: overrides.id ?? 'rental_1',
+    orderCode: overrides.orderCode ?? 'PR-ORD-101',
     customer,
-    costume: makeStockItem(imageUrls),
-    pickupDate: '2026-06-12',
-    returnDate: '2026-06-15',
-    rentalPrice: 2000,
-    depositAmount: 1000,
-    collectedAmount: 3000,
-    status: 'booked',
-    notes: '',
-    createdAt: '2026-06-11T00:00:00.000Z',
-    updatedAt: '2026-06-11T00:00:00.000Z',
+    costume,
+    pickupDate: overrides.pickupDate ?? '2026-06-12',
+    returnDate: overrides.returnDate ?? '2026-06-15',
+    rentalPrice: overrides.rentalPrice ?? 2000,
+    depositAmount: overrides.depositAmount ?? 1000,
+    collectedAmount: overrides.collectedAmount ?? 3000,
+    status: overrides.status ?? 'booked',
+    notes: overrides.notes ?? '',
+    createdAt: overrides.createdAt ?? '2026-06-11T00:00:00.000Z',
+    updatedAt: overrides.updatedAt ?? '2026-06-11T00:00:00.000Z',
   }
 }
 
-function renderRentalsPage(rental: RentalOrder) {
+function renderRentalsPage(rentalsOrRental: RentalOrder | RentalOrder[], onUpdateRentalStatus = vi.fn()) {
+  const rentals = Array.isArray(rentalsOrRental) ? rentalsOrRental : [rentalsOrRental]
+
   render(
     <RentalsPage
-      rentals={[rental]}
+      rentals={rentals}
       customers={[customer]}
-      stockItems={[rental.costume]}
+      stockItems={rentals.map((rental) => rental.costume)}
       onCreateRentals={vi.fn()}
-      onUpdateRentalStatus={vi.fn()}
+      onUpdateRentalStatus={onUpdateRentalStatus}
       onSelectRental={vi.fn()}
-      externalSelectedRentalId={rental.orderCode}
+      externalSelectedRentalId={rentals[0].orderCode}
     />,
   )
+
+  return { onUpdateRentalStatus }
 }
 
 afterEach(() => {
@@ -112,5 +119,61 @@ describe('RentalsPage image display', () => {
     expect(image).toBeInTheDocument()
     expect(image).toHaveAttribute('src', 'https://cdn.example.com/real-dress.jpg')
     expect(orderItems.queryByLabelText('ยังไม่มีรูปสินค้า')).not.toBeInTheDocument()
+  })
+})
+
+describe('RentalsPage grouped rental display', () => {
+  it('shows the full date range for grouped line items', () => {
+    renderRentalsPage([
+      makeRental([], {
+        id: 'rental_1',
+        orderCode: 'PR-ORD-260613-001-1',
+        pickupDate: '2026-06-12',
+        returnDate: '2026-06-14',
+      }),
+      makeRental([], {
+        id: 'rental_2',
+        orderCode: 'PR-ORD-260613-001-2',
+        pickupDate: '2026-06-10',
+        returnDate: '2026-06-16',
+        costume: makeStockItem([], { id: 'stock_2', sku: 'S1-02', productName: 'Second Gown' }),
+      }),
+    ])
+
+    expect(screen.getByText('2026-06-10 to 2026-06-16')).toBeInTheDocument()
+  })
+
+  it('calculates discounts against rental plus deposit totals', () => {
+    renderRentalsPage(
+      makeRental([], {
+        rentalPrice: 2000,
+        depositAmount: 1000,
+        collectedAmount: 2500,
+      })
+    )
+
+    expect(screen.getAllByText('ลด: ฿500').length).toBeGreaterThan(0)
+  })
+
+  it('returns only active or overdue line items in a mixed-status group', async () => {
+    const user = userEvent.setup()
+    const onUpdateRentalStatus = vi.fn()
+    renderRentalsPage([
+      makeRental([], {
+        id: 'active_rental',
+        orderCode: 'PR-ORD-260613-002-1',
+        status: 'active',
+      }),
+      makeRental([], {
+        id: 'returned_rental',
+        orderCode: 'PR-ORD-260613-002-2',
+        status: 'returned',
+        costume: makeStockItem([], { id: 'stock_2', sku: 'S1-02', productName: 'Second Gown' }),
+      }),
+    ], onUpdateRentalStatus)
+
+    await user.click(screen.getByRole('button', { name: 'รับคืนชุด (รับคืน)' }))
+
+    expect(onUpdateRentalStatus).toHaveBeenCalledWith(['active_rental'], 'returned')
   })
 })

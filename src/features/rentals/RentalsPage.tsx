@@ -255,6 +255,22 @@ export function RentalsPage({
     return 'returned'
   }
 
+  const getTransitionableRentalIds = (groupItems: RentalOrder[], fromStatuses: RentalStatus[]) => {
+    return groupItems
+      .filter((rental) => fromStatuses.includes(rental.status))
+      .map((rental) => rental.id)
+  }
+
+  const updateRentalStatuses = (
+    groupItems: RentalOrder[],
+    fromStatuses: RentalStatus[],
+    nextStatus: RentalStatus
+  ) => {
+    const ids = getTransitionableRentalIds(groupItems, fromStatuses)
+    if (ids.length === 0) return
+    onUpdateRentalStatus(ids, nextStatus)
+  }
+
   // Group line-item order codes such as PR-ORD-101-1 back into one displayed order.
   const groupedRentals = useMemo(() => {
     const groups: Record<string, RentalOrder[]> = {}
@@ -274,20 +290,36 @@ export function RentalsPage({
       const totalCollected = groupItems.reduce((sum, r) => sum + r.collectedAmount, 0)
       const groupStatus = getGroupStatus(groupItems)
       const notes = groupItems.map((r) => r.notes).filter(Boolean).join('\n')
+      const pickupDate = groupItems.reduce(
+        (earliest, rental) => (rental.pickupDate < earliest ? rental.pickupDate : earliest),
+        first.pickupDate
+      )
+      const returnDate = groupItems.reduce(
+        (latest, rental) => (rental.returnDate > latest ? rental.returnDate : latest),
+        first.returnDate
+      )
+      const createdAt = groupItems.reduce(
+        (earliest, rental) => (rental.createdAt < earliest ? rental.createdAt : earliest),
+        first.createdAt
+      )
+      const updatedAt = groupItems.reduce(
+        (latest, rental) => (rental.updatedAt > latest ? rental.updatedAt : latest),
+        first.updatedAt
+      )
 
       return {
         id: first.id, // For backward compatibility
         orderCode,
         customer: first.customer,
-        pickupDate: first.pickupDate,
-        returnDate: first.returnDate,
+        pickupDate,
+        returnDate,
         rentalPrice: totalPrice, // Sum for compatibility with list display
         depositAmount: totalDeposit, // Sum for compatibility with list display
         collectedAmount: totalCollected, // Sum for compatibility with list display
         status: groupStatus,
         notes,
-        createdAt: first.createdAt,
-        updatedAt: first.updatedAt,
+        createdAt,
+        updatedAt,
         rentals: groupItems
       }
     })
@@ -433,8 +465,8 @@ export function RentalsPage({
     })}`
   }
 
-  const getDiscountAmount = (price: number, collected: number) => {
-    return Math.max(0, Number((price - collected).toFixed(2)))
+  const getDiscountAmount = (price: number, deposit: number, collected: number) => {
+    return Math.max(0, Number((price + deposit - collected).toFixed(2)))
   }
 
   // Get status translation
@@ -528,9 +560,9 @@ export function RentalsPage({
                 </span>
                 <span>
                   {formatBaht(rental.collectedAmount)}
-                  {getDiscountAmount(rental.rentalPrice, rental.collectedAmount) > 0 ? (
+                  {getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.collectedAmount) > 0 ? (
                     <small style={{ display: 'block', color: 'var(--success-color)', fontSize: '11px' }}>
-                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.collectedAmount))}
+                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.collectedAmount))}
                     </small>
                   ) : (
                     <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
@@ -695,9 +727,9 @@ export function RentalsPage({
                       <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
                         {formatBaht(r.collectedAmount)}
                       </strong>
-                      {getDiscountAmount(r.rentalPrice, r.collectedAmount) > 0 && (
+                      {getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount) > 0 && (
                         <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
-                          ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.collectedAmount))}
+                          ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount))}
                         </small>
                       )}
                       {r.depositAmount > 0 && (
@@ -721,7 +753,7 @@ export function RentalsPage({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), 'active')}
+                    onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
                     style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
                   >
                     ส่งมอบชุด (ขนส่ง)
@@ -731,7 +763,7 @@ export function RentalsPage({
                   <button
                     className="primary-button"
                     type="button"
-                    onClick={() => onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), 'returned')}
+                    onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
                     style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
                   >
                     รับคืนชุด (รับคืน)
@@ -750,12 +782,16 @@ export function RentalsPage({
                     onClick={() => {
                       const currentStatus = selectedRental.status
                       if (currentStatus === 'returned') return
-                      const nextStatusMap: Record<Exclude<RentalStatus, 'returned'>, RentalStatus> = {
-                        booked: 'active',
-                        active: 'overdue',
-                        overdue: 'returned'
+                      const nextTransitionMap: Record<Exclude<RentalStatus, 'returned'>, {
+                        from: RentalStatus[]
+                        to: RentalStatus
+                      }> = {
+                        booked: { from: ['booked'], to: 'active' },
+                        active: { from: ['active'], to: 'overdue' },
+                        overdue: { from: ['overdue'], to: 'returned' }
                       }
-                      onUpdateRentalStatus(selectedRental.rentals.map((r) => r.id), nextStatusMap[currentStatus])
+                      const transition = nextTransitionMap[currentStatus]
+                      updateRentalStatuses(selectedRental.rentals, transition.from, transition.to)
                     }}
                     style={{ fontSize: '14px' }}
                   >
