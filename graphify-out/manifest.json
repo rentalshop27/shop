@@ -11,6 +11,10 @@
     "mtime": 1781269137.696254,
     "hash": "1499120ccec5ad82f722169ef487e893"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0007_allow_archived_customer_phone_reuse.sql": {
+    "mtime": 1781368293.4182022,
+    "hash": "572b92d06350aa1c268e41a402926853"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0006_date_aware_stock_and_bookings.sql": {
     "mtime": 1781327671.9375565,
     "hash": "2def17b44dbed97be79305a25415c111"
@@ -40,8 +44,8 @@
     "hash": "997ff55a1554ad1846439a92a291bb77"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1781355860.14883,
-    "hash": "f1f1365b77263f3483469bfd9a3cb79c"
+    "mtime": 1781368293.4170907,
+    "hash": "29c230f86f4119c088440b317ad49c65"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,

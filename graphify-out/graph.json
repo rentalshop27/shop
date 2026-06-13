@@ -9,7 +9,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/eslint.config.js",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_eslint_config_js",
-      "community": 22,
+      "community": 21,
       "norm_label": "eslint.config.js"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/vite.config.ts",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_vite_config_ts",
-      "community": 23,
+      "community": 22,
       "norm_label": "vite.config.ts"
     },
     {
@@ -1327,10 +1327,19 @@
       "norm_label": "[selectedcustomerid, setselectedcustomerid]"
     },
     {
-      "label": "[query, setQuery]",
+      "label": "[isMobileDetailOpen, setIsMobileDetailOpen]",
       "file_type": "code",
       "source_file": "src/App.tsx",
       "source_location": "L271",
+      "id": "src_app_ismobiledetailopen_setismobiledetailopen",
+      "community": 1,
+      "norm_label": "[ismobiledetailopen, setismobiledetailopen]"
+    },
+    {
+      "label": "[query, setQuery]",
+      "file_type": "code",
+      "source_file": "src/App.tsx",
+      "source_location": "L272",
       "id": "src_app_query_setquery",
       "community": 1,
       "norm_label": "[query, setquery]"
@@ -1339,7 +1348,7 @@
       "label": "[stockQuery, setStockQuery]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L272",
+      "source_location": "L273",
       "id": "src_app_stockquery_setstockquery",
       "community": 1,
       "norm_label": "[stockquery, setstockquery]"
@@ -1348,7 +1357,7 @@
       "label": "[statusFilter, setStatusFilter]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L273",
+      "source_location": "L274",
       "id": "src_app_statusfilter_setstatusfilter",
       "community": 1,
       "norm_label": "[statusfilter, setstatusfilter]"
@@ -1357,7 +1366,7 @@
       "label": "[isFormOpen, setIsFormOpen]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L274",
+      "source_location": "L275",
       "id": "src_app_isformopen_setisformopen",
       "community": 1,
       "norm_label": "[isformopen, setisformopen]"
@@ -1366,7 +1375,7 @@
       "label": "[isStockFormOpen, setIsStockFormOpen]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L275",
+      "source_location": "L276",
       "id": "src_app_isstockformopen_setisstockformopen",
       "community": 1,
       "norm_label": "[isstockformopen, setisstockformopen]"
@@ -1375,7 +1384,7 @@
       "label": "[editingStockId, setEditingStockId]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L276",
+      "source_location": "L277",
       "id": "src_app_editingstockid_seteditingstockid",
       "community": 1,
       "norm_label": "[editingstockid, seteditingstockid]"
@@ -1384,7 +1393,7 @@
       "label": "[editingCustomerId, setEditingCustomerId]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L277",
+      "source_location": "L278",
       "id": "src_app_editingcustomerid_seteditingcustomerid",
       "community": 1,
       "norm_label": "[editingcustomerid, seteditingcustomerid]"
@@ -1393,7 +1402,7 @@
       "label": "[previewStockId, setPreviewStockId]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L278",
+      "source_location": "L279",
       "id": "src_app_previewstockid_setpreviewstockid",
       "community": 1,
       "norm_label": "[previewstockid, setpreviewstockid]"
@@ -1402,7 +1411,7 @@
       "label": "[previewImageIndex, setPreviewImageIndex]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L279",
+      "source_location": "L280",
       "id": "src_app_previewimageindex_setpreviewimageindex",
       "community": 1,
       "norm_label": "[previewimageindex, setpreviewimageindex]"
@@ -1411,7 +1420,7 @@
       "label": "[draft, setDraft]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L280",
+      "source_location": "L281",
       "id": "src_app_draft_setdraft",
       "community": 1,
       "norm_label": "[draft, setdraft]"
@@ -1420,7 +1429,7 @@
       "label": "[draftDocuments, setDraftDocuments]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L281",
+      "source_location": "L282",
       "id": "src_app_draftdocuments_setdraftdocuments",
       "community": 1,
       "norm_label": "[draftdocuments, setdraftdocuments]"
@@ -1429,7 +1438,7 @@
       "label": "[existingDocuments, setExistingDocuments]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L282",
+      "source_location": "L283",
       "id": "src_app_existingdocuments_setexistingdocuments",
       "community": 1,
       "norm_label": "[existingdocuments, setexistingdocuments]"
@@ -1438,7 +1447,7 @@
       "label": "[deletedDocumentIds, setDeletedDocumentIds]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L283",
+      "source_location": "L284",
       "id": "src_app_deleteddocumentids_setdeleteddocumentids",
       "community": 1,
       "norm_label": "[deleteddocumentids, setdeleteddocumentids]"
@@ -1447,7 +1456,7 @@
       "label": "[isSaving, setIsSaving]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L284",
+      "source_location": "L285",
       "id": "src_app_issaving_setissaving",
       "community": 1,
       "norm_label": "[issaving, setissaving]"
@@ -1456,7 +1465,7 @@
       "label": "addDraftDocuments()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L286",
+      "source_location": "L287",
       "id": "src_app_adddraftdocuments",
       "community": 1,
       "norm_label": "adddraftdocuments()"
@@ -1465,7 +1474,7 @@
       "label": "removeDraftDocument()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L316",
+      "source_location": "L317",
       "id": "src_app_removedraftdocument",
       "community": 1,
       "norm_label": "removedraftdocument()"
@@ -1474,7 +1483,7 @@
       "label": "[stockDraft, setStockDraft]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L320",
+      "source_location": "L321",
       "id": "src_app_stockdraft_setstockdraft",
       "community": 1,
       "norm_label": "[stockdraft, setstockdraft]"
@@ -1483,7 +1492,7 @@
       "label": "[currentPage, setCurrentPage]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L321",
+      "source_location": "L322",
       "id": "src_app_currentpage_setcurrentpage",
       "community": 1,
       "norm_label": "[currentpage, setcurrentpage]"
@@ -1492,7 +1501,7 @@
       "label": "[brands, setBrands]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L324",
+      "source_location": "L325",
       "id": "src_app_brands_setbrands",
       "community": 1,
       "norm_label": "[brands, setbrands]"
@@ -1501,7 +1510,7 @@
       "label": "[categories, setCategories]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L336",
+      "source_location": "L337",
       "id": "src_app_categories_setcategories",
       "community": 1,
       "norm_label": "[categories, setcategories]"
@@ -1510,7 +1519,7 @@
       "label": "[colors, setColors]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L348",
+      "source_location": "L349",
       "id": "src_app_colors_setcolors",
       "community": 1,
       "norm_label": "[colors, setcolors]"
@@ -1519,7 +1528,7 @@
       "label": "handleAddBrand()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L376",
+      "source_location": "L377",
       "id": "src_app_handleaddbrand",
       "community": 11,
       "norm_label": "handleaddbrand()"
@@ -1528,7 +1537,7 @@
       "label": "handleDeleteBrand()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L389",
+      "source_location": "L390",
       "id": "src_app_handledeletebrand",
       "community": 11,
       "norm_label": "handledeletebrand()"
@@ -1537,7 +1546,7 @@
       "label": "handleAddCategory()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L402",
+      "source_location": "L403",
       "id": "src_app_handleaddcategory",
       "community": 11,
       "norm_label": "handleaddcategory()"
@@ -1546,7 +1555,7 @@
       "label": "handleDeleteCategory()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L415",
+      "source_location": "L416",
       "id": "src_app_handledeletecategory",
       "community": 11,
       "norm_label": "handledeletecategory()"
@@ -1555,7 +1564,7 @@
       "label": "handleAddColor()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L428",
+      "source_location": "L429",
       "id": "src_app_handleaddcolor",
       "community": 11,
       "norm_label": "handleaddcolor()"
@@ -1564,7 +1573,7 @@
       "label": "handleDeleteColor()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L441",
+      "source_location": "L442",
       "id": "src_app_handledeletecolor",
       "community": 11,
       "norm_label": "handledeletecolor()"
@@ -1573,7 +1582,7 @@
       "label": "[auditLogs, setAuditLogs]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L455",
+      "source_location": "L456",
       "id": "src_app_auditlogs_setauditlogs",
       "community": 1,
       "norm_label": "[auditlogs, setauditlogs]"
@@ -1582,7 +1591,7 @@
       "label": "[loadingAudit, setLoadingAudit]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L456",
+      "source_location": "L457",
       "id": "src_app_loadingaudit_setloadingaudit",
       "community": 1,
       "norm_label": "[loadingaudit, setloadingaudit]"
@@ -1591,7 +1600,7 @@
       "label": "[rentals, setRentals]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L459",
+      "source_location": "L460",
       "id": "src_app_rentals_setrentals",
       "community": 1,
       "norm_label": "[rentals, setrentals]"
@@ -1600,7 +1609,7 @@
       "label": "handleCreateRentals()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L475",
+      "source_location": "L476",
       "id": "src_app_handlecreaterentals",
       "community": 2,
       "norm_label": "handlecreaterentals()"
@@ -1609,7 +1618,7 @@
       "label": "handleUpdateRentalStatus()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L541",
+      "source_location": "L542",
       "id": "src_app_handleupdaterentalstatus",
       "community": 13,
       "norm_label": "handleupdaterentalstatus()"
@@ -1618,7 +1627,7 @@
       "label": "handleDeleteRental()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L569",
+      "source_location": "L570",
       "id": "src_app_handledeleterental",
       "community": 13,
       "norm_label": "handledeleterental()"
@@ -1627,7 +1636,7 @@
       "label": "[formError, setFormError]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L590",
+      "source_location": "L591",
       "id": "src_app_formerror_setformerror",
       "community": 1,
       "norm_label": "[formerror, setformerror]"
@@ -1636,7 +1645,7 @@
       "label": "[stockFormError, setStockFormError]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L591",
+      "source_location": "L592",
       "id": "src_app_stockformerror_setstockformerror",
       "community": 1,
       "norm_label": "[stockformerror, setstockformerror]"
@@ -1645,7 +1654,7 @@
       "label": "[sessionReady, setSessionReady]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L592",
+      "source_location": "L593",
       "id": "src_app_sessionready_setsessionready",
       "community": 1,
       "norm_label": "[sessionready, setsessionready]"
@@ -1654,7 +1663,7 @@
       "label": "[isAuthenticated, setIsAuthenticated]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L593",
+      "source_location": "L594",
       "id": "src_app_isauthenticated_setisauthenticated",
       "community": 1,
       "norm_label": "[isauthenticated, setisauthenticated]"
@@ -1663,7 +1672,7 @@
       "label": "[shopId, setShopId]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L594",
+      "source_location": "L595",
       "id": "src_app_shopid_setshopid",
       "community": 1,
       "norm_label": "[shopid, setshopid]"
@@ -1672,7 +1681,7 @@
       "label": "[remoteError, setRemoteError]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L595",
+      "source_location": "L596",
       "id": "src_app_remoteerror_setremoteerror",
       "community": 1,
       "norm_label": "[remoteerror, setremoteerror]"
@@ -1681,7 +1690,7 @@
       "label": "{ data }",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L608",
+      "source_location": "L609",
       "id": "src_app_data",
       "community": 1,
       "norm_label": "{ data }"
@@ -1690,7 +1699,7 @@
       "label": "handleLoadAuditLogs()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L661",
+      "source_location": "L662",
       "id": "src_app_handleloadauditlogs",
       "community": 13,
       "norm_label": "handleloadauditlogs()"
@@ -1699,7 +1708,7 @@
       "label": "activeCustomers",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L673",
+      "source_location": "L674",
       "id": "src_app_activecustomers",
       "community": 1,
       "norm_label": "activecustomers"
@@ -1708,7 +1717,7 @@
       "label": "filteredCustomers",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L675",
+      "source_location": "L676",
       "id": "src_app_filteredcustomers",
       "community": 1,
       "norm_label": "filteredcustomers"
@@ -1717,7 +1726,7 @@
       "label": "paginatedCustomers",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L695",
+      "source_location": "L696",
       "id": "src_app_paginatedcustomers",
       "community": 1,
       "norm_label": "paginatedcustomers"
@@ -1726,7 +1735,7 @@
       "label": "filteredStockItems",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L702",
+      "source_location": "L703",
       "id": "src_app_filteredstockitems",
       "community": 1,
       "norm_label": "filteredstockitems"
@@ -1735,7 +1744,7 @@
       "label": "updateDraft()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L730",
+      "source_location": "L731",
       "id": "src_app_updatedraft",
       "community": 1,
       "norm_label": "updatedraft()"
@@ -1744,7 +1753,7 @@
       "label": "updateStockDraft()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L734",
+      "source_location": "L735",
       "id": "src_app_updatestockdraft",
       "community": 1,
       "norm_label": "updatestockdraft()"
@@ -1753,7 +1762,7 @@
       "label": "openCreateStockForm()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L738",
+      "source_location": "L739",
       "id": "src_app_opencreatestockform",
       "community": 1,
       "norm_label": "opencreatestockform()"
@@ -1762,7 +1771,7 @@
       "label": "openEditStockForm()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L745",
+      "source_location": "L746",
       "id": "src_app_openeditstockform",
       "community": 1,
       "norm_label": "openeditstockform()"
@@ -1771,7 +1780,7 @@
       "label": "closeStockForm()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L767",
+      "source_location": "L768",
       "id": "src_app_closestockform",
       "community": 13,
       "norm_label": "closestockform()"
@@ -1780,7 +1789,7 @@
       "label": "addStockImages()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L773",
+      "source_location": "L774",
       "id": "src_app_addstockimages",
       "community": 1,
       "norm_label": "addstockimages()"
@@ -1789,7 +1798,7 @@
       "label": "removeStockImage()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L799",
+      "source_location": "L800",
       "id": "src_app_removestockimage",
       "community": 1,
       "norm_label": "removestockimage()"
@@ -1798,7 +1807,7 @@
       "label": "openStockPreview()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L806",
+      "source_location": "L807",
       "id": "src_app_openstockpreview",
       "community": 1,
       "norm_label": "openstockpreview()"
@@ -1807,7 +1816,7 @@
       "label": "closeStockPreview()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L812",
+      "source_location": "L813",
       "id": "src_app_closestockpreview",
       "community": 13,
       "norm_label": "closestockpreview()"
@@ -1816,7 +1825,7 @@
       "label": "handleDeleteStockItem()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L817",
+      "source_location": "L818",
       "id": "src_app_handledeletestockitem",
       "community": 13,
       "norm_label": "handledeletestockitem()"
@@ -1825,7 +1834,7 @@
       "label": "handleUpdateStockStatus()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L870",
+      "source_location": "L871",
       "id": "src_app_handleupdatestockstatus",
       "community": 13,
       "norm_label": "handleupdatestockstatus()"
@@ -1834,16 +1843,16 @@
       "label": "createCustomerCode()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L891",
+      "source_location": "L892",
       "id": "src_app_createcustomercode",
-      "community": 5,
+      "community": 1,
       "norm_label": "createcustomercode()"
     },
     {
       "label": "openEditCustomerForm()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L900",
+      "source_location": "L901",
       "id": "src_app_openeditcustomerform",
       "community": 4,
       "norm_label": "openeditcustomerform()"
@@ -1852,7 +1861,7 @@
       "label": "handleSaveCustomer()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L921",
+      "source_location": "L922",
       "id": "src_app_handlesavecustomer",
       "community": 5,
       "norm_label": "handlesavecustomer()"
@@ -1861,7 +1870,7 @@
       "label": "handleSaveStockItem()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1103",
+      "source_location": "L1108",
       "id": "src_app_handlesavestockitem",
       "community": 9,
       "norm_label": "handlesavestockitem()"
@@ -1870,7 +1879,7 @@
       "label": "updateSelectedStatus()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1362",
+      "source_location": "L1367",
       "id": "src_app_updateselectedstatus",
       "community": 11,
       "norm_label": "updateselectedstatus()"
@@ -1879,7 +1888,7 @@
       "label": "updateSelectedRisk()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1390",
+      "source_location": "L1395",
       "id": "src_app_updateselectedrisk",
       "community": 11,
       "norm_label": "updateselectedrisk()"
@@ -1888,7 +1897,7 @@
       "label": "archiveSelectedCustomer()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1411",
+      "source_location": "L1416",
       "id": "src_app_archiveselectedcustomer",
       "community": 11,
       "norm_label": "archiveselectedcustomer()"
@@ -1897,7 +1906,7 @@
       "label": "addDocuments()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1438",
+      "source_location": "L1444",
       "id": "src_app_adddocuments",
       "community": 5,
       "norm_label": "adddocuments()"
@@ -1906,16 +1915,16 @@
       "label": "refreshCustomerDocumentUrls()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1489",
+      "source_location": "L1495",
       "id": "src_app_refreshcustomerdocumenturls",
-      "community": 5,
+      "community": 1,
       "norm_label": "refreshcustomerdocumenturls()"
     },
     {
       "label": "summary",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1501",
+      "source_location": "L1507",
       "id": "src_app_summary",
       "community": 1,
       "norm_label": "summary"
@@ -1924,7 +1933,7 @@
       "label": "stockSummary",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1508",
+      "source_location": "L1514",
       "id": "src_app_stocksummary",
       "community": 1,
       "norm_label": "stocksummary"
@@ -1933,7 +1942,7 @@
       "label": "onlyNums",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1748",
+      "source_location": "L1762",
       "id": "src_app_onlynums",
       "community": 1,
       "norm_label": "onlynums"
@@ -1942,7 +1951,7 @@
       "label": "customer",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L1901",
+      "source_location": "L1915",
       "id": "src_app_customer",
       "community": 1,
       "norm_label": "customer"
@@ -1951,7 +1960,7 @@
       "label": "items",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2027",
+      "source_location": "L2041",
       "id": "src_app_items",
       "community": 1,
       "norm_label": "items"
@@ -1960,7 +1969,7 @@
       "label": "date",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2130",
+      "source_location": "L2144",
       "id": "src_app_date",
       "community": 1,
       "norm_label": "date"
@@ -1969,7 +1978,7 @@
       "label": "{ primaryStatus, nextBookedRental }",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2278",
+      "source_location": "L2292",
       "id": "src_app_primarystatus_nextbookedrental",
       "community": 1,
       "norm_label": "{ primarystatus, nextbookedrental }"
@@ -1978,7 +1987,7 @@
       "label": "count",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2652",
+      "source_location": "L2666",
       "id": "src_app_count",
       "community": 1,
       "norm_label": "count"
@@ -1987,7 +1996,7 @@
       "label": "baseSku",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2653",
+      "source_location": "L2667",
       "id": "src_app_basesku",
       "community": 1,
       "norm_label": "basesku"
@@ -1996,7 +2005,7 @@
       "label": "match",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2655",
+      "source_location": "L2669",
       "id": "src_app_match",
       "community": 9,
       "norm_label": "match"
@@ -2005,7 +2014,7 @@
       "label": "skus",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2657",
+      "source_location": "L2671",
       "id": "src_app_skus",
       "community": 1,
       "norm_label": "skus"
@@ -2014,7 +2023,7 @@
       "label": "rentalGuard",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2759",
+      "source_location": "L2775",
       "id": "src_app_rentalguard",
       "community": 1,
       "norm_label": "rentalguard"
@@ -2023,7 +2032,7 @@
       "label": "[email, setEmail]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2908",
+      "source_location": "L2929",
       "id": "src_app_email_setemail",
       "community": 1,
       "norm_label": "[email, setemail]"
@@ -2032,7 +2041,7 @@
       "label": "[password, setPassword]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2909",
+      "source_location": "L2930",
       "id": "src_app_password_setpassword",
       "community": 1,
       "norm_label": "[password, setpassword]"
@@ -2041,7 +2050,7 @@
       "label": "[error, setError]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2910",
+      "source_location": "L2931",
       "id": "src_app_error_seterror",
       "community": 1,
       "norm_label": "[error, seterror]"
@@ -2050,7 +2059,7 @@
       "label": "[isSubmitting, setIsSubmitting]",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2911",
+      "source_location": "L2932",
       "id": "src_app_issubmitting_setissubmitting",
       "community": 1,
       "norm_label": "[issubmitting, setissubmitting]"
@@ -2059,7 +2068,7 @@
       "label": "handleLogin()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L2913",
+      "source_location": "L2934",
       "id": "src_app_handlelogin",
       "community": 1,
       "norm_label": "handlelogin()"
@@ -2068,7 +2077,7 @@
       "label": "parseOptionalNumber()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L3035",
+      "source_location": "L3056",
       "id": "src_app_parseoptionalnumber",
       "community": 9,
       "norm_label": "parseoptionalnumber()"
@@ -2077,7 +2086,7 @@
       "label": "readFileAsDataUrl()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L3040",
+      "source_location": "L3061",
       "id": "src_app_readfileasdataurl",
       "community": 1,
       "norm_label": "readfileasdataurl()"
@@ -2086,7 +2095,7 @@
       "label": "getErrorMessage()",
       "file_type": "code",
       "source_file": "src/App.tsx",
-      "source_location": "L3049",
+      "source_location": "L3070",
       "id": "src_app_geterrormessage",
       "community": 11,
       "norm_label": "geterrormessage()"
@@ -2097,7 +2106,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/main.tsx",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_main_tsx",
-      "community": 24,
+      "community": 23,
       "norm_label": "main.tsx"
     },
     {
@@ -2592,7 +2601,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/settings/UpdatePrompt.tsx",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_features_settings_updateprompt_tsx",
-      "community": 17,
+      "community": 16,
       "norm_label": "updateprompt.tsx"
     },
     {
@@ -2601,7 +2610,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/settings/UpdatePrompt.tsx",
       "source_location": "L5",
       "id": "settings_updateprompt_updateprompt",
-      "community": 17,
+      "community": 16,
       "norm_label": "updateprompt()"
     },
     {
@@ -3546,7 +3555,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L132",
       "id": "calendar_calendarpage_grouprentalsbyorder",
-      "community": 21,
+      "community": 19,
       "norm_label": "grouprentalsbyorder()"
     },
     {
@@ -3555,7 +3564,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L188",
       "id": "calendar_calendarpage_groupdayrentals",
-      "community": 21,
+      "community": 19,
       "norm_label": "groupdayrentals()"
     },
     {
@@ -4032,7 +4041,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L1",
       "id": "src_features_calendar_calendarpage_test_tsx",
-      "community": 15,
+      "community": 2,
       "norm_label": "calendarpage.test.tsx"
     },
     {
@@ -4041,7 +4050,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L12",
       "id": "calendar_calendarpage_test_customer",
-      "community": 15,
+      "community": 2,
       "norm_label": "customer"
     },
     {
@@ -4050,7 +4059,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L29",
       "id": "calendar_calendarpage_test_gettodaystring",
-      "community": 15,
+      "community": 2,
       "norm_label": "gettodaystring()"
     },
     {
@@ -4059,7 +4068,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L37",
       "id": "calendar_calendarpage_test_makestockitem",
-      "community": 15,
+      "community": 2,
       "norm_label": "makestockitem()"
     },
     {
@@ -4068,7 +4077,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L58",
       "id": "calendar_calendarpage_test_makerental",
-      "community": 15,
+      "community": 2,
       "norm_label": "makerental()"
     },
     {
@@ -4077,7 +4086,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L96",
       "id": "calendar_calendarpage_test_user",
-      "community": 15,
+      "community": 2,
       "norm_label": "user"
     },
     {
@@ -4086,7 +4095,7 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L97",
       "id": "calendar_calendarpage_test_onupdaterentalstatus",
-      "community": 15,
+      "community": 2,
       "norm_label": "onupdaterentalstatus"
     },
     {
@@ -4176,7 +4185,7 @@
       "source_file": "src/features/dashboard/dashboardMetrics.ts",
       "source_location": "L27",
       "id": "dashboard_dashboardmetrics_builddashboardmetrics",
-      "community": 2,
+      "community": 7,
       "norm_label": "builddashboardmetrics()"
     },
     {
@@ -4797,7 +4806,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_lib_supabase_ts",
-      "community": 16,
+      "community": 15,
       "norm_label": "supabase.ts"
     },
     {
@@ -4806,7 +4815,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L3",
       "id": "lib_supabase_supabaseurl",
-      "community": 16,
+      "community": 15,
       "norm_label": "supabaseurl"
     },
     {
@@ -4815,7 +4824,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L4",
       "id": "lib_supabase_supabaseanonkey",
-      "community": 16,
+      "community": 15,
       "norm_label": "supabaseanonkey"
     },
     {
@@ -4824,7 +4833,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L6",
       "id": "lib_supabase_hassupabaseconfig",
-      "community": 16,
+      "community": 15,
       "norm_label": "hassupabaseconfig"
     },
     {
@@ -4923,7 +4932,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/AGENTS.md",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_agents_md",
-      "community": 18,
+      "community": 17,
       "norm_label": "agents.md"
     },
     {
@@ -4932,7 +4941,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/AGENTS.md",
       "source_location": "L1",
       "id": "precious_shop_agents_graphify",
-      "community": 18,
+      "community": 17,
       "norm_label": "graphify"
     },
     {
@@ -4941,7 +4950,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/supabase/README.md",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_supabase_readme_md",
-      "community": 19,
+      "community": 18,
       "norm_label": "readme.md"
     },
     {
@@ -4950,7 +4959,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/supabase/README.md",
       "source_location": "L1",
       "id": "supabase_readme_supabase_setup",
-      "community": 19,
+      "community": 18,
       "norm_label": "supabase setup"
     },
     {
@@ -5147,7 +5156,7 @@
       "file_type": "code",
       "source_file": "eslint.config.js",
       "source_location": "L1",
-      "community": 25,
+      "community": 24,
       "norm_label": "eslint.config.js",
       "id": "eslint_config_js"
     },
@@ -5156,7 +5165,7 @@
       "file_type": "code",
       "source_file": "vite.config.ts",
       "source_location": "L1",
-      "community": 26,
+      "community": 25,
       "norm_label": "vite.config.ts",
       "id": "vite_config_ts"
     },
@@ -5246,7 +5255,7 @@
       "file_type": "code",
       "source_file": "src/features/settings/UpdatePrompt.tsx",
       "source_location": "L1",
-      "community": 17,
+      "community": 16,
       "norm_label": "updateprompt.tsx",
       "id": "src_features_settings_updateprompt_tsx"
     },
@@ -5291,7 +5300,7 @@
       "file_type": "code",
       "source_file": "src/lib/supabase.ts",
       "source_location": "L1",
-      "community": 16,
+      "community": 15,
       "norm_label": "supabase.ts",
       "id": "src_lib_supabase_ts"
     },
@@ -5309,7 +5318,7 @@
       "file_type": "document",
       "source_file": "AGENTS.md",
       "source_location": "L1",
-      "community": 18,
+      "community": 17,
       "norm_label": "agents.md",
       "id": "agents_md"
     },
@@ -5318,7 +5327,7 @@
       "file_type": "document",
       "source_file": "supabase/README.md",
       "source_location": "L1",
-      "community": 19,
+      "community": 18,
       "norm_label": "readme.md",
       "id": "supabase_readme_md"
     },
@@ -9064,6 +9073,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.tsx",
+      "source_location": "L271",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_app_tsx",
+      "target": "src_app_ismobiledetailopen_setismobiledetailopen"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.tsx",
       "source_location": "L266",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -9939,9 +9958,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "src_app_tsx",
-      "confidence_score": 1.0
+      "target": "src_app_tsx"
     },
     {
       "relation": "imports_from",
@@ -10123,9 +10142,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "src_app_stockitem",
-      "confidence_score": 1.0
+      "target": "src_app_stockitem"
     },
     {
       "relation": "imports",
@@ -10683,6 +10702,17 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.tsx",
+      "source_location": "L899",
+      "weight": 1.0,
+      "source": "src_app_handlesavecustomer",
+      "target": "customers_customerremote_deleteremotecustomerdocuments"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/App.tsx",
       "source_location": "L889",
       "weight": 1.0,
       "source": "src_app_handlesavecustomer",
@@ -10698,17 +10728,6 @@
       "weight": 1.0,
       "source": "src_app_handlesavecustomer",
       "target": "customers_customerremote_uploadremotecustomerdocuments"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/App.tsx",
-      "source_location": "L899",
-      "weight": 1.0,
-      "source": "src_app_handlesavecustomer",
-      "target": "customers_customerremote_deleteremotecustomerdocuments"
     },
     {
       "relation": "calls",
@@ -11658,9 +11677,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "customers_customertypes_customer",
-      "confidence_score": 1.0
+      "target": "customers_customertypes_customer"
     },
     {
       "relation": "imports",
@@ -13034,9 +13053,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "rentals_rentaltypes_rentalorder",
-      "confidence_score": 1.0
+      "target": "rentals_rentaltypes_rentalorder"
     },
     {
       "relation": "imports",
@@ -15351,9 +15370,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "src_features_calendar_calendarpage_tsx",
-      "confidence_score": 1.0
+      "target": "src_features_calendar_calendarpage_tsx"
     },
     {
       "relation": "contains",
@@ -15394,9 +15413,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "src_features_customers_customertypes_ts",
-      "confidence_score": 1.0
+      "target": "src_features_customers_customertypes_ts"
     },
     {
       "relation": "imports_from",
@@ -15405,9 +15424,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "src_features_rentals_rentaltypes_ts",
-      "confidence_score": 1.0
+      "target": "src_features_rentals_rentaltypes_ts"
     },
     {
       "relation": "contains",
@@ -15415,9 +15434,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "calendar_calendarpage_test_customer",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_customer"
     },
     {
       "relation": "contains",
@@ -15425,9 +15444,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "calendar_calendarpage_test_gettodaystring",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_gettodaystring"
     },
     {
       "relation": "contains",
@@ -15435,9 +15454,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "calendar_calendarpage_test_makestockitem",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_makestockitem"
     },
     {
       "relation": "contains",
@@ -15445,9 +15464,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "calendar_calendarpage_test_makerental",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_makerental"
     },
     {
       "relation": "contains",
@@ -15455,9 +15474,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "calendar_calendarpage_test_user",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_user"
     },
     {
       "relation": "contains",
@@ -15465,9 +15484,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L97",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_test_tsx",
-      "target": "calendar_calendarpage_test_onupdaterentalstatus",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_onupdaterentalstatus"
     },
     {
       "relation": "calls",
@@ -15476,9 +15495,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calendar_calendarpage_test_makerental",
-      "target": "calendar_calendarpage_test_gettodaystring",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_gettodaystring"
     },
     {
       "relation": "calls",
@@ -15487,9 +15506,9 @@
       "source_file": "src/features/calendar/CalendarPage.test.tsx",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calendar_calendarpage_test_makerental",
-      "target": "calendar_calendarpage_test_makestockitem",
-      "confidence_score": 1.0
+      "target": "calendar_calendarpage_test_makestockitem"
     },
     {
       "relation": "imports_from",
@@ -17538,5 +17557,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "763c1135dccc6ab6c5878de8f6335f56cc97603a"
+  "built_at_commit": "887bfab05b5a99423d0b55bac73e7a1ee2807ff6"
 }
