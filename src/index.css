@@ -1793,7 +1793,7 @@ h1 {
   }
 
   .app-shell {
-    padding: 20px 16px 90px !important;
+    padding: 16px 12px 90px !important;
   }
 
   .page-header {
@@ -3544,9 +3544,11 @@ h1 {
     background: #090b11;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 16px;
-    padding: 16px;
+    padding: 10px;
     margin-bottom: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   /* Month Navigator Header */
@@ -3633,8 +3635,10 @@ h1 {
   .mobile-calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
+    gap: 4px;
     margin-bottom: 12px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .mobile-day-cell {
@@ -3646,10 +3650,12 @@ h1 {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 2px;
+    padding: 4px 1px;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-height: 48px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .mobile-day-cell:active {
@@ -3672,7 +3678,7 @@ h1 {
   }
 
   .day-number-text {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: #ffffff;
   }
@@ -3693,10 +3699,11 @@ h1 {
   .indicator-pill {
     font-size: 8px;
     font-weight: 700;
-    padding: 1px 4px;
+    padding: 1px 3px;
     border-radius: 4px;
     white-space: nowrap;
-    transform: scale(0.85);
+    transform: scale(0.8);
+    transform-origin: center bottom;
   }
 
   .indicator-pill.pickup {
