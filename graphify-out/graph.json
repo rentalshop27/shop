@@ -9,7 +9,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/eslint.config.js",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_eslint_config_js",
-      "community": 21,
+      "community": 23,
       "norm_label": "eslint.config.js"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/vite.config.ts",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_vite_config_ts",
-      "community": 22,
+      "community": 24,
       "norm_label": "vite.config.ts"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L417",
       "id": "dev_dist_workbox_f0c192c2_isinstance",
-      "community": 6,
+      "community": 1,
       "norm_label": "isinstance()"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L1247",
       "id": "dev_dist_workbox_f0c192c2_waituntil",
-      "community": 6,
+      "community": 1,
       "norm_label": "waituntil()"
     },
     {
@@ -531,7 +531,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L1694",
       "id": "dev_dist_workbox_f0c192c2_timeout",
-      "community": 6,
+      "community": 1,
       "norm_label": "timeout()"
     },
     {
@@ -792,7 +792,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2656",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller",
-      "community": 1,
+      "community": 11,
       "norm_label": "precachecontroller"
     },
     {
@@ -801,7 +801,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2667",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_constructor",
-      "community": 1,
+      "community": 11,
       "norm_label": ".constructor()"
     },
     {
@@ -810,7 +810,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2690",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_strategy",
-      "community": 1,
+      "community": 11,
       "norm_label": ".strategy()"
     },
     {
@@ -819,7 +819,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2703",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_precache",
-      "community": 1,
+      "community": 11,
       "norm_label": ".precache()"
     },
     {
@@ -828,7 +828,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2718",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_addtocachelist",
-      "community": 1,
+      "community": 11,
       "norm_label": ".addtocachelist()"
     },
     {
@@ -855,7 +855,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2849",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_geturlstocachekeys",
-      "community": 1,
+      "community": 11,
       "norm_label": ".geturlstocachekeys()"
     },
     {
@@ -864,7 +864,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2858",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_getcachedurls",
-      "community": 1,
+      "community": 11,
       "norm_label": ".getcachedurls()"
     },
     {
@@ -873,7 +873,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2870",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_getcachekeyforurl",
-      "community": 1,
+      "community": 11,
       "norm_label": ".getcachekeyforurl()"
     },
     {
@@ -882,7 +882,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2879",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_getintegrityforcachekey",
-      "community": 1,
+      "community": 11,
       "norm_label": ".getintegrityforcachekey()"
     },
     {
@@ -891,7 +891,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2900",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_matchprecache",
-      "community": 1,
+      "community": 11,
       "norm_label": ".matchprecache()"
     },
     {
@@ -900,7 +900,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/workbox-f0c192c2.js",
       "source_location": "L2917",
       "id": "dev_dist_workbox_f0c192c2_precachecontroller_createhandlerboundtourl",
-      "community": 1,
+      "community": 11,
       "norm_label": ".createhandlerboundtourl()"
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/sw.js",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_dev_dist_sw_js",
-      "community": 14,
+      "community": 16,
       "norm_label": "sw.js"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/sw.js",
       "source_location": "L16",
       "id": "dev_dist_sw_registry",
-      "community": 14,
+      "community": 16,
       "norm_label": "registry"
     },
     {
@@ -1089,7 +1089,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/sw.js",
       "source_location": "L22",
       "id": "dev_dist_sw_singlerequire",
-      "community": 14,
+      "community": 16,
       "norm_label": "singlerequire()"
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/sw.js",
       "source_location": "L55",
       "id": "dev_dist_sw_exports",
-      "community": 14,
+      "community": 16,
       "norm_label": "exports"
     },
     {
@@ -1107,7 +1107,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/sw.js",
       "source_location": "L56",
       "id": "dev_dist_sw_require",
-      "community": 14,
+      "community": 16,
       "norm_label": "require()"
     },
     {
@@ -1116,7 +1116,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/dev-dist/sw.js",
       "source_location": "L57",
       "id": "dev_dist_sw_specialdeps",
-      "community": 14,
+      "community": 16,
       "norm_label": "specialdeps"
     },
     {
@@ -1197,7 +1197,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L170",
       "id": "src_app_refreshauditlogs",
-      "community": 13,
+      "community": 15,
       "norm_label": "refreshauditlogs()"
     },
     {
@@ -1521,7 +1521,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L376",
       "id": "src_app_handleaddbrand",
-      "community": 11,
+      "community": 12,
       "norm_label": "handleaddbrand()"
     },
     {
@@ -1530,7 +1530,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L389",
       "id": "src_app_handledeletebrand",
-      "community": 11,
+      "community": 12,
       "norm_label": "handledeletebrand()"
     },
     {
@@ -1539,7 +1539,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L402",
       "id": "src_app_handleaddcategory",
-      "community": 11,
+      "community": 12,
       "norm_label": "handleaddcategory()"
     },
     {
@@ -1548,7 +1548,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L415",
       "id": "src_app_handledeletecategory",
-      "community": 11,
+      "community": 12,
       "norm_label": "handledeletecategory()"
     },
     {
@@ -1557,7 +1557,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L428",
       "id": "src_app_handleaddcolor",
-      "community": 11,
+      "community": 12,
       "norm_label": "handleaddcolor()"
     },
     {
@@ -1566,7 +1566,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L441",
       "id": "src_app_handledeletecolor",
-      "community": 11,
+      "community": 12,
       "norm_label": "handledeletecolor()"
     },
     {
@@ -1602,7 +1602,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L475",
       "id": "src_app_handlecreaterentals",
-      "community": 2,
+      "community": 13,
       "norm_label": "handlecreaterentals()"
     },
     {
@@ -1611,7 +1611,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L541",
       "id": "src_app_handleupdaterentalstatus",
-      "community": 13,
+      "community": 15,
       "norm_label": "handleupdaterentalstatus()"
     },
     {
@@ -1620,7 +1620,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L569",
       "id": "src_app_handledeleterental",
-      "community": 13,
+      "community": 15,
       "norm_label": "handledeleterental()"
     },
     {
@@ -1692,7 +1692,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L661",
       "id": "src_app_handleloadauditlogs",
-      "community": 13,
+      "community": 15,
       "norm_label": "handleloadauditlogs()"
     },
     {
@@ -1773,7 +1773,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L767",
       "id": "src_app_closestockform",
-      "community": 13,
+      "community": 15,
       "norm_label": "closestockform()"
     },
     {
@@ -1809,7 +1809,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L812",
       "id": "src_app_closestockpreview",
-      "community": 13,
+      "community": 15,
       "norm_label": "closestockpreview()"
     },
     {
@@ -1818,7 +1818,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L817",
       "id": "src_app_handledeletestockitem",
-      "community": 13,
+      "community": 15,
       "norm_label": "handledeletestockitem()"
     },
     {
@@ -1827,7 +1827,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L870",
       "id": "src_app_handleupdatestockstatus",
-      "community": 13,
+      "community": 15,
       "norm_label": "handleupdatestockstatus()"
     },
     {
@@ -1872,7 +1872,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1362",
       "id": "src_app_updateselectedstatus",
-      "community": 11,
+      "community": 12,
       "norm_label": "updateselectedstatus()"
     },
     {
@@ -1881,7 +1881,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1390",
       "id": "src_app_updateselectedrisk",
-      "community": 11,
+      "community": 12,
       "norm_label": "updateselectedrisk()"
     },
     {
@@ -1890,7 +1890,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L1411",
       "id": "src_app_archiveselectedcustomer",
-      "community": 11,
+      "community": 12,
       "norm_label": "archiveselectedcustomer()"
     },
     {
@@ -2088,7 +2088,7 @@
       "source_file": "src/App.tsx",
       "source_location": "L3048",
       "id": "src_app_geterrormessage",
-      "community": 11,
+      "community": 12,
       "norm_label": "geterrormessage()"
     },
     {
@@ -2097,7 +2097,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/main.tsx",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_main_tsx",
-      "community": 23,
+      "community": 25,
       "norm_label": "main.tsx"
     },
     {
@@ -2592,7 +2592,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/settings/UpdatePrompt.tsx",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_features_settings_updateprompt_tsx",
-      "community": 16,
+      "community": 18,
       "norm_label": "updateprompt.tsx"
     },
     {
@@ -2601,7 +2601,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/settings/UpdatePrompt.tsx",
       "source_location": "L5",
       "id": "settings_updateprompt_updateprompt",
-      "community": 16,
+      "community": 18,
       "norm_label": "updateprompt()"
     },
     {
@@ -2754,7 +2754,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_features_rentals_rentalremote_ts",
-      "community": 2,
+      "community": 13,
       "norm_label": "rentalremote.ts"
     },
     {
@@ -2763,7 +2763,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L6",
       "id": "rentals_rentalremote_rentalrow",
-      "community": 2,
+      "community": 13,
       "norm_label": "rentalrow"
     },
     {
@@ -2772,7 +2772,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L23",
       "id": "rentals_rentalremote_loadrentals",
-      "community": 2,
+      "community": 13,
       "norm_label": "loadrentals()"
     },
     {
@@ -2781,7 +2781,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L38",
       "id": "rentals_rentalremote_createremoterental",
-      "community": 2,
+      "community": 13,
       "norm_label": "createremoterental()"
     },
     {
@@ -2790,7 +2790,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L48",
       "id": "rentals_rentalremote_createremoterentals",
-      "community": 2,
+      "community": 13,
       "norm_label": "createremoterentals()"
     },
     {
@@ -2799,7 +2799,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L62",
       "id": "rentals_rentalremote_torentalinsert",
-      "community": 2,
+      "community": 13,
       "norm_label": "torentalinsert()"
     },
     {
@@ -2808,7 +2808,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L81",
       "id": "rentals_rentalremote_updateremoterentalstatus",
-      "community": 2,
+      "community": 13,
       "norm_label": "updateremoterentalstatus()"
     },
     {
@@ -2817,7 +2817,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L94",
       "id": "rentals_rentalremote_deleteremoterental",
-      "community": 2,
+      "community": 13,
       "norm_label": "deleteremoterental()"
     },
     {
@@ -2826,7 +2826,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts",
       "source_location": "L102",
       "id": "rentals_rentalremote_maprentalrow",
-      "community": 2,
+      "community": 13,
       "norm_label": "maprentalrow()"
     },
     {
@@ -3510,7 +3510,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L67",
       "id": "calendar_calendarpage_tolocaldatestr",
-      "community": 20,
+      "community": 21,
       "norm_label": "tolocaldatestr()"
     },
     {
@@ -3546,7 +3546,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L129",
       "id": "calendar_calendarpage_grouprentalsbyorder",
-      "community": 19,
+      "community": 22,
       "norm_label": "grouprentalsbyorder()"
     },
     {
@@ -3555,7 +3555,7 @@
       "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L185",
       "id": "calendar_calendarpage_groupdayrentals",
-      "community": 19,
+      "community": 22,
       "norm_label": "groupdayrentals()"
     },
     {
@@ -3649,10 +3649,37 @@
       "norm_label": "todaystr"
     },
     {
+      "label": "[isMobile, setIsMobile]",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L241",
+      "id": "calendar_calendarpage_ismobile_setismobile",
+      "community": 3,
+      "norm_label": "[ismobile, setismobile]"
+    },
+    {
+      "label": "[isMobileDetailOpen, setIsMobileDetailOpen]",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L242",
+      "id": "calendar_calendarpage_ismobiledetailopen_setismobiledetailopen",
+      "community": 3,
+      "norm_label": "[ismobiledetailopen, setismobiledetailopen]"
+    },
+    {
+      "label": "handleResize()",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L246",
+      "id": "calendar_calendarpage_handleresize",
+      "community": 3,
+      "norm_label": "handleresize()"
+    },
+    {
       "label": "year",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L245",
+      "source_location": "L256",
       "id": "calendar_calendarpage_year",
       "community": 3,
       "norm_label": "year"
@@ -3661,7 +3688,7 @@
       "label": "month",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L246",
+      "source_location": "L257",
       "id": "calendar_calendarpage_month",
       "community": 3,
       "norm_label": "month"
@@ -3670,16 +3697,16 @@
       "label": "handleGoToToday()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L249",
+      "source_location": "L260",
       "id": "calendar_calendarpage_handlegototoday",
-      "community": 20,
+      "community": 21,
       "norm_label": "handlegototoday()"
     },
     {
       "label": "handlePrevMonth()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L256",
+      "source_location": "L267",
       "id": "calendar_calendarpage_handleprevmonth",
       "community": 3,
       "norm_label": "handleprevmonth()"
@@ -3688,7 +3715,7 @@
       "label": "handleNextMonth()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L261",
+      "source_location": "L272",
       "id": "calendar_calendarpage_handlenextmonth",
       "community": 3,
       "norm_label": "handlenextmonth()"
@@ -3697,7 +3724,7 @@
       "label": "handlePrevWeek()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L266",
+      "source_location": "L277",
       "id": "calendar_calendarpage_handleprevweek",
       "community": 3,
       "norm_label": "handleprevweek()"
@@ -3706,7 +3733,7 @@
       "label": "handleNextWeek()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L273",
+      "source_location": "L284",
       "id": "calendar_calendarpage_handlenextweek",
       "community": 3,
       "norm_label": "handlenextweek()"
@@ -3715,7 +3742,7 @@
       "label": "formatThaiDate()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L280",
+      "source_location": "L291",
       "id": "calendar_calendarpage_formatthaidate",
       "community": 3,
       "norm_label": "formatthaidate()"
@@ -3724,7 +3751,7 @@
       "label": "calendarDays",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L291",
+      "source_location": "L302",
       "id": "calendar_calendarpage_calendardays",
       "community": 3,
       "norm_label": "calendardays"
@@ -3733,7 +3760,7 @@
       "label": "currentWeekDays",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L338",
+      "source_location": "L349",
       "id": "calendar_calendarpage_currentweekdays",
       "community": 3,
       "norm_label": "currentweekdays"
@@ -3742,7 +3769,7 @@
       "label": "visibleRange",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L358",
+      "source_location": "L369",
       "id": "calendar_calendarpage_visiblerange",
       "community": 3,
       "norm_label": "visiblerange"
@@ -3751,7 +3778,7 @@
       "label": "rentalsByDate",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L386",
+      "source_location": "L397",
       "id": "calendar_calendarpage_rentalsbydate",
       "community": 3,
       "norm_label": "rentalsbydate"
@@ -3760,7 +3787,7 @@
       "label": "selectedDayRentals",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L444",
+      "source_location": "L455",
       "id": "calendar_calendarpage_selecteddayrentals",
       "community": 3,
       "norm_label": "selecteddayrentals"
@@ -3769,7 +3796,7 @@
       "label": "groupedSelectedDayRentals",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L450",
+      "source_location": "L461",
       "id": "calendar_calendarpage_groupedselecteddayrentals",
       "community": 3,
       "norm_label": "groupedselecteddayrentals"
@@ -3778,7 +3805,7 @@
       "label": "selectedDayRentalGroups",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L454",
+      "source_location": "L465",
       "id": "calendar_calendarpage_selecteddayrentalgroups",
       "community": 3,
       "norm_label": "selecteddayrentalgroups"
@@ -3787,16 +3814,52 @@
       "label": "selectedCalendarRental",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L483",
+      "source_location": "L494",
       "id": "calendar_calendarpage_selectedcalendarrental",
       "community": 3,
       "norm_label": "selectedcalendarrental"
     },
     {
+      "label": "todayRentals",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L499",
+      "id": "calendar_calendarpage_todayrentals",
+      "community": 3,
+      "norm_label": "todayrentals"
+    },
+    {
+      "label": "groupedTodayRentals",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L504",
+      "id": "calendar_calendarpage_groupedtodayrentals",
+      "community": 3,
+      "norm_label": "groupedtodayrentals"
+    },
+    {
+      "label": "todayRentalGroups",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L508",
+      "id": "calendar_calendarpage_todayrentalgroups",
+      "community": 3,
+      "norm_label": "todayrentalgroups"
+    },
+    {
+      "label": "selectedMobileRental",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L537",
+      "id": "calendar_calendarpage_selectedmobilerental",
+      "community": 3,
+      "norm_label": "selectedmobilerental"
+    },
+    {
       "label": "filteredTimelineRentals",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L501",
+      "source_location": "L559",
       "id": "calendar_calendarpage_filteredtimelinerentals",
       "community": 3,
       "norm_label": "filteredtimelinerentals"
@@ -3805,7 +3868,7 @@
       "label": "paginatedListRentals",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L514",
+      "source_location": "L572",
       "id": "calendar_calendarpage_paginatedlistrentals",
       "community": 3,
       "norm_label": "paginatedlistrentals"
@@ -3814,7 +3877,7 @@
       "label": "formatBaht()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L521",
+      "source_location": "L579",
       "id": "calendar_calendarpage_formatbaht",
       "community": 3,
       "norm_label": "formatbaht()"
@@ -3823,7 +3886,7 @@
       "label": "getDiscountAmount()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L528",
+      "source_location": "L586",
       "id": "calendar_calendarpage_getdiscountamount",
       "community": 3,
       "norm_label": "getdiscountamount()"
@@ -3832,7 +3895,7 @@
       "label": "openRentalGroup()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L532",
+      "source_location": "L590",
       "id": "calendar_calendarpage_openrentalgroup",
       "community": 3,
       "norm_label": "openrentalgroup()"
@@ -3841,7 +3904,7 @@
       "label": "updateRentalGroupStatus()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L536",
+      "source_location": "L594",
       "id": "calendar_calendarpage_updaterentalgroupstatus",
       "community": 3,
       "norm_label": "updaterentalgroupstatus()"
@@ -3850,34 +3913,43 @@
       "label": "getDayCategoryLabel()",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L542",
+      "source_location": "L600",
       "id": "calendar_calendarpage_getdaycategorylabel",
       "community": 3,
       "norm_label": "getdaycategorylabel()"
     },
     {
-      "label": "pickup",
+      "label": "categories",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L574",
-      "id": "calendar_calendarpage_pickup",
+      "source_location": "L690",
+      "id": "calendar_calendarpage_categories",
       "community": 3,
-      "norm_label": "pickup"
+      "norm_label": "categories"
     },
     {
-      "label": "returnDt",
+      "label": "groupWithCats",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L575",
-      "id": "calendar_calendarpage_returndt",
+      "source_location": "L696",
+      "id": "calendar_calendarpage_groupwithcats",
       "community": 3,
-      "norm_label": "returndt"
+      "norm_label": "groupwithcats"
+    },
+    {
+      "label": "isTod",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L976",
+      "id": "calendar_calendarpage_istod",
+      "community": 3,
+      "norm_label": "istod"
     },
     {
       "label": "dayEvents",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L707",
+      "source_location": "L1260",
       "id": "calendar_calendarpage_dayevents",
       "community": 3,
       "norm_label": "dayevents"
@@ -3886,7 +3958,7 @@
       "label": "groupedDayEvents",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L708",
+      "source_location": "L1261",
       "id": "calendar_calendarpage_groupeddayevents",
       "community": 3,
       "norm_label": "groupeddayevents"
@@ -3895,7 +3967,7 @@
       "label": "filteredPickups",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L711",
+      "source_location": "L1264",
       "id": "calendar_calendarpage_filteredpickups",
       "community": 3,
       "norm_label": "filteredpickups"
@@ -3904,7 +3976,7 @@
       "label": "filteredReturns",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L712",
+      "source_location": "L1265",
       "id": "calendar_calendarpage_filteredreturns",
       "community": 3,
       "norm_label": "filteredreturns"
@@ -3913,7 +3985,7 @@
       "label": "isDayToday",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L715",
+      "source_location": "L1268",
       "id": "calendar_calendarpage_isdaytoday",
       "community": 3,
       "norm_label": "isdaytoday"
@@ -3922,7 +3994,7 @@
       "label": "filteredOngoing",
       "file_type": "code",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L893",
+      "source_location": "L1446",
       "id": "calendar_calendarpage_filteredongoing",
       "community": 3,
       "norm_label": "filteredongoing"
@@ -4509,7 +4581,7 @@
       "source_file": "src/features/inventory/stockRemote.ts",
       "source_location": "L329",
       "id": "inventory_stockremote_updateshopsettings",
-      "community": 11,
+      "community": 12,
       "norm_label": "updateshopsettings()"
     },
     {
@@ -4635,7 +4707,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_src_lib_supabase_ts",
-      "community": 15,
+      "community": 17,
       "norm_label": "supabase.ts"
     },
     {
@@ -4644,7 +4716,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L3",
       "id": "lib_supabase_supabaseurl",
-      "community": 15,
+      "community": 17,
       "norm_label": "supabaseurl"
     },
     {
@@ -4653,7 +4725,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L4",
       "id": "lib_supabase_supabaseanonkey",
-      "community": 15,
+      "community": 17,
       "norm_label": "supabaseanonkey"
     },
     {
@@ -4662,7 +4734,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/src/lib/supabase.ts",
       "source_location": "L6",
       "id": "lib_supabase_hassupabaseconfig",
-      "community": 15,
+      "community": 17,
       "norm_label": "hassupabaseconfig"
     },
     {
@@ -4671,7 +4743,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_readme_md",
-      "community": 12,
+      "community": 14,
       "norm_label": "readme.md"
     },
     {
@@ -4680,7 +4752,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L1",
       "id": "precious_shop_readme_precious_shop",
-      "community": 12,
+      "community": 14,
       "norm_label": "precious shop"
     },
     {
@@ -4689,7 +4761,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L5",
       "id": "precious_shop_readme_features",
-      "community": 12,
+      "community": 14,
       "norm_label": "features"
     },
     {
@@ -4698,7 +4770,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L17",
       "id": "precious_shop_readme_development",
-      "community": 12,
+      "community": 14,
       "norm_label": "development"
     },
     {
@@ -4707,7 +4779,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L19",
       "id": "precious_shop_readme_codeblock_1",
-      "community": 12,
+      "community": 14,
       "norm_label": "code:bash (npm install)"
     },
     {
@@ -4716,7 +4788,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L26",
       "id": "precious_shop_readme_supabase",
-      "community": 12,
+      "community": 14,
       "norm_label": "supabase"
     },
     {
@@ -4725,7 +4797,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L34",
       "id": "precious_shop_readme_codeblock_2",
-      "community": 12,
+      "community": 14,
       "norm_label": "code:bash (vite_supabase_url=https://your-project.supabase.co)"
     },
     {
@@ -4734,7 +4806,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L41",
       "id": "precious_shop_readme_cloudflare_pages",
-      "community": 12,
+      "community": 14,
       "norm_label": "cloudflare pages"
     },
     {
@@ -4743,7 +4815,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L47",
       "id": "precious_shop_readme_verification",
-      "community": 12,
+      "community": 14,
       "norm_label": "verification"
     },
     {
@@ -4752,7 +4824,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/README.md",
       "source_location": "L49",
       "id": "precious_shop_readme_codeblock_3",
-      "community": 12,
+      "community": 14,
       "norm_label": "code:bash (npm run test)"
     },
     {
@@ -4761,7 +4833,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/AGENTS.md",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_agents_md",
-      "community": 17,
+      "community": 19,
       "norm_label": "agents.md"
     },
     {
@@ -4770,7 +4842,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/AGENTS.md",
       "source_location": "L1",
       "id": "precious_shop_agents_graphify",
-      "community": 17,
+      "community": 19,
       "norm_label": "graphify"
     },
     {
@@ -4779,7 +4851,7 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/supabase/README.md",
       "source_location": "L1",
       "id": "users_bhusitt_downloads_precious_shop_supabase_readme_md",
-      "community": 18,
+      "community": 20,
       "norm_label": "readme.md"
     },
     {
@@ -4788,8 +4860,26 @@
       "source_file": "/Users/bhusitt./Downloads/Precious Shop/supabase/README.md",
       "source_location": "L1",
       "id": "supabase_readme_supabase_setup",
-      "community": 18,
+      "community": 20,
       "norm_label": "supabase setup"
+    },
+    {
+      "label": "pickup",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L574",
+      "community": 3,
+      "norm_label": "pickup",
+      "id": "calendar_calendarpage_pickup"
+    },
+    {
+      "label": "returnDt",
+      "file_type": "code",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L575",
+      "community": 3,
+      "norm_label": "returndt",
+      "id": "calendar_calendarpage_returndt"
     },
     {
       "label": "isRented",
@@ -4985,7 +5075,7 @@
       "file_type": "code",
       "source_file": "eslint.config.js",
       "source_location": "L1",
-      "community": 24,
+      "community": 26,
       "norm_label": "eslint.config.js",
       "id": "eslint_config_js"
     },
@@ -4994,7 +5084,7 @@
       "file_type": "code",
       "source_file": "vite.config.ts",
       "source_location": "L1",
-      "community": 25,
+      "community": 27,
       "norm_label": "vite.config.ts",
       "id": "vite_config_ts"
     },
@@ -5012,7 +5102,7 @@
       "file_type": "code",
       "source_file": "dev-dist/sw.js",
       "source_location": "L1",
-      "community": 14,
+      "community": 16,
       "norm_label": "sw.js",
       "id": "dev_dist_sw_js"
     },
@@ -5084,7 +5174,7 @@
       "file_type": "code",
       "source_file": "src/features/settings/UpdatePrompt.tsx",
       "source_location": "L1",
-      "community": 16,
+      "community": 18,
       "norm_label": "updateprompt.tsx",
       "id": "src_features_settings_updateprompt_tsx"
     },
@@ -5111,7 +5201,7 @@
       "file_type": "code",
       "source_file": "src/features/rentals/rentalRemote.ts",
       "source_location": "L1",
-      "community": 2,
+      "community": 13,
       "norm_label": "rentalremote.ts",
       "id": "src_features_rentals_rentalremote_ts"
     },
@@ -5129,7 +5219,7 @@
       "file_type": "code",
       "source_file": "src/lib/supabase.ts",
       "source_location": "L1",
-      "community": 15,
+      "community": 17,
       "norm_label": "supabase.ts",
       "id": "src_lib_supabase_ts"
     },
@@ -5138,7 +5228,7 @@
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L1",
-      "community": 12,
+      "community": 14,
       "norm_label": "readme.md",
       "id": "readme_md"
     },
@@ -5147,7 +5237,7 @@
       "file_type": "document",
       "source_file": "AGENTS.md",
       "source_location": "L1",
-      "community": 17,
+      "community": 19,
       "norm_label": "agents.md",
       "id": "agents_md"
     },
@@ -5156,7 +5246,7 @@
       "file_type": "document",
       "source_file": "supabase/README.md",
       "source_location": "L1",
-      "community": 18,
+      "community": 20,
       "norm_label": "readme.md",
       "id": "supabase_readme_md"
     },
@@ -8168,9 +8258,9 @@
       "source_file": "src/features/inventory/inventoryStatus.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_ts",
-      "target": "src_app_tsx",
-      "confidence_score": 1.0
+      "target": "src_app_tsx"
     },
     {
       "relation": "imports",
@@ -8179,9 +8269,9 @@
       "source_file": "src/App.tsx",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app_tsx",
-      "target": "inventory_inventorystatus_getinventorydisplaystatus",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_getinventorydisplaystatus"
     },
     {
       "relation": "imports_from",
@@ -9614,9 +9704,9 @@
       "source_file": "src/App.tsx",
       "source_location": "L2318",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_app_tsx",
-      "target": "src_app_primarystatus_nextbookedrental",
-      "confidence_score": 1.0
+      "target": "src_app_primarystatus_nextbookedrental"
     },
     {
       "relation": "contains",
@@ -9788,9 +9878,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "src_app_tsx",
-      "confidence_score": 1.0
+      "target": "src_app_tsx"
     },
     {
       "relation": "contains",
@@ -9873,9 +9963,9 @@
       "source_file": "src/features/inventory/inventoryStatus.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_ts",
-      "target": "src_app_stockitemstatus",
-      "confidence_score": 1.0
+      "target": "src_app_stockitemstatus"
     },
     {
       "relation": "imports",
@@ -9961,9 +10051,9 @@
       "source_file": "src/features/inventory/inventoryStatus.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_ts",
-      "target": "src_app_stockitem",
-      "confidence_score": 1.0
+      "target": "src_app_stockitem"
     },
     {
       "relation": "imports",
@@ -9983,9 +10073,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "src_app_stockitem",
-      "confidence_score": 1.0
+      "target": "src_app_stockitem"
     },
     {
       "relation": "imports",
@@ -12872,9 +12962,9 @@
       "source_file": "src/features/inventory/inventoryStatus.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_ts",
-      "target": "rentals_rentaltypes_rentalorder",
-      "confidence_score": 1.0
+      "target": "rentals_rentaltypes_rentalorder"
     },
     {
       "relation": "imports",
@@ -12883,9 +12973,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "rentals_rentaltypes_rentalorder",
-      "confidence_score": 1.0
+      "target": "rentals_rentaltypes_rentalorder"
     },
     {
       "relation": "imports",
@@ -14722,6 +14812,36 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L241",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_ismobile_setismobile",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L242",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_ismobiledetailopen_setismobiledetailopen",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L246",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_handleresize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L60",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -14882,6 +15002,46 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L499",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_todayrentals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L504",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_groupedtodayrentals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L508",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_todayrentalgroups",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L537",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_selectedmobilerental",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
       "source_location": "L265",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -14952,21 +15112,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L313",
+      "source_location": "L690",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_tsx",
-      "target": "calendar_calendarpage_pickup"
+      "target": "calendar_calendarpage_categories",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/features/calendar/CalendarPage.tsx",
-      "source_location": "L314",
+      "source_location": "L696",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_tsx",
-      "target": "calendar_calendarpage_returndt"
+      "target": "calendar_calendarpage_groupwithcats",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L976",
+      "weight": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_istod",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -15027,6 +15197,26 @@
       "confidence_score": 1.0,
       "source": "src_features_calendar_calendarpage_tsx",
       "target": "calendar_calendarpage_filteredongoing"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L313",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_pickup"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/features/calendar/CalendarPage.tsx",
+      "source_location": "L314",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "src_features_calendar_calendarpage_tsx",
+      "target": "calendar_calendarpage_returndt"
     },
     {
       "relation": "contains",
@@ -16034,9 +16224,9 @@
       "source_file": "src/features/inventory/inventoryStatus.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_ts",
-      "target": "src_features_rentals_rentaltypes_ts",
-      "confidence_score": 1.0
+      "target": "src_features_rentals_rentaltypes_ts"
     },
     {
       "relation": "contains",
@@ -16044,9 +16234,9 @@
       "source_file": "src/features/inventory/inventoryStatus.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_ts",
-      "target": "inventory_inventorystatus_getinventorydisplaystatus",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_getinventorydisplaystatus"
     },
     {
       "relation": "imports_from",
@@ -16055,9 +16245,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "src_features_inventory_inventorystatus_ts",
-      "confidence_score": 1.0
+      "target": "src_features_inventory_inventorystatus_ts"
     },
     {
       "relation": "imports",
@@ -16066,9 +16256,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_getinventorydisplaystatus",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_getinventorydisplaystatus"
     },
     {
       "relation": "imports_from",
@@ -16540,9 +16730,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "src_features_rentals_rentaltypes_ts",
-      "confidence_score": 1.0
+      "target": "src_features_rentals_rentaltypes_ts"
     },
     {
       "relation": "contains",
@@ -16550,9 +16740,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_makestockitem",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_makestockitem"
     },
     {
       "relation": "contains",
@@ -16560,9 +16750,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_makerental",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_makerental"
     },
     {
       "relation": "contains",
@@ -16570,9 +16760,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L128",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_item",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_item"
     },
     {
       "relation": "contains",
@@ -16580,9 +16770,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_rentalsactive",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_rentalsactive"
     },
     {
       "relation": "contains",
@@ -16590,9 +16780,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L82",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_rentalsoverdue",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_rentalsoverdue"
     },
     {
       "relation": "contains",
@@ -16600,9 +16790,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_itemrepair",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_itemrepair"
     },
     {
       "relation": "contains",
@@ -16610,9 +16800,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L90",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_itemwash",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_itemwash"
     },
     {
       "relation": "contains",
@@ -16620,9 +16810,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L129",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_rentals",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_rentals"
     },
     {
       "relation": "contains",
@@ -16630,9 +16820,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_resrepair",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_resrepair"
     },
     {
       "relation": "contains",
@@ -16640,9 +16830,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_reswash",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_reswash"
     },
     {
       "relation": "contains",
@@ -16650,9 +16840,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "src_features_inventory_inventorystatus_test_ts",
-      "target": "inventory_inventorystatus_test_result",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_result"
     },
     {
       "relation": "calls",
@@ -16661,9 +16851,9 @@
       "source_file": "src/features/inventory/inventoryStatus.test.ts",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "inventory_inventorystatus_test_makerental",
-      "target": "inventory_inventorystatus_test_makestockitem",
-      "confidence_score": 1.0
+      "target": "inventory_inventorystatus_test_makestockitem"
     },
     {
       "relation": "contains",
@@ -17107,5 +17297,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "f2834e339c6f6756c87991607d3137182532026d"
+  "built_at_commit": "211b989c6d6e8889dd7de31700c82faab82c78d8"
 }

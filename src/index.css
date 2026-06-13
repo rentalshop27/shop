@@ -3401,3 +3401,399 @@ h1 {
   }
 }
 
+/* Mobile Calendar Redesign Styles */
+@media (max-width: 768px) {
+  .mobile-calendar-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  /* Horizontal scrolling tabs */
+  .mobile-tabs-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    width: 100%;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+  }
+
+  .mobile-tabs-row::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
+  .mobile-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 10px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    height: 38px;
+  }
+
+  .mobile-tab-btn svg {
+    flex-shrink: 0;
+  }
+
+  .mobile-tab-btn.active {
+    background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  }
+
+  .mobile-tab-btn.action-btn {
+    border: 1px solid var(--border-gold);
+    color: var(--text-gold);
+    background: rgba(223, 183, 80, 0.04);
+  }
+
+  .mobile-tab-btn.action-btn:active {
+    background: var(--text-gold);
+    color: #000;
+  }
+
+  /* Weekly Day strip */
+  .mobile-week-day-btn {
+    transition: all 0.2s ease;
+  }
+
+  .mobile-week-day-btn.active {
+    box-shadow: 0 4px 12px rgba(223, 183, 80, 0.2);
+  }
+
+  /* Selected date card */
+  .mobile-appointment-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .mobile-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
+
+  .mobile-card-icon-container {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mobile-card-today-pill {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: auto;
+  }
+
+  .mobile-empty-state-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0 8px;
+    text-align: center;
+  }
+
+  .mobile-gradient-btn {
+    background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.35);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 44px;
+    margin-top: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-gradient-btn:active {
+    transform: scale(0.98);
+    opacity: 0.95;
+  }
+
+  /* List Container styles */
+  .mobile-rentals-section {
+    margin-top: 8px;
+  }
+
+  .mobile-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .mobile-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .mobile-section-link {
+    background: none;
+    border: none;
+    color: #a78bfa;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+  }
+
+  /* Rental card items */
+  .mobile-rental-item-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .mobile-rental-item-card:active {
+    background: rgba(255, 255, 255, 0.02);
+    transform: scale(0.98);
+  }
+
+  .mobile-rental-left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-grow: 1;
+    text-align: left;
+  }
+
+  .mobile-rental-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+
+  .mobile-badge-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .mobile-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mobile-badge.pickup {
+    background: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .mobile-badge.return {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .mobile-badge.ongoing {
+    background: rgba(139, 92, 246, 0.12);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .mobile-status-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-status-pill.returned {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .mobile-status-pill.booked {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+
+  .mobile-status-pill.active {
+    background: rgba(218, 165, 32, 0.15);
+    color: #ead483;
+    border: 1px solid rgba(218, 165, 32, 0.35);
+  }
+
+  .mobile-status-pill.overdue {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+  }
+
+  /* Bottom sheet modal for mobile details */
+  .mobile-detail-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.25s ease-out;
+  }
+
+  .mobile-detail-modal-content {
+    background: #0d0f1a;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .modal-handle {
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 12px auto 6px;
+    flex-shrink: 0;
+  }
+
+  .mobile-detail-modal-content .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+  }
+
+  .mobile-detail-modal-content .modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  .mobile-detail-modal-content .modal-header .close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+  }
+
+  .mobile-detail-modal-content .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Active Bottom Nav item Glow effect */
+  .mobile-nav-item.active {
+    color: #e0a9ff !important;
+    position: relative;
+  }
+
+  .mobile-nav-item.active svg {
+    color: #e0a9ff !important;
+    filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.6));
+    transform: translateY(-2px);
+  }
+
+  .mobile-nav-item.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 24px;
+    height: 2px;
+    background: #c084fc;
+    border-radius: 2px;
+    box-shadow: 0 0 8px #c084fc, 0 0 16px #c084fc;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+
