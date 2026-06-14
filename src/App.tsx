@@ -65,6 +65,7 @@ import {
   countRemoteRentalsForStockSku,
   loadStockItems,
   createRemoteStockItem,
+  createRemoteStockItems,
   deleteRemoteStockItem,
   updateRemoteStockItem,
   updateShopSettings,
@@ -1167,6 +1168,10 @@ function App() {
       }
     }
 
+    const existingItem = editingStockId
+      ? stockItems.find((item) => item.id === editingStockId)
+      : undefined
+
     // Check for duplicate SKUs
     if (editingStockId) {
       if (
@@ -1178,6 +1183,27 @@ function App() {
       ) {
         setStockFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
         return
+      }
+
+      if (existingItem && existingItem.sku !== stockDraft.sku.trim()) {
+        let relatedRentalCount: number
+        try {
+          relatedRentalCount = supabase && isAuthenticated && shopId
+            ? await countRemoteRentalsForStockSku(supabase, shopId, existingItem.sku)
+            : rentals.filter(
+                (rental) =>
+                  rental.costume.id === existingItem.id ||
+                  rental.costume.sku === existingItem.sku,
+              ).length
+        } catch (error) {
+          setStockFormError(getErrorMessage(error))
+          return
+        }
+
+        if (relatedRentalCount > 0) {
+          setStockFormError(`แก้ไข SKU ของชุด ${existingItem.sku} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงชุดนี้อยู่ ${relatedRentalCount} รายการ`)
+          return
+        }
       }
     } else {
       if (setCount > 1) {
@@ -1205,10 +1231,6 @@ function App() {
         }
       }
     }
-
-    const existingItem = editingStockId
-      ? stockItems.find((item) => item.id === editingStockId)
-      : undefined
 
     setIsSaving(true)
     try {
@@ -1248,6 +1270,7 @@ function App() {
           )
         } else {
           if (setCount > 1) {
+            const itemDrafts: Array<Omit<StockItem, 'id' | 'createdAt'>> = []
             for (let i = 1; i <= setCount; i++) {
               const suffix = String(i).padStart(2, '0')
               const itemSku = `${baseSku}-${suffix}`
@@ -1269,8 +1292,9 @@ function App() {
                 imageUrls: stockDraft.imageUrls,
                 status: (stockDraft.status as StockItemStatus) || 'available',
               }
-              await createRemoteStockItem(supabase, shopId, itemDraft)
+              itemDrafts.push(itemDraft)
             }
+            await createRemoteStockItems(supabase, shopId, itemDrafts)
             const loadedStock = await loadStockItems(supabase)
             setStockItems(loadedStock)
           } else {
