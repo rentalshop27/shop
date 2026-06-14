@@ -229,6 +229,31 @@ export async function createRemoteStockItem(
   return mapStockItemRow(supabase, data as StockItemRow)
 }
 
+export async function createRemoteStockItems(
+  supabase: SupabaseClient,
+  shopId: string,
+  items: Array<Omit<StockItem, 'id' | 'createdAt'> & { id?: string }>
+): Promise<StockItem[]> {
+  const createdItems: StockItem[] = []
+
+  try {
+    for (const item of items) {
+      const createdItem = await createRemoteStockItem(supabase, shopId, item)
+      createdItems.push(createdItem)
+    }
+    return createdItems
+  } catch (error) {
+    for (const createdItem of createdItems) {
+      try {
+        await deleteRemoteStockItem(supabase, createdItem.id, createdItem.imageUrls)
+      } catch (rollbackError) {
+        console.warn('Failed to rollback stock item after batch create error:', createdItem.id, rollbackError)
+      }
+    }
+    throw error
+  }
+}
+
 export async function updateRemoteStockItem(
   supabase: SupabaseClient,
   shopId: string,

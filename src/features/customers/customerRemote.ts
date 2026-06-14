@@ -161,6 +161,7 @@ export async function uploadRemoteCustomerDocuments(
   files: File[],
 ) {
   const existingCount = customer.documents.length
+  const uploadedPaths: string[] = []
   const rows: Array<{
     shop_id: string
     customer_id: string
@@ -168,25 +169,46 @@ export async function uploadRemoteCustomerDocuments(
     sort_order: number
   }> = []
 
-  for (const [index, file] of files.entries()) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
-    const storagePath = `${customer.shopId}/${customer.id}/${crypto.randomUUID()}-${safeName}`
-    const { error: uploadError } = await supabase.storage
-      .from('customer-documents')
-      .upload(storagePath, file, { upsert: false })
+  try {
+    for (const [index, file] of files.entries()) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+      const storagePath = `${customer.shopId}/${customer.id}/${crypto.randomUUID()}-${safeName}`
+      const { error: uploadError } = await supabase.storage
+        .from('customer-documents')
+        .upload(storagePath, file, { upsert: false })
 
-    if (uploadError) throw uploadError
+      if (uploadError) throw uploadError
 
-    rows.push({
-      shop_id: customer.shopId,
-      customer_id: customer.id,
-      storage_path: storagePath,
-      sort_order: existingCount + index + 1,
-    })
+      uploadedPaths.push(storagePath)
+      rows.push({
+        shop_id: customer.shopId,
+        customer_id: customer.id,
+        storage_path: storagePath,
+        sort_order: existingCount + index + 1,
+      })
+    }
+
+    const { error } = await supabase.from('customer_documents').insert(rows)
+    if (error) throw error
+  } catch (error) {
+    await cleanupUploadedCustomerDocumentPaths(supabase, uploadedPaths)
+    throw error
   }
+}
 
-  const { error } = await supabase.from('customer_documents').insert(rows)
-  if (error) throw error
+async function cleanupUploadedCustomerDocumentPaths(
+  supabase: SupabaseClient,
+  storagePaths: string[],
+) {
+  if (storagePaths.length === 0) return
+
+  const { error } = await supabase.storage
+    .from('customer-documents')
+    .remove(storagePaths)
+
+  if (error) {
+    console.warn('Failed to delete customer documents after upload error:', storagePaths, error)
+  }
 }
 
 async function mapCustomerRow(supabase: SupabaseClient, row: CustomerRow): Promise<Customer> {
