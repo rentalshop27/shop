@@ -5,6 +5,7 @@ import {
   canCreateRentalForCustomer,
   findPhoneDuplicate,
   normalizeThaiPhone,
+  sanitizeThaiPhoneInput,
   validateThaiPhone,
 } from './customerRules'
 
@@ -32,6 +33,11 @@ describe('customer rules', () => {
     expect(validateThaiPhone('12323')).toBe(false)
   })
 
+  it('sanitizes formatted pasted phone values before limiting length', () => {
+    expect(sanitizeThaiPhoneInput('098-263-1234')).toBe('0982631234')
+    expect(sanitizeThaiPhoneInput('098 263 1234 ต่อ 55')).toBe('0982631234')
+  })
+
   it('blocks duplicate active customers by normalized phone', () => {
     const duplicate = findPhoneDuplicate([baseCustomer], '098-765 4321')
 
@@ -56,4 +62,3 @@ describe('customer rules', () => {
     ).toBe(true)
   })
 })
-

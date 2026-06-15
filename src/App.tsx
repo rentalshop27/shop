@@ -83,6 +83,7 @@ import {
   findPhoneDuplicate,
   formatMeasurements,
   normalizeThaiPhone,
+  sanitizeThaiPhoneInput,
   profileStatusLabel,
   profileStatusTone,
   validateThaiPhone,
@@ -1860,13 +1861,9 @@ function App() {
                       label="เบอร์โทรศัพท์"
                       value={draft.phone}
                       onChange={(value) => {
-                        const onlyNums = value.replace(/\D/g, '')
-                        if (onlyNums.length <= 10) {
-                          updateDraft('phone', onlyNums)
-                        }
+                        updateDraft('phone', sanitizeThaiPhoneInput(value))
                       }}
                       inputMode="numeric"
-                      maxLength={10}
                       required
                       disabled={isSaving}
                     />
@@ -1882,11 +1879,27 @@ function App() {
                     </label>
                     <label className="field wide">
                       <span>ที่อยู่ปัจจุบัน</span>
-                      <textarea value={draft.currentAddress} onChange={(event) => updateDraft('currentAddress', event.target.value)} rows={3} disabled={isSaving} />
+                      <textarea
+                        value={draft.currentAddress}
+                        onChange={(event) => updateDraft('currentAddress', event.target.value)}
+                        rows={3}
+                        disabled={isSaving}
+                        spellCheck={false}
+                        autoCapitalize="off"
+                        translate="no"
+                      />
                     </label>
                     <label className="field wide">
                       <span>หมายเหตุ</span>
-                      <textarea value={draft.notes} onChange={(event) => updateDraft('notes', event.target.value)} rows={3} disabled={isSaving} />
+                      <textarea
+                        value={draft.notes}
+                        onChange={(event) => updateDraft('notes', event.target.value)}
+                        rows={3}
+                        disabled={isSaving}
+                        spellCheck={false}
+                        autoCapitalize="off"
+                        translate="no"
+                      />
                     </label>
                     <TextField label='รอบอก (นิ้ว)' value={draft.bustIn} onChange={(value) => updateDraft('bustIn', value)} inputMode="decimal" disabled={isSaving} />
                     <TextField label='รอบเอว (นิ้ว)' value={draft.waistIn} onChange={(value) => updateDraft('waistIn', value)} inputMode="decimal" disabled={isSaving} />

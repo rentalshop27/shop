@@ -25,6 +25,10 @@ export function normalizeThaiPhone(phone: string) {
   return phone.replace(/[^\d]/g, '')
 }
 
+export function sanitizeThaiPhoneInput(phone: string) {
+  return normalizeThaiPhone(phone).slice(0, 10)
+}
+
 export function validateThaiPhone(phone: string) {
   const normalized = normalizeThaiPhone(phone)
   return /^0\d{9}$/.test(normalized)
@@ -93,4 +97,3 @@ export function formatMeasurements(customer: Customer) {
     { label: 'ส่วนสูง', value: customer.heightCm ? `${customer.heightCm} cm` : '-' },
   ]
 }
-
