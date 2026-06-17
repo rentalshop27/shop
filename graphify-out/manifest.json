@@ -156,8 +156,16 @@
     "hash": "9080150ca7764459551f31bc5c2eb0c8"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/ReportsPage.tsx": {
-    "mtime": 1781674783.580885,
-    "hash": "540b696828710c438cfd2483561fdeb3"
+    "mtime": 1781675712.6932743,
+    "hash": "fbc26ab8b17f5403dc4aa6792a59b3db"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/reportsMetrics.test.ts": {
+    "mtime": 1781675656.2406762,
+    "hash": "0fd83188d3001681a572bca122b9e57c"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/reportsMetrics.ts": {
+    "mtime": 1781675588.7521937,
+    "hash": "d7fd62caa25a15a9dd87497a27e6ac7f"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/lib/supabase.ts": {
     "mtime": 1781269137.694621,

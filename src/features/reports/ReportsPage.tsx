@@ -16,6 +16,12 @@ import {
 } from 'lucide-react'
 import type { RentalOrder } from '../rentals/rentalTypes'
 import type { StockItem } from '../../App'
+import {
+  buildDressReportsData,
+  buildGeneralStoreMetrics,
+  buildReportsDateRange,
+} from './reportsMetrics'
+import type { DateRangeMode, DressReportItem } from './reportsMetrics'
 import './ReportsPage.css'
 
 // Helper to format currency
@@ -26,51 +32,9 @@ function formatBaht(value: number) {
   })}`
 }
 
-// Helper to convert date string to UTC timestamp (ms) to avoid timezone offsets
-function toUtcDay(dateStr: string) {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  return Date.UTC(year, month - 1, day)
-}
-
-// Helper to get number of days between two dates inclusive
-function getDaysBetween(startStr: string, endStr: string) {
-  const start = toUtcDay(startStr)
-  const end = toUtcDay(endStr)
-  if (end < start) return 0
-  return Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
-}
-
-// Helper to calculate overlap days between a rental period and a range period
-function getOverlapDays(
-  rentStartStr: string, rentEndStr: string,
-  rangeStartStr: string, rangeEndStr: string
-) {
-  const rentStart = toUtcDay(rentStartStr)
-  const rentEnd = toUtcDay(rentEndStr)
-  const rangeStart = toUtcDay(rangeStartStr)
-  const rangeEnd = toUtcDay(rangeEndStr)
-
-  const overlapStart = Math.max(rentStart, rangeStart)
-  const overlapEnd = Math.min(rentEnd, rangeEnd)
-
-  if (overlapEnd < overlapStart) return 0
-  return Math.floor((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1
-}
-
 // Date helper to get string YYYY-MM-DD
 function getLocalDateString(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-interface DressReportItem {
-  stockItem: StockItem
-  rentalCount: number
-  totalRevenue: number
-  averageRevenue: number
-  rentedDays: number
-  totalDays: number
-  emptyDays: number
-  emptyRate: number
 }
 
 type SortField = 'rentalCount' | 'totalRevenue' | 'emptyDays' | 'emptyRate'
@@ -93,7 +57,7 @@ export function ReportsPage({
   const [colorFilter, setColorFilter] = useState('all')
 
   // Date Range Filter States
-  const [dateRangeMode, setDateRangeMode] = useState<'all' | '30days' | 'this_month' | '90days' | 'custom'>('all')
+  const [dateRangeMode, setDateRangeMode] = useState<DateRangeMode>('all')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
 
@@ -123,95 +87,19 @@ export function ReportsPage({
 
   // Resolve active Date Range
   const activeDateRange = useMemo(() => {
-    const end = todayStr
-    let start = '2020-01-01' // default earliest date
-
-    if (dateRangeMode === '30days') {
-      const d = new Date()
-      d.setDate(d.getDate() - 30)
-      start = getLocalDateString(d)
-    } else if (dateRangeMode === 'this_month') {
-      const d = new Date()
-      start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
-    } else if (dateRangeMode === '90days') {
-      const d = new Date()
-      d.setDate(d.getDate() - 90)
-      start = getLocalDateString(d)
-    } else if (dateRangeMode === 'custom') {
-      if (customStartDate) start = customStartDate
-      if (customEndDate) return { start, end: customEndDate }
-    } else {
-      // 'all' time: Find the earliest creation date of stock items or pickup date of rentals
-      const creationDates = stockItems.map(item => item.createdAt ? item.createdAt.substring(0, 10) : '').filter(Boolean)
-      const rentalDates = rentals.map(r => r.pickupDate).filter(Boolean)
-      const allDates = [...creationDates, ...rentalDates].sort()
-      if (allDates.length > 0) {
-        start = allDates[0]
-      } else {
-        start = getLocalDateString(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)) // 1 year ago fallback
-      }
-    }
-    return { start, end }
+    return buildReportsDateRange({
+      mode: dateRangeMode,
+      customStartDate,
+      customEndDate,
+      stockItems,
+      rentals,
+      todayStr,
+    })
   }, [dateRangeMode, customStartDate, customEndDate, stockItems, rentals, todayStr])
 
   // Calculate stats for all dresses in the selected date range
   const dressReportsData = useMemo<DressReportItem[]>(() => {
-    const { start: rangeStart, end: rangeEnd } = activeDateRange
-
-    return stockItems.map(item => {
-      // 1. Resolve item creation date
-      const itemCreatedStr = item.createdAt ? item.createdAt.substring(0, 10) : ''
-      // Effective start is the later of rangeStart or item.createdAt
-      const effectiveStart = itemCreatedStr && itemCreatedStr > rangeStart ? itemCreatedStr : rangeStart
-
-      let totalDays = 0
-      if (effectiveStart <= rangeEnd) {
-        totalDays = getDaysBetween(effectiveStart, rangeEnd)
-      }
-
-      // 2. Filter rentals for this stock item that overlap with the range
-      const itemRentals = rentals.filter(rental => rental.costume.sku === item.sku)
-
-      let rentalCount = 0
-      let totalRevenue = 0
-      let rentedDays = 0
-
-      itemRentals.forEach(rental => {
-        // We only consider rental orders that fall/overlap with [effectiveStart, rangeEnd]
-        const overlap = getOverlapDays(rental.pickupDate, rental.returnDate, effectiveStart, rangeEnd)
-        
-        if (overlap > 0) {
-          // Check if rental is inside range
-          // Let's count it as a rental in this period
-          rentalCount++
-          
-          // Calculate Net Revenue = collectedAmount - depositAmount
-          // If collectedAmount isn't fully paid or custom, use actual net amount paid
-          const netRev = Math.max(0, rental.collectedAmount - rental.depositAmount)
-          totalRevenue += netRev
-          
-          // Add overlap days to rented days
-          rentedDays += overlap
-        }
-      })
-
-      // Adjust rented days to not exceed total active days
-      rentedDays = Math.min(totalDays, rentedDays)
-      const emptyDays = Math.max(0, totalDays - rentedDays)
-      const emptyRate = totalDays > 0 ? (emptyDays / totalDays) * 100 : 0
-      const averageRevenue = rentalCount > 0 ? totalRevenue / rentalCount : 0
-
-      return {
-        stockItem: item,
-        rentalCount,
-        totalRevenue,
-        averageRevenue,
-        rentedDays,
-        totalDays,
-        emptyDays,
-        emptyRate
-      }
-    })
+    return buildDressReportsData(stockItems, rentals, activeDateRange)
   }, [stockItems, rentals, activeDateRange])
 
   // Apply Search, Category, Brand, Size, Color Filters
@@ -251,8 +139,8 @@ export function ReportsPage({
   const sortedDressReports = useMemo(() => {
     const sorted = [...filteredDressReports]
     sorted.sort((a, b) => {
-      let valA = a[sortField]
-      let valB = b[sortField]
+      const valA = a[sortField]
+      const valB = b[sortField]
 
       // Tie breaker by SKU
       if (valA === valB) {
@@ -298,22 +186,7 @@ export function ReportsPage({
 
   // General Store Revenue Metrics (Tab 2)
   const generalStoreMetrics = useMemo(() => {
-    const totalRentalsCount = rentals.length
-    const totalRevenue = rentals.reduce((sum, r) => sum + Math.max(0, r.collectedAmount - r.depositAmount), 0)
-    const avgOrderValue = totalRentalsCount > 0 ? totalRevenue / totalRentalsCount : 0
-
-    // Group rentals by status
-    const statusCounts = rentals.reduce((acc, r) => {
-      acc[r.status] = (acc[r.status] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    return {
-      totalRentalsCount,
-      totalRevenue,
-      avgOrderValue,
-      statusCounts
-    }
+    return buildGeneralStoreMetrics(rentals)
   }, [rentals])
 
   const handleSort = (field: SortField) => {
@@ -491,7 +364,7 @@ export function ReportsPage({
                 <Calendar size={18} className="calendar-icon" />
                 <select
                   value={dateRangeMode}
-                  onChange={e => setDateRangeMode(e.target.value as any)}
+                  onChange={e => setDateRangeMode(e.target.value as DateRangeMode)}
                   className="reports-select-input date-mode-select"
                 >
                   <option value="all">ทั้งหมด (ตั้งแต่เปิดร้าน)</option>
