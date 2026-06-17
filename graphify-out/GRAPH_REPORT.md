@@ -1,16 +1,16 @@
-# Graph Report - Precious Shop  (2026-06-16)
+# Graph Report - Precious-Shop-Test  (2026-06-17)
 
 ## Corpus Check
-- 43 files · ~74,042 words
+- 44 files · ~76,484 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 643 nodes · 1540 edges · 30 communities (25 shown, 5 thin omitted)
+- 675 nodes · 1579 edges · 30 communities (25 shown, 5 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 7 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a23b3f79`
+- Built from commit: `9e6ee10a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -42,9 +42,9 @@
 - [[_COMMUNITY_Community 24|Community 24]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `RentalOrder` - 31 edges
+1. `RentalOrder` - 32 edges
 2. `Customer` - 29 edges
-3. `StockItem` - 25 edges
+3. `StockItem` - 26 edges
 4. `RentalStatus` - 19 edges
 5. `getErrorMessage()` - 18 edges
 6. `StrategyHandler` - 15 edges
@@ -54,16 +54,16 @@
 10. `Router` - 12 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `openEditCustomerForm()` --calls--> `setIsFormOpen()`  [EXTRACTED]
-  src/App.tsx → /Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/RentalsPage.tsx
-- `handleSaveStockItem()` --calls--> `parseOptionalNumber()`  [INFERRED]
-  src/App.tsx → /Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.ts
-- `handleCreateRentals()` --calls--> `findOpenRentalConflict()`  [EXTRACTED]
-  src/App.tsx → /Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalRules.ts
-- `handleDeleteStockItem()` --calls--> `countRemoteRentalsForStockSku()`  [EXTRACTED]
-  src/App.tsx → /Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts
-- `handleDeleteStockItem()` --calls--> `deleteRemoteStockItem()`  [EXTRACTED]
-  src/App.tsx → /Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts
+- `handleCreateRentals()` --calls--> `canCreateRentalForCustomer()`  [EXTRACTED]
+  src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/customers/customerRules.ts
+- `handleUpdateRentalStatus()` --calls--> `updateRemoteRentalStatus()`  [EXTRACTED]
+  src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts
+- `handleDeleteRental()` --calls--> `deleteRemoteRental()`  [EXTRACTED]
+  src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts
+- `refreshAuditLogs()` --calls--> `loadAuditLogs()`  [EXTRACTED]
+  src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/audit/auditRemote.ts
+- `handleCreateRentals()` --calls--> `createRemoteRentals()`  [EXTRACTED]
+  src/App.tsx → /Users/bhusitt./Downloads/Precious Shop/src/features/rentals/rentalRemote.ts
 
 ## Communities (30 total, 5 thin omitted)
 
@@ -72,52 +72,52 @@ Cohesion: 0.02
 Nodes (71): activeCustomers, [activeTab, setActiveTab], [auditLogs, setAuditLogs], baseSku, [brands, setBrands], [categories, setCategories], [colors, setColors], count (+63 more)
 
 ### Community 1 - "Community 1"
+Cohesion: 0.07
+Nodes (55): customer, getTodayString(), makeRental(), makeStockItem(), onUpdateRentalStatus, user, demoCustomers, Customer (+47 more)
+
+### Community 2 - "Community 2"
 Cohesion: 0.06
 Nodes (68): calendarDays, CalendarPageProps, categories, [currentDate, setCurrentDate], currentWeekDays, dayEvents, DayRentalBuckets, DayRentalCategory (+60 more)
 
-### Community 2 - "Community 2"
-Cohesion: 0.1
-Nodes (45): archiveRemoteCustomer(), cleanupUploadedCustomerDocumentPaths(), createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemoteCustomerDocuments(), loadCustomers(), loadOwnerShopId() (+37 more)
-
 ### Community 3 - "Community 3"
 Cohesion: 0.1
-Nodes (50): [collectedAmount, setCollectedAmount], costumeContainerRef, costumeImageUrl, [costumeSearch, setCostumeSearch], [currentPage, setCurrentPage], customerContainerRef, [customerSearch, setCustomerSearch], [depositAmount, setDepositAmount] (+42 more)
+Nodes (51): canCreateRentalForCustomer(), [collectedAmount, setCollectedAmount], costumeContainerRef, costumeImageUrl, [costumeSearch, setCostumeSearch], [currentPage, setCurrentPage], customerContainerRef, [customerSearch, setCustomerSearch] (+43 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.09
-Nodes (37): customer, getTodayString(), makeRental(), makeStockItem(), onUpdateRentalStatus, user, getInventoryDisplayStatus(), item (+29 more)
+Cohesion: 0.11
+Nodes (42): archiveRemoteCustomer(), cleanupUploadedCustomerDocumentPaths(), createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemoteCustomerDocuments(), loadCustomers(), loadOwnerShopId() (+34 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.09
 Nodes (39): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+31 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.12
-Nodes (31): buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, customer, makeRental(), metrics (+23 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.16
 Nodes (29): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), createRemoteStockItems(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadShopSettings() (+21 more)
 
+### Community 7 - "Community 7"
+Cohesion: 0.07
+Nodes (28): activeDateRange, [activeSubTab, setActiveSubTab], [brandFilter, setBrandFilter], brandsList, categoriesList, [categoryFilter, setCategoryFilter], [colorFilter, setColorFilter], colorsList (+20 more)
+
 ### Community 8 - "Community 8"
-Cohesion: 0.2
-Nodes (22): [actionFilter, setActionFilter], actionTranslations, allKeys, AuditLogPageProps, [currentPage, setCurrentPage], fieldTranslations, filteredLogs, formatDateTime() (+14 more)
+Cohesion: 0.14
+Nodes (25): getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, toUtcDay(), [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip (+17 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.26
-Nodes (15): findConflictingRentalForStockSku(), findOpenRentalConflict(), findOpenRentalForStockSku(), hasRentalConflict(), isDateOverlap(), isOpenRental(), isOpenRentalStatus(), openRentalStatuses (+7 more)
+Cohesion: 0.19
+Nodes (23): [actionFilter, setActionFilter], actionTranslations, allKeys, AuditLogPageProps, [currentPage, setCurrentPage], fieldTranslations, filteredLogs, formatDateTime() (+15 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.15
-Nodes (19): updateShopSettings(), archiveSelectedCustomer(), closeStockForm(), closeStockPreview(), getErrorMessage(), handleAddBrand(), handleAddCategory(), handleAddColor() (+11 more)
-
-### Community 11 - "Community 11"
 Cohesion: 0.28
 Nodes (4): executeQuotaErrorCallbacks(), PrecacheStrategy, StrategyHandler, toRequest()
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.21
 Nodes (16): [brandError, setBrandError], [brandSuccess, setBrandSuccess], [categoryError, setCategoryError], [categorySuccess, setCategorySuccess], [colorError, setColorError], [colorSuccess, setColorSuccess], handleAddBrandSubmit(), handleAddCategorySubmit() (+8 more)
+
+### Community 12 - "Community 12"
+Cohesion: 0.16
+Nodes (18): updateShopSettings(), archiveSelectedCustomer(), closeStockForm(), closeStockPreview(), getErrorMessage(), handleAddBrand(), handleAddCategory(), handleAddColor() (+10 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.16
@@ -127,9 +127,9 @@ Nodes (7): getOrCreateDefaultRouter(), hasMethod(), isOneOf(), isType(), normali
 Cohesion: 0.16
 Nodes (3): createCacheKey(), PrecacheController, waitUntil()
 
-### Community 16 - "Community 16"
-Cohesion: 0.35
-Nodes (9): createRemoteRental(), createRemoteRentals(), deleteRemoteRental(), loadRentals(), mapRentalRow(), RentalRow, toRentalInsert(), updateRemoteRentalStatus() (+1 more)
+### Community 15 - "Community 15"
+Cohesion: 0.24
+Nodes (14): availableCostume, CreateRentalsHandler, customer, existingRental, heading, image, makeRental(), makeStockItem() (+6 more)
 
 ### Community 17 - "Community 17"
 Cohesion: 0.18
@@ -148,24 +148,24 @@ Cohesion: 0.6
 Nodes (3): hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
 ## Knowledge Gaps
-- **78 isolated node(s):** `emptyDraft`, `ViewKey`, `StockDraft`, `emptyStockDraft`, `statusOptions` (+73 more)
+- **103 isolated node(s):** `emptyDraft`, `ViewKey`, `StockDraft`, `emptyStockDraft`, `statusOptions` (+98 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `RentalOrder` connect `Community 4` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 6`, `Community 9`, `Community 16`?**
-  _High betweenness centrality (0.050) - this node is a cross-community bridge._
-- **Why does `Customer` connect `Community 2` to `Community 0`, `Community 3`, `Community 4`, `Community 6`, `Community 9`, `Community 16`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `RentalStatus` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 9`, `Community 16`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `RentalOrder` connect `Community 1` to `Community 0`, `Community 2`, `Community 3`, `Community 7`, `Community 8`, `Community 15`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+- **Why does `StockItem` connect `Community 1` to `Community 0`, `Community 3`, `Community 6`, `Community 7`, `Community 15`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `Customer` connect `Community 1` to `Community 0`, `Community 3`, `Community 4`, `Community 15`?**
+  _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **What connects `emptyDraft`, `ViewKey`, `StockDraft` to the rest of the system?**
-  _78 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _103 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.1 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06 - nodes in this community are weakly interconnected._

@@ -30,6 +30,7 @@ import {
   X,
   History,
   Shirt,
+  BarChart3,
 } from 'lucide-react'
 import './index.css'
 import { DashboardPage } from './features/dashboard/DashboardPage'
@@ -37,6 +38,7 @@ import { RentalsPage } from './features/rentals/RentalsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { AuditLogPage } from './features/audit/AuditLogPage'
+import { ReportsPage } from './features/reports/ReportsPage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
@@ -103,7 +105,7 @@ const emptyDraft: CustomerDraft = {
   heightCm: '',
 }
 
-type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit'
+type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports'
 
 export type StockItemStatus = 'available' | 'repair' | 'wash'
 
@@ -1590,6 +1592,14 @@ function App() {
         </div>
         <div className="mobile-top-actions">
           <button
+            className={`mobile-action-btn ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => handleTabChange('reports')}
+            title="รายงาน"
+            type="button"
+          >
+            <BarChart3 size={20} />
+          </button>
+          <button
             className={`mobile-action-btn ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => handleTabChange('settings')}
             title="ตั้งค่า"
@@ -2156,7 +2166,14 @@ function App() {
           />
         )}
 
-        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && (
+        {activeTab === 'reports' && (
+          <ReportsPage
+            rentals={rentals}
+            stockItems={stockItems}
+          />
+        )}
+
+        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && (
           <div style={{ padding: '80px 40px', textAlign: 'center', color: '#c7bfb9' }}>
             <p className="eyebrow" style={{ marginBottom: '16px' }}>Precious Shop</p>
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: '#fff7ef', marginBottom: '12px' }}>
@@ -2228,6 +2245,7 @@ function SideNav({
     { id: 'customers', label: 'ลูกค้า', icon: UserRound },
     { id: 'rentals', label: 'เช่า/คืน', icon: CalendarCheck },
     { id: 'calendar', label: 'ปฏิทิน', icon: CalendarDays },
+    { id: 'reports', label: 'รายงาน', icon: BarChart3 },
     { id: 'settings', label: 'ตั้งค่า', icon: Settings },
     { id: 'audit', label: 'ประวัติระบบ', icon: History },
   ]
