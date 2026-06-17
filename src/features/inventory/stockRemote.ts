@@ -61,10 +61,11 @@ export function dataURLtoFile(dataurl: string, filename: string): File {
   return new File([u8arr], filename, { type: mime })
 }
 
-export async function loadStockItems(supabase: SupabaseClient): Promise<StockItem[]> {
+export async function loadStockItems(supabase: SupabaseClient, shopId: string): Promise<StockItem[]> {
   const { data, error } = await supabase
     .from('stock_items')
     .select('*')
+    .eq('shop_id', shopId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

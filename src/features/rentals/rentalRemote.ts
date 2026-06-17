@@ -22,12 +22,14 @@ type RentalRow = {
 
 export async function loadRentals(
   supabase: SupabaseClient,
+  shopId: string,
   customers: Customer[],
   stockItems: StockItem[],
 ): Promise<RentalOrder[]> {
   const { data, error } = await supabase
     .from('rentals')
     .select('*')
+    .eq('shop_id', shopId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

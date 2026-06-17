@@ -1,8 +1,34 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
-import { countRemoteRentalsForStockSku, createRemoteStockItems } from './stockRemote'
+import {
+  countRemoteRentalsForStockSku,
+  createRemoteStockItems,
+  loadShopSettings,
+  loadStockItems,
+  updateShopSettings,
+} from './stockRemote'
 
 describe('stock remote', () => {
+  it('loads stock items for the active shop only', async () => {
+    const filters: Array<[string, string]> = []
+    const order = vi.fn(() => ({ data: [], error: null }))
+    const eq = vi.fn((column: string, value: string) => {
+      filters.push([column, value])
+      return { order }
+    })
+    const select = vi.fn(() => ({ eq }))
+    const supabase = {
+      from: vi.fn(() => ({ select })),
+    } as unknown as SupabaseClient
+
+    await loadStockItems(supabase, 'shop_1')
+
+    expect(supabase.from).toHaveBeenCalledWith('stock_items')
+    expect(select).toHaveBeenCalledWith('*')
+    expect(filters).toEqual([['shop_id', 'shop_1']])
+    expect(order).toHaveBeenCalledWith('created_at', { ascending: false })
+  })
+
   it('counts rentals for a stock SKU within the active shop only', async () => {
     const filters: Array<[string, string]> = []
     const terminalResult = { count: 2, error: null }
@@ -26,6 +52,68 @@ describe('stock remote', () => {
       ['shop_id', 'shop_1'],
       ['stock_item_sku', 'SKU-001'],
     ])
+  })
+
+  it('loads settings for the active shop only', async () => {
+    const filters: Array<[string, string]> = []
+    const maybeSingle = vi.fn(() => ({
+      data: {
+        brands: ['Precious'],
+        categories: ['ชุดราตรี'],
+        colors: ['ดำ'],
+      },
+      error: null,
+    }))
+    const eq = vi.fn((column: string, value: string) => {
+      filters.push([column, value])
+      return { maybeSingle }
+    })
+    const select = vi.fn(() => ({ eq }))
+    const supabase = {
+      from: vi.fn(() => ({ select })),
+    } as unknown as SupabaseClient
+
+    const settings = await loadShopSettings(supabase, 'shop_1')
+
+    expect(supabase.from).toHaveBeenCalledWith('shops')
+    expect(select).toHaveBeenCalledWith('brands, categories, colors')
+    expect(filters).toEqual([['id', 'shop_1']])
+    expect(maybeSingle).toHaveBeenCalled()
+    expect(settings).toEqual({
+      brands: ['Precious'],
+      categories: ['ชุดราตรี'],
+      colors: ['ดำ'],
+    })
+  })
+
+  it('updates settings for the active shop only', async () => {
+    const filters: Array<[string, string]> = []
+    const updatePayloads: unknown[] = []
+    const eq = vi.fn((column: string, value: string) => {
+      filters.push([column, value])
+      return { error: null }
+    })
+    const update = vi.fn((payload: unknown) => {
+      updatePayloads.push(payload)
+      return { eq }
+    })
+    const supabase = {
+      from: vi.fn(() => ({ update })),
+    } as unknown as SupabaseClient
+
+    await updateShopSettings(supabase, 'shop_1', {
+      brands: ['Precious'],
+      categories: ['ชุดราตรี'],
+      colors: ['ดำ'],
+    })
+
+    expect(supabase.from).toHaveBeenCalledWith('shops')
+    expect(filters).toEqual([['id', 'shop_1']])
+    expect(updatePayloads[0]).toMatchObject({
+      brands: ['Precious'],
+      categories: ['ชุดราตรี'],
+      colors: ['ดำ'],
+    })
   })
 
   it('rolls back previously created stock items when batch creation fails', async () => {

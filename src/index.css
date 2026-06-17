@@ -81,6 +81,10 @@ button {
   width: 100%;
 }
 
+.side-nav-shop-switcher {
+  margin-bottom: 24px;
+}
+
 .side-nav nav {
   display: grid;
   gap: 12px;
@@ -126,6 +130,23 @@ button {
   width: min(100%, 1920px);
   min-height: 100vh;
   padding: 40px 48px 56px;
+}
+
+.active-shop-banner {
+  align-items: center;
+  background: rgba(218, 165, 32, 0.08);
+  border: 1px solid rgba(218, 165, 32, 0.18);
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+}
+
+.active-shop-banner strong {
+  color: var(--text-bright);
+  font-size: 18px;
 }
 
 .page-header {
@@ -405,6 +426,62 @@ h1 {
   font-weight: 600;
   margin-bottom: 24px;
   padding: 12px 18px;
+}
+
+.shop-switcher-field {
+  display: grid;
+  gap: 8px;
+}
+
+.shop-switcher-field span {
+  color: var(--text-gold);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shop-switcher-field select {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-bright);
+  min-height: 44px;
+  padding: 0 14px;
+  width: 100%;
+}
+
+.shop-selection-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-selection-card {
+  align-items: flex-start;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-bright);
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.shop-selection-card strong {
+  font-size: 18px;
+}
+
+.shop-selection-card span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shop-selection-card:hover {
+  border-color: rgba(218, 165, 32, 0.35);
+  transform: translateY(-1px);
 }
 
 /* Customer Grid & Panels */
@@ -1095,6 +1172,10 @@ select {
   grid-template-columns: 1fr;
 }
 
+.mobile-shop-switcher {
+  display: none;
+}
+
 /* Inventory */
 .inventory-panel {
   padding: 24px;
@@ -1549,14 +1630,16 @@ select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 56px;
+    min-height: 56px;
     background: var(--bg-sidebar);
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: 0 16px;
+    padding: 10px 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   .mobile-brand-logo {
@@ -1574,6 +1657,16 @@ select {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: auto;
+  }
+
+  .mobile-shop-switcher {
+    display: block;
+    flex: 1 1 100%;
+  }
+
+  .mobile-shop-switcher .shop-switcher-field span {
+    font-size: 11px;
   }
 
   .mobile-action-btn {
@@ -1854,6 +1947,11 @@ select {
 
   .app-shell {
     padding: 16px 12px 90px !important;
+  }
+
+  .active-shop-banner {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .page-header {
@@ -4712,4 +4810,3 @@ select {
   border-color: rgba(223, 183, 80, 0.7);
   box-shadow: 0 0 0 2px rgba(223, 183, 80, 0.12);
 }
-

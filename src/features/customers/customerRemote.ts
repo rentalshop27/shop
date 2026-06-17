@@ -32,21 +32,26 @@ type CustomerRow = {
   customer_documents?: CustomerDocumentRow[]
 }
 
-export async function loadOwnerShopId(supabase: SupabaseClient) {
-  const { data, error } = await supabase
-    .from('shops')
-    .select('id')
-    .limit(1)
-    .maybeSingle()
-
-  if (error) throw error
-  return data?.id ?? null
+export type ShopSummary = {
+  id: string
+  name: string
 }
 
-export async function loadCustomers(supabase: SupabaseClient) {
+export async function loadAccessibleShops(supabase: SupabaseClient): Promise<ShopSummary[]> {
+  const { data, error } = await supabase
+    .from('shops')
+    .select('id, name')
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []) as ShopSummary[]
+}
+
+export async function loadCustomers(supabase: SupabaseClient, shopId: string) {
   const { data, error } = await supabase
     .from('customers')
     .select('*, customer_documents(*)')
+    .eq('shop_id', shopId)
     .is('archived_at', null)
     .order('created_at', { ascending: false })
 

@@ -3,7 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Customer } from './customerTypes'
-import { uploadRemoteCustomerDocuments } from './customerRemote'
+import { loadAccessibleShops, loadCustomers, uploadRemoteCustomerDocuments } from './customerRemote'
 
 const customer: Customer = {
   id: 'customer_1',
@@ -23,6 +23,57 @@ const customer: Customer = {
 }
 
 describe('customer remote', () => {
+  it('loads every accessible shop for the authenticated user', async () => {
+    const order = vi.fn(() => ({
+      data: [
+        { id: 'shop_1', name: 'Precious Siam' },
+        { id: 'shop_2', name: 'Precious Silom' },
+      ],
+      error: null,
+    }))
+    const select = vi.fn(() => ({ order }))
+    const supabase = {
+      from: vi.fn(() => ({ select })),
+    } as unknown as SupabaseClient
+
+    const shops = await loadAccessibleShops(supabase)
+
+    expect(supabase.from).toHaveBeenCalledWith('shops')
+    expect(select).toHaveBeenCalledWith('id, name')
+    expect(order).toHaveBeenCalledWith('created_at', { ascending: true })
+    expect(shops).toEqual([
+      { id: 'shop_1', name: 'Precious Siam' },
+      { id: 'shop_2', name: 'Precious Silom' },
+    ])
+  })
+
+  it('filters customers by the selected shop id', async () => {
+    const filters: Array<[string, string | null]> = []
+    const order = vi.fn(() => ({ data: [], error: null }))
+    const is = vi.fn((column: string, value: null) => {
+      filters.push([column, value])
+      return { order }
+    })
+    const eq = vi.fn((column: string, value: string) => {
+      filters.push([column, value])
+      return { is }
+    })
+    const select = vi.fn(() => ({ eq }))
+    const supabase = {
+      from: vi.fn(() => ({ select })),
+    } as unknown as SupabaseClient
+
+    await loadCustomers(supabase, 'shop_1')
+
+    expect(supabase.from).toHaveBeenCalledWith('customers')
+    expect(select).toHaveBeenCalledWith('*, customer_documents(*)')
+    expect(filters).toEqual([
+      ['shop_id', 'shop_1'],
+      ['archived_at', null],
+    ])
+    expect(order).toHaveBeenCalledWith('created_at', { ascending: false })
+  })
+
   it('removes uploaded document files when document row insert fails', async () => {
     const uploadedPaths: string[] = []
     const removedPaths: string[][] = []

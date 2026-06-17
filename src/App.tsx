@@ -56,8 +56,9 @@ import {
   archiveRemoteCustomer,
   createRemoteCustomer,
   deleteRemoteCustomerDocuments,
+  loadAccessibleShops,
   loadCustomers,
-  loadOwnerShopId,
+  type ShopSummary,
   updateRemoteCustomer,
   updateRemoteCustomerRisk,
   updateRemoteCustomerStatus,
@@ -163,6 +164,11 @@ const emptyStockDraft: StockDraft = {
 }
 
 const demoStockItems: StockItem[] = demoStockItemsForRentals
+const DEMO_SHOP_ID = 'shop_demo'
+const DEFAULT_BRANDS = ['Precious', 'Chanel', 'Dior', 'Gucci']
+const DEFAULT_CATEGORIES = ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
+const DEFAULT_COLORS = ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
+const LAST_SELECTED_SHOP_KEY_PREFIX = 'precious_last_shop:'
 
 const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; label: string }> = [
   { value: 'all', label: 'ทุกสถานะ' },
@@ -175,13 +181,14 @@ const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; 
 
 async function refreshAuditLogs(
   isAuthenticated: boolean,
+  shopId: string | null,
   setLoadingAudit: (loading: boolean) => void,
   setAuditLogs: (logs: AuditLog[]) => void,
 ) {
-  if (!supabase || !isAuthenticated) return
+  if (!supabase || !isAuthenticated || !shopId) return
   try {
     setLoadingAudit(true)
-    const logs = await loadAuditLogs(supabase)
+    const logs = await loadAuditLogs(supabase, shopId)
     setAuditLogs(logs)
   } catch (error) {
     console.warn('Failed to load audit logs from Supabase, using demo logs:', error)
@@ -196,6 +203,35 @@ function formatBaht(value: number) {
     minimumFractionDigits: value % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   })}`
+}
+
+function getLocalArray<T>(key: string, fallback: T[]): T[] {
+  if (hasSupabaseConfig) return fallback
+
+  const saved = localStorage.getItem(key)
+  if (!saved) return fallback
+
+  try {
+    return JSON.parse(saved) as T[]
+  } catch {
+    return fallback
+  }
+}
+
+function getLastSelectedShopKey(userId: string) {
+  return `${LAST_SELECTED_SHOP_KEY_PREFIX}${userId}`
+}
+
+function getPreferredShopId(userId: string | null, shops: ShopSummary[]) {
+  if (shops.length === 0) return null
+  if (!userId) return shops.length === 1 ? shops[0].id : null
+
+  const savedShopId = localStorage.getItem(getLastSelectedShopKey(userId))
+  if (savedShopId && shops.some((shop) => shop.id === savedShopId)) {
+    return savedShopId
+  }
+
+  return shops.length === 1 ? shops[0].id : null
 }
 
 function CurrencyField({
@@ -261,19 +297,11 @@ function App() {
     }
   }
 
-  const [customers, setCustomers] = useState<Customer[]>(demoCustomers)
-  const [stockItems, setStockItems] = useState<StockItem[]>(() => {
-    const saved = localStorage.getItem('precious_stock_items')
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return demoStockItems
-      }
-    }
-    return demoStockItems
-  })
-  const [selectedCustomerId, setSelectedCustomerId] = useState(demoCustomers[0]?.id ?? '')
+  const [customers, setCustomers] = useState<Customer[]>(hasSupabaseConfig ? [] : demoCustomers)
+  const [stockItems, setStockItems] = useState<StockItem[]>(() =>
+    getLocalArray('precious_stock_items', demoStockItems)
+  )
+  const [selectedCustomerId, setSelectedCustomerId] = useState(hasSupabaseConfig ? '' : demoCustomers[0]?.id ?? '')
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [stockQuery, setStockQuery] = useState('')
@@ -333,55 +361,31 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
-  const [brands, setBrands] = useState<string[]>(() => {
-    const saved = localStorage.getItem('precious_brands')
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return ['Precious', 'Chanel', 'Dior', 'Gucci']
-      }
-    }
-    return ['Precious', 'Chanel', 'Dior', 'Gucci']
-  })
-
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('precious_categories')
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
-      }
-    }
-    return ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
-  })
-
-  const [colors, setColors] = useState<string[]>(() => {
-    const saved = localStorage.getItem('precious_colors')
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
-      }
-    }
-    return ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
-  })
+  const [brands, setBrands] = useState<string[]>(() => getLocalArray('precious_brands', DEFAULT_BRANDS))
+  const [categories, setCategories] = useState<string[]>(() => getLocalArray('precious_categories', DEFAULT_CATEGORIES))
+  const [colors, setColors] = useState<string[]>(() => getLocalArray('precious_colors', DEFAULT_COLORS))
+  const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
+  const [authUserId, setAuthUserId] = useState<string | null>(null)
+  const [shopsReady, setShopsReady] = useState(!hasSupabaseConfig)
+  const [isShopDataLoading, setIsShopDataLoading] = useState(false)
 
   useEffect(() => {
+    if (hasSupabaseConfig) return
     localStorage.setItem('precious_brands', JSON.stringify(brands))
   }, [brands])
 
   useEffect(() => {
+    if (hasSupabaseConfig) return
     localStorage.setItem('precious_categories', JSON.stringify(categories))
   }, [categories])
 
   useEffect(() => {
+    if (hasSupabaseConfig) return
     localStorage.setItem('precious_colors', JSON.stringify(colors))
   }, [colors])
 
   useEffect(() => {
+    if (hasSupabaseConfig) return
     localStorage.setItem('precious_stock_items', JSON.stringify(stockItems))
   }, [stockItems])
 
@@ -611,6 +615,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!hasSupabaseConfig)
   const [shopId, setShopId] = useState<string | null>(null)
   const [remoteError, setRemoteError] = useState('')
+  const currentShop = availableShops.find((shop) => shop.id === shopId) ?? null
 
   useEffect(() => {
     if (!supabase) return
@@ -620,11 +625,20 @@ function App() {
     supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return
       setIsAuthenticated(Boolean(data.session))
+      setAuthUserId(data.session?.user.id ?? null)
+      setShopsReady(!data.session)
       setSessionReady(true)
     })
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(Boolean(session))
+      setAuthUserId(session?.user.id ?? null)
+      setShopsReady(!session)
+      if (!session) {
+        setAvailableShops([])
+        setShopId(null)
+        setRemoteError('')
+      }
       setSessionReady(true)
     })
 
@@ -635,58 +649,132 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!supabase || !isAuthenticated) return
+    if (!supabase || !isAuthenticated || !authUserId) return
 
-    const client = supabase
+    let cancelled = false
 
-    Promise.resolve()
-      .then(() => {
-        setRemoteError('')
-        return Promise.all([
-          loadOwnerShopId(client),
-          loadCustomers(client),
-          loadStockItems(client)
-        ])
-      })
-      .then(async ([loadedShopId, loadedCustomers, loadedStock]) => {
-        setShopId(loadedShopId)
-        setCustomers(loadedCustomers)
-        setStockItems(loadedStock)
-        setSelectedCustomerId(loadedCustomers[0]?.id ?? '')
-        if (!loadedShopId) {
+    setShopsReady(false)
+    setRemoteError('')
+
+    loadAccessibleShops(supabase)
+      .then((shops) => {
+        if (cancelled) return
+
+        setAvailableShops(shops)
+
+        if (shops.length === 0) {
+          setShopId(null)
           setRemoteError('ยังไม่พบร้านของผู้ใช้นี้ กรุณาสร้าง row ใน shops และ shop_members ก่อน')
-          return null
+          return
         }
-        const [settings, loadedRentals] = await Promise.all([
-          loadShopSettings(client, loadedShopId),
-          loadRentals(client, loadedCustomers, loadedStock),
-        ])
-        setRentals(loadedRentals)
-        return settings
-      })
-      .then((settings) => {
-        if (settings) {
-          if (settings.brands && settings.brands.length > 0) setBrands(settings.brands)
-          if (settings.categories && settings.categories.length > 0) setCategories(settings.categories)
-          if (settings.colors && settings.colors.length > 0) setColors(settings.colors)
-        }
+
+        setShopId(getPreferredShopId(authUserId, shops))
       })
       .catch((error: unknown) => {
+        if (cancelled) return
+        setAvailableShops([])
+        setShopId(null)
         setRemoteError(getErrorMessage(error))
       })
-  }, [isAuthenticated])
+      .finally(() => {
+        if (!cancelled) {
+          setShopsReady(true)
+        }
+      })
 
-  async function handleLoadAuditLogs() {
-    await refreshAuditLogs(isAuthenticated, setLoadingAudit, setAuditLogs)
-  }
+    return () => {
+      cancelled = true
+    }
+  }, [authUserId, isAuthenticated])
 
   useEffect(() => {
-    if (!supabase || !isAuthenticated) {
-      setAuditLogs(demoAuditLogs)
-      return
+    if (!authUserId || !shopId) return
+    localStorage.setItem(getLastSelectedShopKey(authUserId), shopId)
+  }, [authUserId, shopId])
+
+  useEffect(() => {
+    if (!supabase || !isAuthenticated || !shopId) return
+
+    let cancelled = false
+    const client = supabase
+
+    setIsShopDataLoading(true)
+    setRemoteError('')
+    setCustomers([])
+    setStockItems([])
+    setRentals([])
+    setAuditLogs([])
+    setSelectedCustomerId('')
+    setFormError('')
+    setStockFormError('')
+    setIsMobileDetailOpen(false)
+    setIsFormOpen(false)
+    setIsStockFormOpen(false)
+    setEditingCustomerId(null)
+    setEditingStockId(null)
+    setPreviewStockId(null)
+    setPreviewCustomerDocOwnerId(null)
+    setPreviewCustomerDocIndex(0)
+    setPreviewImageIndex(0)
+    setExternalSelectedRentalId('')
+    setExternalIsFormOpen(false)
+    setExternalPickupDate('')
+    setExternalReturnDate('')
+    setDraft(emptyDraft)
+    setDraftDocuments([])
+    setExistingDocuments([])
+    setDeletedDocumentIds([])
+    setStockDraft(emptyStockDraft)
+    setQuery('')
+    setStockQuery('')
+    setCurrentPage(1)
+    setStatusFilter('all')
+    setBrands(DEFAULT_BRANDS)
+    setCategories(DEFAULT_CATEGORIES)
+    setColors(DEFAULT_COLORS)
+
+    Promise.all([
+      loadCustomers(client, shopId),
+      loadStockItems(client, shopId),
+      loadShopSettings(client, shopId),
+      loadAuditLogs(client, shopId),
+    ])
+      .then(async ([loadedCustomers, loadedStock, settings, loadedAuditLogs]) => {
+        if (cancelled) return
+
+        setCustomers(loadedCustomers)
+        setStockItems(loadedStock)
+        setAuditLogs(loadedAuditLogs)
+        setSelectedCustomerId(loadedCustomers[0]?.id ?? '')
+
+        const loadedRentals = await loadRentals(client, shopId, loadedCustomers, loadedStock)
+        if (cancelled) return
+
+        setRentals(loadedRentals)
+
+        if (settings?.brands?.length) setBrands(settings.brands)
+        if (settings?.categories?.length) setCategories(settings.categories)
+        if (settings?.colors?.length) setColors(settings.colors)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        setRemoteError(getErrorMessage(error))
+        setAuditLogs(demoAuditLogs)
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsShopDataLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
     }
-    refreshAuditLogs(isAuthenticated, setLoadingAudit, setAuditLogs)
-  }, [isAuthenticated])
+  }, [isAuthenticated, shopId])
+
+  async function handleLoadAuditLogs() {
+    await refreshAuditLogs(isAuthenticated, shopId, setLoadingAudit, setAuditLogs)
+  }
 
   const activeCustomers = customers.filter((customer) => !customer.archivedAt)
 
@@ -998,7 +1086,7 @@ function App() {
             )
           }
 
-          const loadedCustomers = await loadCustomers(supabase)
+          const loadedCustomers = await loadCustomers(supabase, updatedCustomer.shopId)
           setCustomers(loadedCustomers)
           setSelectedCustomerId(updatedCustomer.id)
           setIsMobileDetailOpen(true)
@@ -1076,7 +1164,7 @@ function App() {
             newCustomer,
             draftDocuments.map((d) => d.file),
           )
-          const loadedCustomers = await loadCustomers(supabase)
+          const loadedCustomers = await loadCustomers(supabase, shopId)
           setCustomers(loadedCustomers)
           setSelectedCustomerId(newCustomer.id)
         } else {
@@ -1094,7 +1182,7 @@ function App() {
       const now = new Date().toISOString()
       const newCustomer: Customer = {
         id: crypto.randomUUID(),
-        shopId: 'shop_demo',
+        shopId: DEMO_SHOP_ID,
         customerCode: createCustomerCode(),
         fullName: draft.fullName.trim(),
         lineAccount: draft.lineAccount.trim(),
@@ -1298,7 +1386,7 @@ function App() {
               itemDrafts.push(itemDraft)
             }
             await createRemoteStockItems(supabase, shopId, itemDrafts)
-            const loadedStock = await loadStockItems(supabase)
+            const loadedStock = await loadStockItems(supabase, shopId)
             setStockItems(loadedStock)
           } else {
             const itemDraft: Omit<StockItem, 'id' | 'createdAt'> = {
@@ -1402,9 +1490,9 @@ function App() {
         closeStockForm()
       }
     } catch (err) {
-      if (supabase && isAuthenticated) {
+      if (supabase && isAuthenticated && shopId) {
         try {
-          const loadedStock = await loadStockItems(supabase)
+          const loadedStock = await loadStockItems(supabase, shopId)
           setStockItems(loadedStock)
         } catch (reloadError) {
           console.warn('Failed to reload stock after save error:', reloadError)
@@ -1518,7 +1606,7 @@ function App() {
     if (supabase) {
       try {
         await uploadRemoteCustomerDocuments(supabase, selectedCustomer, filesToUpload)
-        const loadedCustomers = await loadCustomers(supabase)
+        const loadedCustomers = await loadCustomers(supabase, selectedCustomer.shopId)
         setCustomers(loadedCustomers)
         setSelectedCustomerId(selectedCustomer.id)
       } catch (error) {
@@ -1551,10 +1639,10 @@ function App() {
   }
 
   async function refreshCustomerDocumentUrls(customerId: string) {
-    if (!supabase) return
+    if (!supabase || !shopId) return
 
     try {
-      const loadedCustomers = await loadCustomers(supabase)
+      const loadedCustomers = await loadCustomers(supabase, shopId)
       setCustomers(loadedCustomers)
       setSelectedCustomerId(customerId)
     } catch (error) {
@@ -1584,12 +1672,42 @@ function App() {
     return <LoginScreen />
   }
 
+  if (hasSupabaseConfig && !shopsReady) {
+    return <LoadingScreen title="กำลังตรวจสอบร้านค้า" subtitle="กำลังโหลดรายการร้านที่บัญชีนี้เข้าใช้งานได้" />
+  }
+
+  if (hasSupabaseConfig && availableShops.length === 0) {
+    return <EmptyShopAccessScreen message={remoteError || 'ยังไม่พบร้านสำหรับบัญชีนี้'} />
+  }
+
+  if (hasSupabaseConfig && availableShops.length > 1 && !shopId) {
+    return <ShopSelectScreen shops={availableShops} onSelectShop={setShopId} />
+  }
+
+  if (hasSupabaseConfig && isShopDataLoading) {
+    return <LoadingScreen title="กำลังสลับร้าน" subtitle="กำลังโหลดข้อมูลของร้านที่เลือก" />
+  }
+
   return (
     <div className="app-layout">
       <div className="mobile-top-bar">
         <div className="mobile-brand-logo">
           <img src="/web-logo.png" alt="Precious Rental" />
         </div>
+        {availableShops.length > 1 && (
+          <div className="mobile-shop-switcher">
+            <label className="shop-switcher-field">
+              <span>ร้านที่ใช้งาน</span>
+              <select value={shopId ?? ''} onChange={(event) => setShopId(event.target.value)}>
+                {availableShops.map((shop) => (
+                  <option key={shop.id} value={shop.id}>
+                    {shop.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
         <div className="mobile-top-actions">
           <button
             className={`mobile-action-btn ${activeTab === 'reports' ? 'active' : ''}`}
@@ -1618,8 +1736,22 @@ function App() {
         </div>
       </div>
 
-      <SideNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <SideNav
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        availableShops={availableShops}
+        selectedShopId={shopId}
+        onShopChange={setShopId}
+      />
       <main className="app-shell">
+        {currentShop && (
+          <section className="active-shop-banner" aria-label="ร้านที่กำลังใช้งาน">
+            <p className="eyebrow">ร้านที่กำลังใช้งาน</p>
+            <strong>{currentShop.name}</strong>
+          </section>
+        )}
+        {remoteError && <section className="remote-error">{remoteError}</section>}
+
         {activeTab === 'dashboard' && (
           <DashboardPage
             rentals={rentals}
@@ -1754,8 +1886,6 @@ function App() {
                 isActive={statusFilter === 'incomplete'}
               />
             </section>
-
-            {remoteError && <section className="remote-error">{remoteError}</section>}
 
             <section className="customer-grid">
               <div className="panel customer-list-panel">
@@ -2235,9 +2365,15 @@ function App() {
 function SideNav({
   activeTab,
   onTabChange,
+  availableShops,
+  selectedShopId,
+  onShopChange,
 }: {
   activeTab: ViewKey
   onTabChange: (tab: ViewKey) => void
+  availableShops: ShopSummary[]
+  selectedShopId: string | null
+  onShopChange: (shopId: string) => void
 }) {
   const items: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
@@ -2255,6 +2391,20 @@ function SideNav({
       <div className="brand-logo" aria-label="Precious Rental">
         <img src="/web-logo.png" alt="Precious Rental" style={{ width: '100%', maxWidth: '160px', height: 'auto', display: 'block', margin: '0 auto' }} />
       </div>
+      {availableShops.length > 1 && (
+        <div className="side-nav-shop-switcher">
+          <label className="shop-switcher-field">
+            <span>สลับร้าน</span>
+            <select value={selectedShopId ?? ''} onChange={(event) => onShopChange(event.target.value)}>
+              {availableShops.map((shop) => (
+                <option key={shop.id} value={shop.id}>
+                  {shop.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       <nav>
         {items.map(({ id, label, icon: Icon }) => (
           <button
@@ -3310,12 +3460,62 @@ function LoginScreen() {
   )
 }
 
-function LoadingScreen() {
+function ShopSelectScreen({
+  shops,
+  onSelectShop,
+}: {
+  shops: ShopSummary[]
+  onSelectShop: (shopId: string) => void
+}) {
   return (
     <main className="auth-shell">
       <section className="modal-panel auth-panel">
         <p className="eyebrow">Precious Shop</p>
-        <h1>กำลังเตรียมระบบ</h1>
+        <h1>เลือกร้านที่ต้องการเข้าใช้งาน</h1>
+        <p className="subtitle">บัญชีนี้มีสิทธิ์เข้าหลายร้าน เลือกร้านที่จะเปิดก่อนเริ่มงาน</p>
+        <div className="shop-selection-grid">
+          {shops.map((shop) => (
+            <button
+              key={shop.id}
+              className="shop-selection-card"
+              type="button"
+              onClick={() => onSelectShop(shop.id)}
+            >
+              <strong>{shop.name}</strong>
+              <span>เข้าสู่ร้านนี้</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function EmptyShopAccessScreen({ message }: { message: string }) {
+  return (
+    <main className="auth-shell">
+      <section className="modal-panel auth-panel">
+        <p className="eyebrow">Precious Shop</p>
+        <h1>ยังไม่พบบัญชีร้านค้า</h1>
+        <p className="subtitle">{message}</p>
+      </section>
+    </main>
+  )
+}
+
+function LoadingScreen({
+  title = 'กำลังเตรียมระบบ',
+  subtitle,
+}: {
+  title?: string
+  subtitle?: string
+}) {
+  return (
+    <main className="auth-shell">
+      <section className="modal-panel auth-panel">
+        <p className="eyebrow">Precious Shop</p>
+        <h1>{title}</h1>
+        {subtitle && <p className="subtitle">{subtitle}</p>}
       </section>
     </main>
   )

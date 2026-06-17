@@ -25,7 +25,7 @@ npm run dev
 
 ## Supabase
 
-1. รัน SQL ใน `supabase/migrations/` ตามลำดับ `0001` ถึง `0004`
+1. รัน SQL ใน `supabase/migrations/` ตามลำดับเลขไฟล์ทั้งหมดที่มีอยู่ในโฟลเดอร์
 2. สร้าง owner user ใน Supabase Auth
 3. สร้าง `shops` และ `shop_members` ให้ user คนนั้นเป็น owner
 4. คัดลอก `.env.example` เป็น `.env.local`

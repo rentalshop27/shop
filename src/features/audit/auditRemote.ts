@@ -28,10 +28,11 @@ export interface AuditLog {
   createdAt: string
 }
 
-export async function loadAuditLogs(supabase: SupabaseClient): Promise<AuditLog[]> {
+export async function loadAuditLogs(supabase: SupabaseClient, shopId: string): Promise<AuditLog[]> {
   const { data, error } = await supabase
     .from('audit_logs')
     .select('*')
+    .eq('shop_id', shopId)
     .order('created_at', { ascending: false })
 
   if (error) throw error
