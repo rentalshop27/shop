@@ -34,9 +34,15 @@ npm run dev
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_PUBLIC_APP_URL=http://127.0.0.1:5173
+VITE_GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 ```
 
 อย่าใส่ service role key ใน frontend หรือ Cloudflare Pages
+
+## Google OAuth
+
+ดูขั้นตอนสร้าง Google Cloud project, เปิด APIs และตั้งค่า OAuth client ได้ที่ `docs/google-oauth-setup.md`
 
 ## Cloudflare Pages
 

@@ -252,6 +252,68 @@ button {
   width: 100%;
 }
 
+.profile-oauth-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-oauth-field {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.profile-oauth-field span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.profile-oauth-field code {
+  color: var(--text-bright);
+  font-family: 'Outfit', 'Kanit', sans-serif;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.profile-oauth-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.profile-connect-button {
+  justify-content: center;
+  text-decoration: none;
+  width: 100%;
+}
+
+.profile-connect-button.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.profile-oauth-note {
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 14px 16px;
+}
+
+.profile-oauth-note.ready {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  color: #86efac;
+}
+
+.profile-oauth-note.warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  color: #fcd34d;
+}
+
 .profile-logout-panel {
   align-items: center;
   grid-column: 1 / -1;

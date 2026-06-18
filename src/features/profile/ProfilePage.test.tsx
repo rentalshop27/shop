@@ -10,6 +10,10 @@ const shops = [
 ]
 
 afterEach(cleanup)
+afterEach(() => {
+  vi.unstubAllEnvs()
+  window.history.replaceState({}, '', '/')
+})
 
 describe('ProfilePage', () => {
   it('shows the account and current shop', () => {
@@ -71,6 +75,41 @@ describe('ProfilePage', () => {
     expect(screen.getByText('โหมดทดลอง')).toBeTruthy()
     expect(screen.getByText('โหมดทดลองยังไม่มีข้อมูลร้าน')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'ออกจากระบบ' })).toBeNull()
+  })
+
+  it('shows Google OAuth setup values from env', () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://abc123.supabase.co')
+    vi.stubEnv('VITE_PUBLIC_APP_URL', 'https://app.precious.test')
+    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-id.apps.googleusercontent.com')
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('client-id.apps.googleusercontent.com')).toBeTruthy()
+    expect(screen.getByText('https://abc123.supabase.co/functions/v1/google-oauth-callback')).toBeTruthy()
+    expect(screen.getByText('พร้อมเชื่อม Google สำหรับร้าน Precious Siam')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'เชื่อม Google' })).toBeTruthy()
+  })
+
+  it('shows the Google OAuth success message from the callback query string', () => {
+    window.history.replaceState({}, '', '/?tab=profile&google_oauth=success&google_email=owner%40gmail.com')
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('เชื่อม Google สำเร็จแล้ว: owner@gmail.com')).toBeTruthy()
   })
 
   it('prevents repeated logout clicks while logout is pending', async () => {
