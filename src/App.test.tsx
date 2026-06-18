@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
   loadAccessibleShops,
@@ -97,21 +96,78 @@ describe('App shop selection', () => {
     loadAuditLogs.mockResolvedValue([])
   })
 
-  it('asks the user to choose a shop before loading multi-shop data', async () => {
-    const user = userEvent.setup()
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('multi-shop login displays aggregate dashboard, does not show ShopSelectScreen', async () => {
+    render(<App />)
+
+    expect(await screen.findByText('หน้าแดชบอร์ดภาพรวมสาขา')).toBeTruthy()
+    expect(screen.queryByText('เลือกร้านที่ต้องการเข้าใช้งาน')).toBeNull()
+  })
+
+  it('multi-shop overview loads customers/stock/rentals separately for each shop id', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_1', [], [])
+      expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
+    })
+  })
+
+  it('enters the shop when clicking "เข้าร้านนี้" button and loads shop-mode data', async () => {
+    render(<App />)
+
+    // Wait for shops data to be loaded in overview
+    await screen.findByText('หน้าแดชบอร์ดภาพรวมสาขา', {}, { timeout: 5000 })
+
+    // Find the enter shop button for Precious Silom
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ }, { timeout: 5000 })
+    const enterButton = enterButtons[1]
+
+    // Clear mocks before clicking to trace shop-mode specific calls
+    loadCustomers.mockClear()
+    loadStockItems.mockClear()
+    loadRentals.mockClear()
+
+    fireEvent.click(enterButton)
+
+    await waitFor(() => {
+      expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
+    }, { timeout: 5000 })
+
+    expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน', {}, { timeout: 5000 })).textContent).toContain('Precious Silom')
+  })
+
+  it('keeps a failed overview shop available to enter', async () => {
+    loadCustomers.mockImplementation((_client, selectedShopId) => {
+      if (selectedShopId === 'shop_2') {
+        return Promise.reject(new Error('customers unavailable'))
+      }
+      return Promise.resolve([])
+    })
 
     render(<App />)
 
-    expect(await screen.findByText('เลือกร้านที่ต้องการเข้าใช้งาน')).toBeTruthy()
-    expect(loadCustomers).not.toHaveBeenCalled()
+    expect(await screen.findByText('Precious Silom')).toBeTruthy()
+    expect(await screen.findByText(/ข้อมูลภาพรวมของร้านนี้ไม่พร้อม/)).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: /Precious Silom/ }))
+    const shopCard = screen.getByText('Precious Silom').closest('.shop-card')
+    const enterButton = shopCard?.querySelector<HTMLButtonElement>('button')
+    expect(enterButton).toBeTruthy()
+
+    loadCustomers.mockResolvedValue([])
+    fireEvent.click(enterButton!)
 
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
     })
-    expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
-    expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
-    expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน')).textContent).toContain('Precious Silom')
   })
 })

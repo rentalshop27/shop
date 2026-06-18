@@ -52,16 +52,16 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1781720205.7119777,
-    "hash": "88bd3131a20aa4eee50dd9fed113feed"
+    "mtime": 1781757926.434978,
+    "hash": "35b6fd42ce639a4d74b40d99f807d755"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
     "hash": "787e5a07efeb2bf6209d5937195f2f68"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.test.tsx": {
-    "mtime": 1781720278.3761427,
-    "hash": "0e05d178e8908cc06326fb12b9bdc99f"
+    "mtime": 1781758142.2167845,
+    "hash": "9b49b7f67b2fb6b6ad25759778cd2b70"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.test.ts": {
     "mtime": 1781720052.5466874,
@@ -135,9 +135,17 @@
     "mtime": 1781369268.2533174,
     "hash": "14c6f890b4e259eca8c0eaf82d884c4c"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/MultiShopDashboardPage.test.tsx": {
+    "mtime": 1781758079.9500227,
+    "hash": "6e3a89e3f25a0cb04d5d7529ab169cab"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.test.ts": {
     "mtime": 1781369268.1091187,
     "hash": "fda66f2f029ed6af8934fa53b151b80c"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/MultiShopDashboardPage.tsx": {
+    "mtime": 1781757986.3121774,
+    "hash": "fd3e399a63ac938959b65ed75c76abe6"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.ts": {
     "mtime": 1781324076.8656795,

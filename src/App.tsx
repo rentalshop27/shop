@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import './index.css'
 import { DashboardPage } from './features/dashboard/DashboardPage'
+import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
 import { RentalsPage } from './features/rentals/RentalsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
@@ -614,6 +615,7 @@ function App() {
   const [sessionReady, setSessionReady] = useState(!hasSupabaseConfig)
   const [isAuthenticated, setIsAuthenticated] = useState(!hasSupabaseConfig)
   const [shopId, setShopId] = useState<string | null>(null)
+  const [overviewShopsData, setOverviewShopsData] = useState<OverviewShopData[]>([])
   const [remoteError, setRemoteError] = useState('')
   const currentShop = availableShops.find((shop) => shop.id === shopId) ?? null
 
@@ -636,6 +638,7 @@ function App() {
       setShopsReady(!session)
       if (!session) {
         setAvailableShops([])
+        setOverviewShopsData([])
         setShopId(null)
         setRemoteError('')
       }
@@ -668,7 +671,18 @@ function App() {
           return
         }
 
-        setShopId(getPreferredShopId(authUserId, shops))
+        if (shops.length === 1) {
+          setOverviewShopsData([])
+          setShopId(shops[0].id)
+        } else {
+          setOverviewShopsData(shops.map((shop) => ({
+            shop,
+            status: 'loading',
+            rentals: [],
+            error: '',
+          })))
+          setShopId(null)
+        }
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -691,6 +705,58 @@ function App() {
     if (!authUserId || !shopId) return
     localStorage.setItem(getLastSelectedShopKey(authUserId), shopId)
   }, [authUserId, shopId])
+
+  useEffect(() => {
+    if (!supabase || !isAuthenticated || availableShops.length <= 1 || shopId) {
+      setOverviewShopsData([])
+      return
+    }
+
+    let cancelled = false
+    const client = supabase
+
+    setOverviewShopsData(availableShops.map((shop) => ({
+      shop,
+      status: 'loading',
+      rentals: [],
+      error: '',
+    })))
+
+    const loadAllShopsData = async () => {
+      const results = await Promise.all(
+        availableShops.map(async (shop) => {
+          try {
+            const customers = await loadCustomers(client, shop.id)
+            const stockItems = await loadStockItems(client, shop.id)
+            const rentals = await loadRentals(client, shop.id, customers, stockItems)
+            return {
+              shop,
+              status: 'ready' as const,
+              rentals,
+              error: '',
+            }
+          } catch (err) {
+            return {
+              shop,
+              status: 'error' as const,
+              rentals: [],
+              error: getErrorMessage(err),
+            }
+          }
+        })
+      )
+
+      if (cancelled) return
+
+      setOverviewShopsData(results)
+    }
+
+    loadAllShopsData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, availableShops, shopId])
 
   useEffect(() => {
     if (!supabase || !isAuthenticated || !shopId) return
@@ -1681,7 +1747,14 @@ function App() {
   }
 
   if (hasSupabaseConfig && availableShops.length > 1 && !shopId) {
-    return <ShopSelectScreen shops={availableShops} onSelectShop={setShopId} />
+    return (
+      <MultiShopDashboardPage
+        shopsData={overviewShopsData}
+        onEnterShop={setShopId}
+        preferredShopId={getPreferredShopId(authUserId, availableShops)}
+        onLogout={() => supabase?.auth.signOut()}
+      />
+    )
   }
 
   if (hasSupabaseConfig && isShopDataLoading) {
@@ -1698,7 +1771,8 @@ function App() {
           <div className="mobile-shop-switcher">
             <label className="shop-switcher-field">
               <span>ร้านที่ใช้งาน</span>
-              <select value={shopId ?? ''} onChange={(event) => setShopId(event.target.value)}>
+              <select value={shopId ?? ''} onChange={(event) => setShopId(event.target.value || null)}>
+                <option value="">ภาพรวมทุกร้าน</option>
                 {availableShops.map((shop) => (
                   <option key={shop.id} value={shop.id}>
                     {shop.name}
@@ -2373,7 +2447,7 @@ function SideNav({
   onTabChange: (tab: ViewKey) => void
   availableShops: ShopSummary[]
   selectedShopId: string | null
-  onShopChange: (shopId: string) => void
+  onShopChange: (shopId: string | null) => void
 }) {
   const items: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
@@ -2395,7 +2469,8 @@ function SideNav({
         <div className="side-nav-shop-switcher">
           <label className="shop-switcher-field">
             <span>สลับร้าน</span>
-            <select value={selectedShopId ?? ''} onChange={(event) => onShopChange(event.target.value)}>
+            <select value={selectedShopId ?? ''} onChange={(event) => onShopChange(event.target.value || null)}>
+              <option value="">ภาพรวมทุกร้าน</option>
               {availableShops.map((shop) => (
                 <option key={shop.id} value={shop.id}>
                   {shop.name}
@@ -3455,37 +3530,6 @@ function LoginScreen() {
         <button className="primary-button" type="button" onClick={handleLogin} disabled={isSubmitting}>
           {isSubmitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </button>
-      </section>
-    </main>
-  )
-}
-
-function ShopSelectScreen({
-  shops,
-  onSelectShop,
-}: {
-  shops: ShopSummary[]
-  onSelectShop: (shopId: string) => void
-}) {
-  return (
-    <main className="auth-shell">
-      <section className="modal-panel auth-panel">
-        <p className="eyebrow">Precious Shop</p>
-        <h1>เลือกร้านที่ต้องการเข้าใช้งาน</h1>
-        <p className="subtitle">บัญชีนี้มีสิทธิ์เข้าหลายร้าน เลือกร้านที่จะเปิดก่อนเริ่มงาน</p>
-        <div className="shop-selection-grid">
-          {shops.map((shop) => (
-            <button
-              key={shop.id}
-              className="shop-selection-card"
-              type="button"
-              onClick={() => onSelectShop(shop.id)}
-            >
-              <strong>{shop.name}</strong>
-              <span>เข้าสู่ร้านนี้</span>
-            </button>
-          ))}
-        </div>
       </section>
     </main>
   )
