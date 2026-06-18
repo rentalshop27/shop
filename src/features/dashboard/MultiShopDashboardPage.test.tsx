@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Customer } from '../customers/customerTypes'
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
@@ -177,5 +177,26 @@ describe('MultiShopDashboardPage', () => {
     expect(screen.getByRole('status').textContent).toContain('กำลังโหลดข้อมูลภาพรวมทุกสาขา')
     expect(screen.queryByRole('region', { name: 'สถิติหลัก' })).toBeNull()
     expect(screen.getByText('Precious Silom')).toBeTruthy()
+  })
+
+  it('prevents repeated logout and shows logout failures', async () => {
+    vi.useRealTimers()
+    const onLogout = vi.fn().mockRejectedValue(new Error('logout unavailable'))
+    render(
+      <MultiShopDashboardPage
+        shopsData={[readyShop('shop_1', 'Precious Siam', [])]}
+        onEnterShop={vi.fn()}
+        preferredShopId={null}
+        onLogout={onLogout}
+      />,
+    )
+
+    const logoutButton = screen.getByRole('button', { name: 'ออกจากระบบ' })
+    fireEvent.click(logoutButton)
+    fireEvent.click(logoutButton)
+
+    expect(onLogout).toHaveBeenCalledTimes(1)
+    expect((await screen.findByRole('alert')).textContent).toContain('logout unavailable')
+    await waitFor(() => expect((screen.getByRole('button', { name: 'ออกจากระบบ' }) as HTMLButtonElement).disabled).toBe(false))
   })
 })

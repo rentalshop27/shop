@@ -31,6 +31,7 @@ import {
   History,
   Shirt,
   BarChart3,
+  CircleUserRound,
 } from 'lucide-react'
 import './index.css'
 import { DashboardPage } from './features/dashboard/DashboardPage'
@@ -40,6 +41,7 @@ import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { AuditLogPage } from './features/audit/AuditLogPage'
 import { ReportsPage } from './features/reports/ReportsPage'
+import { ProfilePage } from './features/profile/ProfilePage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
@@ -107,7 +109,7 @@ const emptyDraft: CustomerDraft = {
   heightCm: '',
 }
 
-type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports'
+type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
 
 export type StockItemStatus = 'available' | 'repair' | 'wash'
 
@@ -367,6 +369,7 @@ function App() {
   const [colors, setColors] = useState<string[]>(() => getLocalArray('precious_colors', DEFAULT_COLORS))
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
   const [authUserId, setAuthUserId] = useState<string | null>(null)
+  const [authUserEmail, setAuthUserEmail] = useState<string | null>(null)
   const authUserIdRef = useRef<string | null>(null)
   const [shopsReady, setShopsReady] = useState(!hasSupabaseConfig)
   const [isShopDataLoading, setIsShopDataLoading] = useState(false)
@@ -633,6 +636,7 @@ function App() {
       authUserIdRef.current = nextUserId
       setIsAuthenticated(Boolean(data.session))
       setAuthUserId(nextUserId)
+      setAuthUserEmail(data.session?.user.email ?? null)
       if (!data.session) {
         setShopsReady(true)
       } else if (userChanged) {
@@ -652,6 +656,7 @@ function App() {
       authUserIdRef.current = nextUserId
       setIsAuthenticated(Boolean(session))
       setAuthUserId(nextUserId)
+      setAuthUserEmail(session?.user.email ?? null)
       if (!session) {
         setShopsReady(true)
         setAvailableShops([])
@@ -723,6 +728,12 @@ function App() {
       cancelled = true
     }
   }, [authUserId, isAuthenticated])
+
+  async function handleLogout() {
+    if (!supabase) return
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  }
 
   useEffect(() => {
     if (!authUserId || !shopId) return
@@ -1766,7 +1777,7 @@ function App() {
   }
 
   if (hasSupabaseConfig && availableShops.length === 0) {
-    return <EmptyShopAccessScreen message={remoteError || 'ยังไม่พบร้านสำหรับบัญชีนี้'} />
+    return <EmptyShopAccessScreen message={remoteError || 'ยังไม่พบร้านสำหรับบัญชีนี้'} onLogout={handleLogout} />
   }
 
   if (hasSupabaseConfig && availableShops.length > 1 && !shopId) {
@@ -1775,7 +1786,7 @@ function App() {
         shopsData={overviewShopsData}
         onEnterShop={setShopId}
         preferredShopId={getPreferredShopId(authUserId, availableShops)}
-        onLogout={() => supabase?.auth.signOut()}
+        onLogout={handleLogout}
       />
     )
   }
@@ -1790,21 +1801,6 @@ function App() {
         <div className="mobile-brand-logo">
           <img src="/web-logo.png" alt="Precious Rental" />
         </div>
-        {availableShops.length > 1 && (
-          <div className="mobile-shop-switcher">
-            <label className="shop-switcher-field">
-              <span>ร้านที่ใช้งาน</span>
-              <select value={shopId ?? ''} onChange={(event) => setShopId(event.target.value || null)}>
-                <option value="">ภาพรวมทุกร้าน</option>
-                {availableShops.map((shop) => (
-                  <option key={shop.id} value={shop.id}>
-                    {shop.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
         <div className="mobile-top-actions">
           <button
             className={`mobile-action-btn ${activeTab === 'reports' ? 'active' : ''}`}
@@ -1823,6 +1819,14 @@ function App() {
             <Settings size={20} />
           </button>
           <button
+            className={`mobile-action-btn ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => handleTabChange('profile')}
+            title="โปรไฟล์"
+            type="button"
+          >
+            <CircleUserRound size={20} />
+          </button>
+          <button
             className={`mobile-action-btn ${activeTab === 'audit' ? 'active' : ''}`}
             onClick={() => handleTabChange('audit')}
             title="ประวัติระบบ"
@@ -1836,9 +1840,6 @@ function App() {
       <SideNav
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        availableShops={availableShops}
-        selectedShopId={shopId}
-        onShopChange={setShopId}
       />
       <main className="app-shell">
         {currentShop && (
@@ -2400,7 +2401,17 @@ function App() {
           />
         )}
 
-        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && (
+        {activeTab === 'profile' && (
+          <ProfilePage
+            email={authUserEmail}
+            availableShops={availableShops}
+            selectedShopId={shopId}
+            onShopChange={setShopId}
+            onLogout={hasSupabaseConfig ? handleLogout : undefined}
+          />
+        )}
+
+        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && activeTab !== 'profile' && (
           <div style={{ padding: '80px 40px', textAlign: 'center', color: '#c7bfb9' }}>
             <p className="eyebrow" style={{ marginBottom: '16px' }}>Precious Shop</p>
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: '#fff7ef', marginBottom: '12px' }}>
@@ -2462,15 +2473,9 @@ function App() {
 function SideNav({
   activeTab,
   onTabChange,
-  availableShops,
-  selectedShopId,
-  onShopChange,
 }: {
   activeTab: ViewKey
   onTabChange: (tab: ViewKey) => void
-  availableShops: ShopSummary[]
-  selectedShopId: string | null
-  onShopChange: (shopId: string | null) => void
 }) {
   const items: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
@@ -2481,6 +2486,7 @@ function SideNav({
     { id: 'reports', label: 'รายงาน', icon: BarChart3 },
     { id: 'settings', label: 'ตั้งค่า', icon: Settings },
     { id: 'audit', label: 'ประวัติระบบ', icon: History },
+    { id: 'profile', label: 'โปรไฟล์', icon: CircleUserRound },
   ]
 
   return (
@@ -2488,21 +2494,6 @@ function SideNav({
       <div className="brand-logo" aria-label="Precious Rental">
         <img src="/web-logo.png" alt="Precious Rental" style={{ width: '100%', maxWidth: '160px', height: 'auto', display: 'block', margin: '0 auto' }} />
       </div>
-      {availableShops.length > 1 && (
-        <div className="side-nav-shop-switcher">
-          <label className="shop-switcher-field">
-            <span>สลับร้าน</span>
-            <select value={selectedShopId ?? ''} onChange={(event) => onShopChange(event.target.value || null)}>
-              <option value="">ภาพรวมทุกร้าน</option>
-              {availableShops.map((shop) => (
-                <option key={shop.id} value={shop.id}>
-                  {shop.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
       <nav>
         {items.map(({ id, label, icon: Icon }) => (
           <button
@@ -3558,13 +3549,33 @@ function LoginScreen() {
   )
 }
 
-function EmptyShopAccessScreen({ message }: { message: string }) {
+function EmptyShopAccessScreen({ message, onLogout }: { message: string; onLogout: () => Promise<void> }) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
+
+  async function handleLogout() {
+    if (isLoggingOut) return
+
+    setLogoutError('')
+    setIsLoggingOut(true)
+    try {
+      await onLogout()
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : 'ออกจากระบบไม่สำเร็จ กรุณาลองใหม่')
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <main className="auth-shell">
       <section className="modal-panel auth-panel">
         <p className="eyebrow">Precious Shop</p>
         <h1>ยังไม่พบบัญชีร้านค้า</h1>
         <p className="subtitle">{message}</p>
+        <button className="secondary-button empty-shop-logout" type="button" onClick={handleLogout} disabled={isLoggingOut}>
+          {isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
+        </button>
+        {logoutError && <p className="form-error" role="alert">{logoutError}</p>}
       </section>
     </main>
   )

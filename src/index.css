@@ -81,10 +81,6 @@ button {
   width: 100%;
 }
 
-.side-nav-shop-switcher {
-  margin-bottom: 24px;
-}
-
 .side-nav nav {
   display: grid;
   gap: 12px;
@@ -123,6 +119,168 @@ button {
 .nav-item svg {
   color: inherit;
   flex-shrink: 0;
+}
+
+/* Profile */
+.profile-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-panel {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+}
+
+.profile-panel-heading {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.profile-panel h2 {
+  color: var(--text-bright);
+  font-size: 20px;
+  margin: 0;
+}
+
+.profile-panel p {
+  color: var(--text-muted);
+  margin: 3px 0 0;
+}
+
+.profile-icon,
+.profile-shop-mark {
+  align-items: center;
+  background: rgba(223, 183, 80, 0.1);
+  border: 1px solid rgba(223, 183, 80, 0.2);
+  border-radius: 10px;
+  color: var(--text-gold);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.profile-account-row {
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.profile-account-row div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-account-row span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.profile-account-row strong {
+  color: var(--text-bright);
+  overflow-wrap: anywhere;
+}
+
+.profile-shop-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-shop-empty {
+  background: var(--bg-input);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.profile-shop-option {
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-bright);
+  display: flex;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+  width: 100%;
+}
+
+.profile-shop-option:not(:disabled):hover {
+  background: rgba(223, 183, 80, 0.05);
+  border-color: rgba(223, 183, 80, 0.45);
+}
+
+.profile-shop-option.active {
+  background: rgba(223, 183, 80, 0.06);
+  border-color: rgba(223, 183, 80, 0.35);
+  cursor: default;
+  opacity: 1;
+}
+
+.profile-shop-name {
+  flex: 1;
+  font-weight: 700;
+}
+
+.profile-current-badge {
+  align-items: center;
+  color: var(--success-color);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 4px;
+}
+
+.profile-overview-button {
+  justify-content: center;
+  width: 100%;
+}
+
+.profile-logout-panel {
+  align-items: center;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.profile-logout-button {
+  align-items: center;
+  background: var(--danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  color: var(--danger-color);
+  display: inline-flex;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+}
+
+.profile-logout-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.profile-logout-error {
+  color: var(--danger-color) !important;
+  grid-column: 1 / -1;
+  text-align: right;
 }
 
 /* App Shell & Page Header */
@@ -426,29 +584,6 @@ h1 {
   font-weight: 600;
   margin-bottom: 24px;
   padding: 12px 18px;
-}
-
-.shop-switcher-field {
-  display: grid;
-  gap: 8px;
-}
-
-.shop-switcher-field span {
-  color: var(--text-gold);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.shop-switcher-field select {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  color: var(--text-bright);
-  min-height: 44px;
-  padding: 0 14px;
-  width: 100%;
 }
 
 .shop-selection-grid {
@@ -1172,10 +1307,6 @@ select {
   grid-template-columns: 1fr;
 }
 
-.mobile-shop-switcher {
-  display: none;
-}
-
 /* Inventory */
 .inventory-panel {
   padding: 24px;
@@ -1660,13 +1791,30 @@ select {
     margin-left: auto;
   }
 
-  .mobile-shop-switcher {
-    display: block;
-    flex: 1 1 100%;
+  .profile-grid {
+    grid-template-columns: 1fr;
   }
 
-  .mobile-shop-switcher .shop-switcher-field span {
-    font-size: 11px;
+  .profile-panel {
+    padding: 18px;
+  }
+
+  .profile-logout-panel {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .profile-logout-button {
+    width: 100%;
+  }
+
+  .profile-current-badge {
+    font-size: 0;
+  }
+
+  .profile-current-badge svg {
+    height: 18px;
+    width: 18px;
   }
 
   .mobile-action-btn {
@@ -2681,6 +2829,25 @@ select {
   flex: 0 0 auto;
 }
 
+.multi-shop-logout-group {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-items: end;
+}
+
+.multi-shop-logout-error {
+  color: var(--danger-color);
+  font-size: 13px;
+  margin: 0;
+}
+
+.empty-shop-logout {
+  justify-content: center;
+  margin-top: 16px;
+  width: 100%;
+}
+
 .multi-shop-notice {
   display: flex;
   align-items: center;
@@ -3037,6 +3204,11 @@ select {
   }
 
   .multi-shop-logout {
+    width: 100%;
+  }
+
+  .multi-shop-logout-group {
+    justify-items: stretch;
     width: 100%;
   }
 

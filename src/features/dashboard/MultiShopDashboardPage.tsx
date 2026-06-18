@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   AlertTriangle,
   BadgeCheck,
@@ -27,7 +27,7 @@ interface MultiShopDashboardPageProps {
   shopsData: OverviewShopData[]
   onEnterShop: (shopId: string) => void
   preferredShopId: string | null
-  onLogout?: () => void
+  onLogout?: () => Promise<void>
 }
 
 interface ScheduleTableProps {
@@ -143,7 +143,23 @@ export function MultiShopDashboardPage({
   preferredShopId,
   onLogout,
 }: MultiShopDashboardPageProps) {
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
   const today = getLocalDateString(new Date())
+
+  async function handleLogout() {
+    if (!onLogout || isLoggingOut) return
+
+    setLogoutError('')
+    setIsLoggingOut(true)
+    try {
+      await onLogout()
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : 'ออกจากระบบไม่สำเร็จ กรุณาลองใหม่')
+      setIsLoggingOut(false)
+    }
+  }
+
   const sortedShopsData = useMemo(() => {
     if (!preferredShopId) return shopsData
     return [...shopsData].sort((a, b) => {
@@ -187,9 +203,12 @@ export function MultiShopDashboardPage({
           <p className="subtitle">ภาพรวมผลประกอบการ รายรับ และจำนวนงานของทุกร้านค้าที่บัญชีนี้เข้าถึงได้</p>
         </div>
         {onLogout && (
-          <button className="secondary-button multi-shop-logout" onClick={onLogout} type="button">
-            ออกจากระบบ
-          </button>
+          <div className="multi-shop-logout-group">
+            <button className="secondary-button multi-shop-logout" onClick={handleLogout} disabled={isLoggingOut} type="button">
+              {isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
+            </button>
+            {logoutError && <p className="multi-shop-logout-error" role="alert">{logoutError}</p>}
+          </div>
         )}
       </header>
 

@@ -14,7 +14,7 @@ const {
   supabase,
 } = vi.hoisted(() => {
   const authStateChange = {
-    callback: null as null | ((event: string, session: { user: { id: string } } | null) => void),
+    callback: null as null | ((event: string, session: { user: { id: string; email?: string } } | null) => void),
   }
 
   return {
@@ -28,6 +28,7 @@ const {
     supabase: {
       auth: {
         getSession: vi.fn(),
+        signOut: vi.fn(),
         onAuthStateChange: vi.fn((callback) => {
           authStateChange.callback = callback
           return {
@@ -92,7 +93,7 @@ describe('App shop selection', () => {
     supabase.auth.getSession.mockResolvedValue({
       data: {
         session: {
-          user: { id: 'user_1' },
+          user: { id: 'user_1', email: 'owner@example.com' },
         },
       },
     })
@@ -106,6 +107,7 @@ describe('App shop selection', () => {
     loadShopSettings.mockResolvedValue(null)
     loadRentals.mockResolvedValue([])
     loadAuditLogs.mockResolvedValue([])
+    supabase.auth.signOut.mockResolvedValue({ error: null })
   })
 
   afterEach(() => {
@@ -156,6 +158,60 @@ describe('App shop selection', () => {
     }, { timeout: 5000 })
 
     expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน', {}, { timeout: 5000 })).textContent).toContain('Precious Silom')
+  })
+
+  it('opens profile with the authenticated email and no legacy shop select', async () => {
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'โปรไฟล์' })[0])
+
+    expect(await screen.findByText('owner@example.com')).toBeTruthy()
+    expect(screen.queryByText('สลับร้าน')).toBeNull()
+    expect(screen.queryByText('ร้านที่ใช้งาน')).toBeNull()
+  })
+
+  it('switches shops from profile and reloads data for the selected shop', async () => {
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+    fireEvent.click(screen.getAllByRole('button', { name: 'โปรไฟล์' })[0])
+
+    loadCustomers.mockClear()
+    loadStockItems.mockClear()
+    loadShopSettings.mockClear()
+    loadAuditLogs.mockClear()
+    loadRentals.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Precious Silom' }))
+
+    await waitFor(() => {
+      expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadShopSettings).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadAuditLogs).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
+    })
+
+    expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน')).textContent).toContain('Precious Silom')
+    expect(screen.getByRole('heading', { name: 'โปรไฟล์' })).toBeTruthy()
+  })
+
+  it('allows an authenticated user without shop access to retry a failed logout', async () => {
+    loadAccessibleShops.mockResolvedValue([])
+    supabase.auth.signOut.mockResolvedValue({ error: new Error('logout unavailable') })
+    render(<App />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'ออกจากระบบ' }))
+
+    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1)
+    expect((await screen.findByRole('alert')).textContent).toContain('logout unavailable')
+    expect((screen.getByRole('button', { name: 'ออกจากระบบ' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('keeps a failed overview shop available to enter', async () => {
