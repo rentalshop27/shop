@@ -367,6 +367,7 @@ function App() {
   const [colors, setColors] = useState<string[]>(() => getLocalArray('precious_colors', DEFAULT_COLORS))
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
   const [authUserId, setAuthUserId] = useState<string | null>(null)
+  const authUserIdRef = useRef<string | null>(null)
   const [shopsReady, setShopsReady] = useState(!hasSupabaseConfig)
   const [isShopDataLoading, setIsShopDataLoading] = useState(false)
 
@@ -626,17 +627,39 @@ function App() {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return
+      const nextUserId = data.session?.user.id ?? null
+      const userChanged = nextUserId !== authUserIdRef.current
+
+      authUserIdRef.current = nextUserId
       setIsAuthenticated(Boolean(data.session))
-      setAuthUserId(data.session?.user.id ?? null)
-      setShopsReady(!data.session)
+      setAuthUserId(nextUserId)
+      if (!data.session) {
+        setShopsReady(true)
+      } else if (userChanged) {
+        setShopsReady(false)
+        setAvailableShops([])
+        setOverviewShopsData([])
+        setShopId(null)
+        setRemoteError('')
+      }
       setSessionReady(true)
     })
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUserId = session?.user.id ?? null
+      const userChanged = nextUserId !== authUserIdRef.current
+
+      authUserIdRef.current = nextUserId
       setIsAuthenticated(Boolean(session))
-      setAuthUserId(session?.user.id ?? null)
-      setShopsReady(!session)
+      setAuthUserId(nextUserId)
       if (!session) {
+        setShopsReady(true)
+        setAvailableShops([])
+        setOverviewShopsData([])
+        setShopId(null)
+        setRemoteError('')
+      } else if (userChanged) {
+        setShopsReady(false)
         setAvailableShops([])
         setOverviewShopsData([])
         setShopId(null)

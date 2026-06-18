@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, cleanup, act } from '@testing-library/react'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
@@ -10,27 +10,38 @@ const {
   loadShopSettings,
   loadRentals,
   loadAuditLogs,
+  authStateChange,
   supabase,
-} = vi.hoisted(() => ({
-  loadAccessibleShops: vi.fn(),
-  loadCustomers: vi.fn(),
-  loadStockItems: vi.fn(),
-  loadShopSettings: vi.fn(),
-  loadRentals: vi.fn(),
-  loadAuditLogs: vi.fn(),
-  supabase: {
-    auth: {
-      getSession: vi.fn(),
-      onAuthStateChange: vi.fn(() => ({
-        data: {
-          subscription: {
-            unsubscribe: vi.fn(),
-          },
-        },
-      })),
+} = vi.hoisted(() => {
+  const authStateChange = {
+    callback: null as null | ((event: string, session: { user: { id: string } } | null) => void),
+  }
+
+  return {
+    loadAccessibleShops: vi.fn(),
+    loadCustomers: vi.fn(),
+    loadStockItems: vi.fn(),
+    loadShopSettings: vi.fn(),
+    loadRentals: vi.fn(),
+    loadAuditLogs: vi.fn(),
+    authStateChange,
+    supabase: {
+      auth: {
+        getSession: vi.fn(),
+        onAuthStateChange: vi.fn((callback) => {
+          authStateChange.callback = callback
+          return {
+            data: {
+              subscription: {
+                unsubscribe: vi.fn(),
+              },
+            },
+          }
+        }),
+      },
     },
-  },
-}))
+  }
+})
 
 vi.mock('./lib/supabase', () => ({
   hasSupabaseConfig: true,
@@ -76,6 +87,7 @@ describe('App shop selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    authStateChange.callback = null
 
     supabase.auth.getSession.mockResolvedValue({
       data: {
@@ -169,5 +181,23 @@ describe('App shop selection', () => {
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
     })
+  })
+
+  it('keeps the selected shop when the existing session refreshes', async () => {
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[1])
+
+    expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน')).textContent).toContain('Precious Silom')
+    expect(loadAccessibleShops).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      authStateChange.callback?.('TOKEN_REFRESHED', { user: { id: 'user_1' } })
+    })
+
+    expect(screen.queryByText('กำลังตรวจสอบร้านค้า')).toBeNull()
+    expect(screen.getByLabelText('ร้านที่กำลังใช้งาน').textContent).toContain('Precious Silom')
+    expect(loadAccessibleShops).toHaveBeenCalledTimes(1)
   })
 })
