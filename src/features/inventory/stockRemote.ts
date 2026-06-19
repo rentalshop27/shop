@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { StockItem } from '../../App'
+import type { StockItem } from './inventoryTypes'
 
 type StockItemRow = {
   id: string

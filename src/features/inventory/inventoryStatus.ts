@@ -1,4 +1,4 @@
-import type { StockItem, StockItemStatus } from '../../App'
+import type { StockItem, StockItemStatus } from './inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 
 export function getInventoryDisplayStatus(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getInventoryDisplayStatus } from './inventoryStatus'
-import type { StockItem } from '../../App'
+import type { StockItem } from './inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 
 function makeStockItem(sku: string, status: StockItem['status'] = 'available'): StockItem {

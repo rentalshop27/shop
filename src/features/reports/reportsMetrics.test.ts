@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { StockItem } from '../../App'
+import type { StockItem } from '../inventory/inventoryTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
 import {

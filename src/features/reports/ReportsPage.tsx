@@ -15,7 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import type { RentalOrder } from '../rentals/rentalTypes'
-import type { StockItem } from '../../App'
+import type { StockItem } from '../inventory/inventoryTypes'
 import {
   buildDressReportsData,
   buildGeneralStoreMetrics,

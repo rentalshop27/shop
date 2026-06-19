@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Customer } from '../customers/customerTypes'
-import type { StockItem } from '../../App'
+import type { StockItem } from '../inventory/inventoryTypes'
 import { loadRentals } from './rentalRemote'
 
 const customer: Customer = {

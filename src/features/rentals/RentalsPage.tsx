@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
-import type { StockItem } from '../../App'
+import type { StockItem } from '../inventory/inventoryTypes'
 import { findOpenRentalConflict } from './rentalRules'
 import { canCreateRentalForCustomer } from '../customers/customerRules'
 

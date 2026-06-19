@@ -1,5 +1,5 @@
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
-import type { StockItem } from '../../App'
+import type { StockItem } from '../inventory/inventoryTypes'
 
 export type DateRangeMode = 'all' | '30days' | 'this_month' | '90days' | 'custom'
 
