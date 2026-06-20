@@ -64,16 +64,16 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1781889948.5185783,
-    "hash": "19034d618ebc6335fb1da31c7ca9a52a"
+    "mtime": 1781927705.9454637,
+    "hash": "be9921523bf212d4a35da654a9e13a1a"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
     "hash": "787e5a07efeb2bf6209d5937195f2f68"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.test.tsx": {
-    "mtime": 1781760095.8383527,
-    "hash": "70c0cafe9bb77355c38e2e07e37c85fa"
+    "mtime": 1781927789.5305119,
+    "hash": "78d292ba974adecf0cd4446489baf284"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.test.ts": {
     "mtime": 1781720052.5466874,
@@ -204,8 +204,8 @@
     "hash": "8132e08ab515c7bae670c18b75f8021b"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.test.ts": {
-    "mtime": 1781720673.205051,
-    "hash": "f0e7710f95d6dcc4cedb1adf21a27547"
+    "mtime": 1781927799.1427543,
+    "hash": "17520a6fcf09ca5146b7dcafb4955cd3"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/InventoryPage.tsx": {
     "mtime": 1781890726.8509963,
@@ -216,8 +216,16 @@
     "hash": "e5401cd0c69bb48909211321dc0d6acc"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts": {
-    "mtime": 1781889748.727861,
-    "hash": "3ab2190d8dec950ad0780a362b537110"
+    "mtime": 1781927705.943674,
+    "hash": "0992b3b06ea4c1362a10812317ad53d5"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.ts": {
+    "mtime": 1781927871.0435717,
+    "hash": "77431cf1821d06399a8d523ecc1803ad"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.test.tsx": {
+    "mtime": 1781927826.7922814,
+    "hash": "7428ddfed04134b01396d9d3ba7d78d1"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/inventoryStatus.test.ts": {
     "mtime": 1781889748.7344644,

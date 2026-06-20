@@ -68,6 +68,7 @@ vi.mock('./features/inventory/stockRemote', () => ({
   createRemoteStockItems: vi.fn(),
   deleteRemoteStockItem: vi.fn(),
   updateRemoteStockItem: vi.fn(),
+  updateRemoteStockItemStatus: vi.fn(),
   updateShopSettings: vi.fn(),
   loadShopSettings,
 }))
@@ -200,6 +201,23 @@ describe('App shop selection', () => {
 
     expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน')).textContent).toContain('Precious Silom')
     expect(screen.getByRole('heading', { name: 'โปรไฟล์' })).toBeTruthy()
+  })
+
+  it('preserves the inventory search when navigating away and back', async () => {
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
+    const search = await screen.findByPlaceholderText(/ค้นหาด้วย SKU/)
+    fireEvent.change(search, { target: { value: 'emerald' } })
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'แดชบอร์ด' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
+
+    expect((screen.getByPlaceholderText(/ค้นหาด้วย SKU/) as HTMLInputElement).value).toBe('emerald')
   })
 
   it('allows an authenticated user without shop access to retry a failed logout', async () => {

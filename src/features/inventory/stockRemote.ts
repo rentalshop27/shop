@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { StockItem } from './inventoryTypes'
+import type { StockItem, StockItemStatus } from './inventoryTypes'
 
 type StockItemRow = {
   id: string
@@ -246,7 +246,7 @@ export async function createRemoteStockItems(
   } catch (error) {
     for (const createdItem of createdItems) {
       try {
-        await deleteRemoteStockItem(supabase, createdItem.id, createdItem.imageUrls)
+        await deleteRemoteStockItem(supabase, shopId, createdItem.id, createdItem.imageUrls)
       } catch (rollbackError) {
         console.warn('Failed to rollback stock item after batch create error:', createdItem.id, rollbackError)
       }
@@ -290,6 +290,7 @@ export async function updateRemoteStockItem(
     .from('stock_items')
     .update(payload)
     .eq('id', stockId)
+    .eq('shop_id', shopId)
     .select('*')
     .single()
 
@@ -311,6 +312,7 @@ export async function updateRemoteStockItem(
 
 export async function deleteRemoteStockItem(
   supabase: SupabaseClient,
+  shopId: string,
   stockId: string,
   imageUrls: string[]
 ): Promise<void> {
@@ -322,6 +324,7 @@ export async function deleteRemoteStockItem(
     .from('stock_items')
     .delete()
     .eq('id', stockId)
+    .eq('shop_id', shopId)
 
   if (error) throw error
 
@@ -335,6 +338,24 @@ export async function deleteRemoteStockItem(
       console.warn('Failed to delete stock images:', imagePaths, storageError)
     }
   }
+}
+
+export async function updateRemoteStockItemStatus(
+  supabase: SupabaseClient,
+  shopId: string,
+  stockId: string,
+  status: StockItemStatus,
+): Promise<void> {
+  const { error } = await supabase
+    .from('stock_items')
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', stockId)
+    .eq('shop_id', shopId)
+
+  if (error) throw error
 }
 
 export async function countRemoteRentalsForStockSku(

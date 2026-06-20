@@ -39,9 +39,10 @@ import { ReportsPage } from './features/reports/ReportsPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { InventoryPage } from './features/inventory/InventoryPage'
+import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
-import type { StockDraft, StockItem, StockItemStatus } from './features/inventory/inventoryTypes'
+import type { StockItem } from './features/inventory/inventoryTypes'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
@@ -64,12 +65,7 @@ import {
   uploadRemoteCustomerDocuments,
 } from './features/customers/customerRemote'
 import {
-  countRemoteRentalsForStockSku,
   loadStockItems,
-  createRemoteStockItem,
-  createRemoteStockItems,
-  deleteRemoteStockItem,
-  updateRemoteStockItem,
   updateShopSettings,
   loadShopSettings,
 } from './features/inventory/stockRemote'
@@ -106,23 +102,6 @@ const emptyDraft: CustomerDraft = {
 }
 
 type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
-
-const emptyStockDraft: StockDraft = {
-  sku: '',
-  serialNumber: '',
-  productName: '',
-  brand: '',
-  category: '',
-  size: 'M',
-  primaryColor: 'น้ำเงินมิดไนต์',
-  publicDescription: '',
-  setCount: '1',
-  rentalPricePerDay: '',
-  lateFeeRule: '',
-  depositAmount: '',
-  imageUrls: [],
-  status: 'available',
-}
 
 const demoStockItems: StockItem[] = demoStockItemsForRentals
 const DEMO_SHOP_ID = 'shop_demo'
@@ -232,14 +211,9 @@ function App() {
   const [selectedCustomerId, setSelectedCustomerId] = useState(hasSupabaseConfig ? '' : demoCustomers[0]?.id ?? '')
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [stockQuery, setStockQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | CustomerProfileStatus | 'has_risk'>('all')
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isStockFormOpen, setIsStockFormOpen] = useState(false)
-  const [editingStockId, setEditingStockId] = useState<string | null>(null)
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
-  const [previewStockId, setPreviewStockId] = useState<string | null>(null)
-  const [previewImageIndex, setPreviewImageIndex] = useState(0)
   const [previewCustomerDocOwnerId, setPreviewCustomerDocOwnerId] = useState<string | null>(null)
   const [previewCustomerDocIndex, setPreviewCustomerDocIndex] = useState<number>(0)
   const previewCustomer = useMemo(() => {
@@ -285,7 +259,6 @@ function App() {
     setDraftDocuments((current) => current.filter((doc) => doc.id !== id))
   }
 
-  const [stockDraft, setStockDraft] = useState<StockDraft>(emptyStockDraft)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -540,7 +513,6 @@ function App() {
     setRentals((current) => current.filter((r) => !ids.includes(r.id)))
   }
   const [formError, setFormError] = useState('')
-  const [stockFormError, setStockFormError] = useState('')
   const [sessionReady, setSessionReady] = useState(!hasSupabaseConfig)
   const [isAuthenticated, setIsAuthenticated] = useState(!hasSupabaseConfig)
   const [shopId, setShopId] = useState<string | null>(null)
@@ -731,16 +703,11 @@ function App() {
     setAuditLogs([])
     setSelectedCustomerId('')
     setFormError('')
-    setStockFormError('')
     setIsMobileDetailOpen(false)
     setIsFormOpen(false)
-    setIsStockFormOpen(false)
     setEditingCustomerId(null)
-    setEditingStockId(null)
-    setPreviewStockId(null)
     setPreviewCustomerDocOwnerId(null)
     setPreviewCustomerDocIndex(0)
-    setPreviewImageIndex(0)
     setExternalSelectedRentalId('')
     setExternalIsFormOpen(false)
     setExternalPickupDate('')
@@ -749,9 +716,7 @@ function App() {
     setDraftDocuments([])
     setExistingDocuments([])
     setDeletedDocumentIds([])
-    setStockDraft(emptyStockDraft)
     setQuery('')
-    setStockQuery('')
     setCurrentPage(1)
     setStatusFilter('all')
     setBrands(DEFAULT_BRANDS)
@@ -801,6 +766,21 @@ function App() {
     await refreshAuditLogs(isAuthenticated, shopId, setLoadingAudit, setAuditLogs)
   }
 
+  const { pageProps: inventoryPageProps } = useInventoryController({
+    stockItems,
+    setStockItems,
+    rentals,
+    brands,
+    categories,
+    colors,
+    isSaving,
+    setIsSaving,
+    isAuthenticated,
+    shopId,
+    supabase,
+    onLoadAuditLogs: handleLoadAuditLogs,
+  })
+
   const activeCustomers = customers.filter((customer) => !customer.archivedAt)
 
   const filteredCustomers = useMemo(() => {
@@ -834,193 +814,12 @@ function App() {
 
   const totalPages = Math.ceil(filteredCustomers.length / pageSize) || 1
 
-  const filteredStockItems = useMemo(() => {
-    const normalizedQuery = stockQuery.trim().toLowerCase()
-
-    return stockItems.filter((item) => {
-      const searchable = [
-        item.sku,
-        item.serialNumber,
-        item.productName,
-        item.brand,
-        item.category,
-        item.size,
-        item.primaryColor,
-      ]
-        .join(' ')
-        .toLowerCase()
-
-      return !normalizedQuery || searchable.includes(normalizedQuery)
-    })
-  }, [stockItems, stockQuery])
-
   const selectedCustomer =
     filteredCustomers.find((customer) => customer.id === selectedCustomerId) ??
     filteredCustomers[0]
 
-  const previewStockItem = previewStockId
-    ? stockItems.find((item) => item.id === previewStockId) ?? null
-    : null
-
   function updateDraft(field: keyof CustomerDraft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }))
-  }
-
-  function updateStockDraft(field: keyof StockDraft, value: string) {
-    setStockDraft((current) => ({ ...current, [field]: value }))
-  }
-
-  function openCreateStockForm() {
-    setEditingStockId(null)
-    setStockDraft(emptyStockDraft)
-    setStockFormError('')
-    setIsStockFormOpen(true)
-  }
-
-  function openEditStockForm(item: StockItem) {
-    setEditingStockId(item.id)
-    setStockDraft({
-      sku: item.sku,
-      serialNumber: item.serialNumber,
-      productName: item.productName,
-      brand: item.brand,
-      category: item.category,
-      size: item.size,
-      primaryColor: item.primaryColor,
-      publicDescription: item.publicDescription,
-      setCount: String(item.setCount),
-      rentalPricePerDay: item.rentalPricePerDay ? String(item.rentalPricePerDay) : '',
-      lateFeeRule: item.lateFeeRule,
-      depositAmount: item.depositAmount ? String(item.depositAmount) : '',
-      imageUrls: item.imageUrls ?? [],
-      status: item.status || 'available',
-    })
-    setStockFormError('')
-    setIsStockFormOpen(true)
-  }
-
-  function closeStockForm() {
-    setIsStockFormOpen(false)
-    setEditingStockId(null)
-    setStockFormError('')
-  }
-
-  async function addStockImages(files: FileList | null) {
-    if (!files?.length) return
-
-    const incomingFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
-    const remainingSlots = 5 - stockDraft.imageUrls.length
-
-    if (remainingSlots <= 0) {
-      window.alert('รูปชุดเต็ม 5 รูปแล้ว')
-      return
-    }
-
-    const filesToUpload = incomingFiles.slice(0, remainingSlots)
-    if (incomingFiles.length > remainingSlots) {
-      window.alert(`สามารถเพิ่มรูปชุดได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
-    }
-
-    const imageUrls = await Promise.all(
-      filesToUpload.map((file) => readFileAsDataUrl(file)),
-    )
-
-    setStockDraft((current) => ({
-      ...current,
-      imageUrls: [...current.imageUrls, ...imageUrls],
-    }))
-  }
-
-  function removeStockImage(imageUrl: string) {
-    setStockDraft((current) => ({
-      ...current,
-      imageUrls: current.imageUrls.filter((url) => url !== imageUrl),
-    }))
-  }
-
-  function openStockPreview(item: StockItem, index = 0) {
-    if (!item.imageUrls.length) return
-    setPreviewStockId(item.id)
-    setPreviewImageIndex(index)
-  }
-
-  function closeStockPreview() {
-    setPreviewStockId(null)
-    setPreviewImageIndex(0)
-  }
-
-  async function handleDeleteStockItem(item: StockItem) {
-    try {
-      let relatedRentalCount = rentals.filter(
-        (rental) => rental.costume.id === item.id || rental.costume.sku === item.sku,
-      ).length
-
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
-          return
-        }
-        relatedRentalCount = await countRemoteRentalsForStockSku(supabase, shopId, item.sku)
-      }
-
-      if (relatedRentalCount > 0) {
-        window.alert(`ยังลบชุด ${item.sku} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงชุดนี้อยู่ ${relatedRentalCount} รายการ`)
-        return
-      }
-    } catch (error) {
-      window.alert(getErrorMessage(error))
-      return
-    }
-
-    const confirmed = window.confirm(
-      `คุณต้องการลบชุด "${item.productName}" (${item.sku}) ใช่หรือไม่?\n\nข้อมูลชุดและรูปภาพของชุดนี้จะถูกลบออกจากระบบ`
-    )
-    if (!confirmed) return
-
-    setStockFormError('')
-    setIsSaving(true)
-
-    try {
-      if (supabase && isAuthenticated) {
-        await deleteRemoteStockItem(supabase, item.id, item.imageUrls)
-        handleLoadAuditLogs()
-      }
-
-      setStockItems((current) => current.filter((stockItem) => stockItem.id !== item.id))
-
-      if (editingStockId === item.id) {
-        closeStockForm()
-      }
-
-      if (previewStockId === item.id) {
-        closeStockPreview()
-      }
-    } catch (error) {
-      window.alert(getErrorMessage(error))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function handleUpdateStockStatus(itemId: string, newStatus: StockItemStatus) {
-    try {
-      if (supabase && isAuthenticated) {
-        const { error } = await supabase
-          .from('stock_items')
-          .update({
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', itemId)
-        if (error) throw error
-        handleLoadAuditLogs()
-      }
-      setStockItems((current) =>
-        current.map((item) => (item.id === itemId ? { ...item, status: newStatus } : item))
-      )
-    } catch (error) {
-      window.alert(getErrorMessage(error))
-    }
   }
 
   function createCustomerCode() {
@@ -1247,288 +1046,6 @@ function App() {
     }
   }
 
-  async function handleSaveStockItem() {
-    setStockFormError('')
-
-    if (!stockDraft.sku.trim()) {
-      setStockFormError('กรุณากรอก SKU/รหัสสต๊อก')
-      return
-    }
-
-    const setCount = Number(stockDraft.setCount)
-    if (!Number.isInteger(setCount) || setCount < 1) {
-      setStockFormError('จำนวนชุดต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป')
-      return
-    }
-
-    if (!stockDraft.productName.trim()) {
-      setStockFormError('กรุณากรอกชื่อสินค้า')
-      return
-    }
-
-    // Determine base SKU and serial number
-    let baseSku = stockDraft.sku.trim()
-    const suffixRegex = /-(\d{2,})$/
-    if (!editingStockId && setCount > 1) {
-      const match = baseSku.match(suffixRegex)
-      if (match) {
-        baseSku = baseSku.replace(suffixRegex, '')
-      }
-    }
-
-    let baseSerial = stockDraft.serialNumber.trim()
-    if (!editingStockId && setCount > 1 && baseSerial) {
-      const match = baseSerial.match(suffixRegex)
-      if (match) {
-        baseSerial = baseSerial.replace(suffixRegex, '')
-      }
-    }
-
-    const existingItem = editingStockId
-      ? stockItems.find((item) => item.id === editingStockId)
-      : undefined
-
-    // Check for duplicate SKUs
-    if (editingStockId) {
-      if (
-        stockItems.some(
-          (item) =>
-            item.id !== editingStockId &&
-            item.sku.toLowerCase() === stockDraft.sku.trim().toLowerCase(),
-        )
-      ) {
-        setStockFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
-        return
-      }
-
-      if (existingItem && existingItem.sku !== stockDraft.sku.trim()) {
-        let relatedRentalCount: number
-        try {
-          relatedRentalCount = supabase && isAuthenticated && shopId
-            ? await countRemoteRentalsForStockSku(supabase, shopId, existingItem.sku)
-            : rentals.filter(
-                (rental) =>
-                  rental.costume.id === existingItem.id ||
-                  rental.costume.sku === existingItem.sku,
-              ).length
-        } catch (error) {
-          setStockFormError(getErrorMessage(error))
-          return
-        }
-
-        if (relatedRentalCount > 0) {
-          setStockFormError(`แก้ไข SKU ของชุด ${existingItem.sku} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงชุดนี้อยู่ ${relatedRentalCount} รายการ`)
-          return
-        }
-      }
-    } else {
-      if (setCount > 1) {
-        const duplicatedSkus: string[] = []
-        for (let i = 1; i <= setCount; i++) {
-          const suffix = String(i).padStart(2, '0')
-          const itemSku = `${baseSku}-${suffix}`
-          if (stockItems.some((item) => item.sku.toLowerCase() === itemSku.toLowerCase())) {
-            duplicatedSkus.push(itemSku)
-          }
-        }
-        if (duplicatedSkus.length > 0) {
-          setStockFormError(`SKU ต่อไปนี้มีอยู่ในระบบแล้ว: ${duplicatedSkus.join(', ')}`)
-          return
-        }
-      } else {
-        if (
-          stockItems.some(
-            (item) =>
-              item.sku.toLowerCase() === stockDraft.sku.trim().toLowerCase(),
-          )
-        ) {
-          setStockFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
-          return
-        }
-      }
-    }
-
-    setIsSaving(true)
-    try {
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          setStockFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
-          setIsSaving(false)
-          return
-        }
-
-        if (editingStockId) {
-          const draftItem: Omit<StockItem, 'id' | 'createdAt'> = {
-            sku: stockDraft.sku.trim(),
-            serialNumber: stockDraft.serialNumber.trim(),
-            productName: stockDraft.productName.trim(),
-            brand: stockDraft.brand.trim(),
-            category: stockDraft.category.trim(),
-            size: stockDraft.size.trim(),
-            primaryColor: stockDraft.primaryColor.trim(),
-            publicDescription: stockDraft.publicDescription.trim(),
-            setCount,
-            rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-            lateFeeRule: stockDraft.lateFeeRule.trim(),
-            depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-            imageUrls: stockDraft.imageUrls,
-            status: (stockDraft.status as StockItemStatus) || 'available',
-          }
-          const savedItem = await updateRemoteStockItem(
-            supabase,
-            shopId,
-            editingStockId,
-            draftItem,
-            existingItem?.imageUrls ?? []
-          )
-          setStockItems((current) =>
-            current.map((item) => (item.id === editingStockId ? savedItem : item))
-          )
-        } else {
-          if (setCount > 1) {
-            const itemDrafts: Array<Omit<StockItem, 'id' | 'createdAt'>> = []
-            for (let i = 1; i <= setCount; i++) {
-              const suffix = String(i).padStart(2, '0')
-              const itemSku = `${baseSku}-${suffix}`
-              const itemSerial = baseSerial ? `${baseSerial}-${suffix}` : ''
-
-              const itemDraft: Omit<StockItem, 'id' | 'createdAt'> = {
-                sku: itemSku,
-                serialNumber: itemSerial,
-                productName: stockDraft.productName.trim(),
-                brand: stockDraft.brand.trim(),
-                category: stockDraft.category.trim(),
-                size: stockDraft.size.trim(),
-                primaryColor: stockDraft.primaryColor.trim(),
-                publicDescription: stockDraft.publicDescription.trim(),
-                setCount: 1,
-                rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-                lateFeeRule: stockDraft.lateFeeRule.trim(),
-                depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-                imageUrls: stockDraft.imageUrls,
-                status: (stockDraft.status as StockItemStatus) || 'available',
-              }
-              itemDrafts.push(itemDraft)
-            }
-            await createRemoteStockItems(supabase, shopId, itemDrafts)
-            const loadedStock = await loadStockItems(supabase, shopId)
-            setStockItems(loadedStock)
-          } else {
-            const itemDraft: Omit<StockItem, 'id' | 'createdAt'> = {
-              sku: stockDraft.sku.trim(),
-              serialNumber: stockDraft.serialNumber.trim(),
-              productName: stockDraft.productName.trim(),
-              brand: stockDraft.brand.trim(),
-              category: stockDraft.category.trim(),
-              size: stockDraft.size.trim(),
-              primaryColor: stockDraft.primaryColor.trim(),
-              publicDescription: stockDraft.publicDescription.trim(),
-              setCount: 1,
-              rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-              lateFeeRule: stockDraft.lateFeeRule.trim(),
-              depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-              imageUrls: stockDraft.imageUrls,
-              status: (stockDraft.status as StockItemStatus) || 'available',
-            }
-            const savedItem = await createRemoteStockItem(supabase, shopId, itemDraft)
-            setStockItems((current) => [savedItem, ...current])
-          }
-        }
-
-        handleLoadAuditLogs()
-        closeStockForm()
-      } else {
-        // Local Storage Fallback
-        if (editingStockId) {
-          const draftItem: StockItem = {
-            sku: stockDraft.sku.trim(),
-            serialNumber: stockDraft.serialNumber.trim(),
-            productName: stockDraft.productName.trim(),
-            brand: stockDraft.brand.trim(),
-            category: stockDraft.category.trim(),
-            size: stockDraft.size.trim(),
-            primaryColor: stockDraft.primaryColor.trim(),
-            publicDescription: stockDraft.publicDescription.trim(),
-            setCount,
-            rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-            lateFeeRule: stockDraft.lateFeeRule.trim(),
-            depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-            imageUrls: stockDraft.imageUrls,
-            id: editingStockId,
-            createdAt: existingItem?.createdAt ?? new Date().toISOString(),
-            status: (stockDraft.status as StockItemStatus) || 'available',
-          }
-          setStockItems((current) =>
-            current.map((item) => (item.id === editingStockId ? draftItem : item))
-          )
-        } else {
-          const savedItemsList: StockItem[] = []
-          if (setCount > 1) {
-            for (let i = 1; i <= setCount; i++) {
-              const suffix = String(i).padStart(2, '0')
-              const itemSku = `${baseSku}-${suffix}`
-              const itemSerial = baseSerial ? `${baseSerial}-${suffix}` : ''
-
-              const savedItem: StockItem = {
-                sku: itemSku,
-                serialNumber: itemSerial,
-                productName: stockDraft.productName.trim(),
-                brand: stockDraft.brand.trim(),
-                category: stockDraft.category.trim(),
-                size: stockDraft.size.trim(),
-                primaryColor: stockDraft.primaryColor.trim(),
-                publicDescription: stockDraft.publicDescription.trim(),
-                setCount: 1,
-                rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-                lateFeeRule: stockDraft.lateFeeRule.trim(),
-                depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-                imageUrls: stockDraft.imageUrls,
-                id: crypto.randomUUID(),
-                createdAt: new Date().toISOString(),
-                status: (stockDraft.status as StockItemStatus) || 'available',
-              }
-              savedItemsList.push(savedItem)
-            }
-            setStockItems((current) => [...savedItemsList, ...current])
-          } else {
-            const savedItem: StockItem = {
-              sku: stockDraft.sku.trim(),
-              serialNumber: stockDraft.serialNumber.trim(),
-              productName: stockDraft.productName.trim(),
-              brand: stockDraft.brand.trim(),
-              category: stockDraft.category.trim(),
-              size: stockDraft.size.trim(),
-              primaryColor: stockDraft.primaryColor.trim(),
-              publicDescription: stockDraft.publicDescription.trim(),
-              setCount: 1,
-              rentalPricePerDay: parseOptionalNumber(stockDraft.rentalPricePerDay) ?? 0,
-              lateFeeRule: stockDraft.lateFeeRule.trim(),
-              depositAmount: parseOptionalNumber(stockDraft.depositAmount) ?? 0,
-              imageUrls: stockDraft.imageUrls,
-              id: crypto.randomUUID(),
-              createdAt: new Date().toISOString(),
-              status: (stockDraft.status as StockItemStatus) || 'available',
-            }
-            setStockItems((current) => [savedItem, ...current])
-          }
-        }
-        closeStockForm()
-      }
-    } catch (err) {
-      if (supabase && isAuthenticated && shopId) {
-        try {
-          const loadedStock = await loadStockItems(supabase, shopId)
-          setStockItems(loadedStock)
-        } catch (reloadError) {
-          console.warn('Failed to reload stock after save error:', reloadError)
-        }
-      }
-      setStockFormError(getErrorMessage(err))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   async function updateSelectedStatus(profileStatus: CustomerProfileStatus) {
     if (!selectedCustomer) return
 
@@ -1682,13 +1199,6 @@ function App() {
     risk: activeCustomers.filter((customer) => customer.riskFlag === 'has_risk').length,
   }
 
-  const stockSummary = {
-    total: stockItems.length,
-    sets: stockItems.reduce((total, item) => total + item.setCount, 0),
-    deposits: stockItems.reduce((total, item) => total + item.depositAmount, 0),
-    priced: stockItems.filter((item) => item.rentalPricePerDay > 0).length,
-  }
-
   if (!sessionReady) {
     return <LoadingScreen />
   }
@@ -1813,36 +1323,7 @@ function App() {
         )}
 
         {activeTab === 'inventory' && (
-          <InventoryPage
-            items={filteredStockItems}
-            query={stockQuery}
-            setQuery={setStockQuery}
-            summary={stockSummary}
-            isFormOpen={isStockFormOpen}
-            isEditing={Boolean(editingStockId)}
-            draft={stockDraft}
-            formError={stockFormError}
-            isSaving={isSaving}
-            onOpenForm={openCreateStockForm}
-            onCloseForm={closeStockForm}
-            onEdit={openEditStockForm}
-            onDelete={handleDeleteStockItem}
-            onPreview={openStockPreview}
-            onDraftChange={updateStockDraft}
-            onResetDraft={() => setStockDraft(emptyStockDraft)}
-            onImageUpload={addStockImages}
-            onImageRemove={removeStockImage}
-            onSave={handleSaveStockItem}
-            previewItem={previewStockItem}
-            previewImageIndex={previewImageIndex}
-            onPreviewIndexChange={setPreviewImageIndex}
-            onClosePreview={closeStockPreview}
-            brands={brands}
-            categories={categories}
-            colors={colors}
-            rentals={rentals}
-            onUpdateStatus={handleUpdateStockStatus}
-          />
+          <InventoryPage {...inventoryPageProps} />
         )}
 
         {activeTab === 'customers' && (

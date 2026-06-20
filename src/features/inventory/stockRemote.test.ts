@@ -3,8 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   countRemoteRentalsForStockSku,
   createRemoteStockItems,
+  deleteRemoteStockItem,
   loadShopSettings,
   loadStockItems,
+  updateRemoteStockItem,
+  updateRemoteStockItemStatus,
   updateShopSettings,
 } from './stockRemote'
 
@@ -116,6 +119,114 @@ describe('stock remote', () => {
     })
   })
 
+  it('updates a stock item by both id and active shop', async () => {
+    const filters: Array<[string, string]> = []
+    const savedRow = {
+      id: 'stock_1',
+      shop_id: 'shop_1',
+      sku: 'SKU-001',
+      serial_number: '',
+      product_name: 'Updated Dress',
+      brand: '',
+      category: '',
+      size: 'M',
+      primary_color: '',
+      public_description: '',
+      set_count: 1,
+      rental_price_per_day: 1000,
+      late_fee_rule: '',
+      deposit_amount: 2000,
+      image_urls: [],
+      status: 'available',
+      created_at: '2026-06-13T00:00:00.000Z',
+      updated_at: '2026-06-20T00:00:00.000Z',
+    }
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        filters.push([column, value])
+        return query
+      }),
+      select: vi.fn(() => ({ single: vi.fn(() => ({ data: savedRow, error: null })) })),
+    }
+    const supabase = {
+      from: vi.fn(() => ({ update: vi.fn(() => query) })),
+      storage: {
+        from: vi.fn(() => ({ remove: vi.fn(() => ({ error: null })) })),
+      },
+    } as unknown as SupabaseClient
+
+    await updateRemoteStockItem(
+      supabase,
+      'shop_1',
+      'stock_1',
+      {
+        sku: 'SKU-001',
+        serialNumber: '',
+        productName: 'Updated Dress',
+        brand: '',
+        category: '',
+        size: 'M',
+        primaryColor: '',
+        publicDescription: '',
+        setCount: 1,
+        rentalPricePerDay: 1000,
+        lateFeeRule: '',
+        depositAmount: 2000,
+        imageUrls: [],
+        status: 'available',
+      },
+      [],
+    )
+
+    expect(filters).toEqual([
+      ['id', 'stock_1'],
+      ['shop_id', 'shop_1'],
+    ])
+  })
+
+  it('deletes a stock item by both id and active shop', async () => {
+    const filters: Array<[string, string]> = []
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        filters.push([column, value])
+        return filters.length === 2 ? { error: null } : query
+      }),
+    }
+    const supabase = {
+      from: vi.fn(() => ({ delete: vi.fn(() => query) })),
+      storage: {
+        from: vi.fn(() => ({ remove: vi.fn(() => ({ error: null })) })),
+      },
+    } as unknown as SupabaseClient
+
+    await deleteRemoteStockItem(supabase, 'shop_1', 'stock_1', [])
+
+    expect(filters).toEqual([
+      ['id', 'stock_1'],
+      ['shop_id', 'shop_1'],
+    ])
+  })
+
+  it('updates stock status by both id and active shop', async () => {
+    const filters: Array<[string, string]> = []
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        filters.push([column, value])
+        return filters.length === 2 ? { error: null } : query
+      }),
+    }
+    const supabase = {
+      from: vi.fn(() => ({ update: vi.fn(() => query) })),
+    } as unknown as SupabaseClient
+
+    await updateRemoteStockItemStatus(supabase, 'shop_1', 'stock_1', 'repair')
+
+    expect(filters).toEqual([
+      ['id', 'stock_1'],
+      ['shop_id', 'shop_1'],
+    ])
+  })
+
   it('rolls back previously created stock items when batch creation fails', async () => {
     const firstInsertResult = {
       data: {
@@ -145,7 +256,7 @@ describe('stock remote', () => {
       error: new Error('duplicate sku'),
     }
     const insertPayloads: unknown[] = []
-    const deletedIds: string[] = []
+    const deleteFilters: Array<[string, string]> = []
     const insertResults = [firstInsertResult, secondInsertResult]
 
     const makeInsertQuery = () => ({
@@ -158,13 +269,14 @@ describe('stock remote', () => {
         }
       }),
     })
+    const deleteFilterQuery = {
+      eq: vi.fn((column: string, value: string) => {
+        deleteFilters.push([column, value])
+        return deleteFilters.length % 2 === 0 ? { error: null } : deleteFilterQuery
+      }),
+    }
     const deleteQuery = {
-      delete: vi.fn(() => ({
-        eq: vi.fn((_column: string, value: string) => {
-          deletedIds.push(value)
-          return { error: null }
-        }),
-      })),
+      delete: vi.fn(() => deleteFilterQuery),
     }
     const supabase = {
       from: vi.fn((table: string) => {
@@ -217,6 +329,9 @@ describe('stock remote', () => {
     ).rejects.toThrow('duplicate sku')
 
     expect(insertPayloads).toHaveLength(2)
-    expect(deletedIds).toEqual(['stock_1'])
+    expect(deleteFilters).toEqual([
+      ['id', 'stock_1'],
+      ['shop_id', 'shop_1'],
+    ])
   })
 })
