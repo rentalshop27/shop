@@ -4,8 +4,13 @@ import { normalizeThaiPhone } from './customerRules'
 
 type CustomerDocumentRow = {
   id: string
+  shop_id: string
   customer_id: string
   storage_path: string
+  storage_provider: CustomerDocument['storageProvider']
+  external_file_id: string | null
+  mime_type: string | null
+  original_file_name: string | null
   sort_order: number
   created_at: string
 }
@@ -35,6 +40,13 @@ type CustomerRow = {
 export type ShopSummary = {
   id: string
   name: string
+}
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+
+function getFunctionUrl(name: string) {
+  if (!supabaseUrl) return ''
+  return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/${name}`
 }
 
 export async function loadAccessibleShops(supabase: SupabaseClient): Promise<ShopSummary[]> {
@@ -165,12 +177,21 @@ export async function uploadRemoteCustomerDocuments(
   customer: Customer,
   files: File[],
 ) {
+  if (await hasConnectedGoogleDrive(supabase, customer.shopId)) {
+    await uploadGoogleDriveCustomerDocuments(supabase, customer, files)
+    return
+  }
+
   const existingCount = customer.documents.length
   const uploadedPaths: string[] = []
   const rows: Array<{
     shop_id: string
     customer_id: string
     storage_path: string
+    storage_provider: CustomerDocument['storageProvider']
+    external_file_id: string | null
+    mime_type: string
+    original_file_name: string
     sort_order: number
   }> = []
 
@@ -189,6 +210,10 @@ export async function uploadRemoteCustomerDocuments(
         shop_id: customer.shopId,
         customer_id: customer.id,
         storage_path: storagePath,
+        storage_provider: 'supabase_storage',
+        external_file_id: null,
+        mime_type: file.type,
+        original_file_name: file.name,
         sort_order: existingCount + index + 1,
       })
     }
@@ -250,6 +275,20 @@ async function mapDocumentRow(
   supabase: SupabaseClient,
   row: CustomerDocumentRow,
 ): Promise<CustomerDocument> {
+  if (row.storage_provider === 'google_drive' && row.external_file_id) {
+    return {
+      id: row.id,
+      customerId: row.customer_id,
+      storagePath: row.storage_path,
+      storageProvider: row.storage_provider,
+      externalFileId: row.external_file_id,
+      mimeType: row.mime_type ?? undefined,
+      originalFileName: row.original_file_name ?? undefined,
+      sortOrder: row.sort_order,
+      createdAt: row.created_at,
+    }
+  }
+
   const { data } = await supabase.storage
     .from('customer-documents')
     .createSignedUrl(row.storage_path, 60 * 5)
@@ -258,18 +297,54 @@ async function mapDocumentRow(
     id: row.id,
     customerId: row.customer_id,
     storagePath: row.storage_path,
+    storageProvider: row.storage_provider,
+    externalFileId: row.external_file_id ?? undefined,
+    mimeType: row.mime_type ?? undefined,
+    originalFileName: row.original_file_name ?? undefined,
     previewUrl: data?.signedUrl,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
   }
 }
 
+export async function loadCustomerDocumentPreview(
+  supabase: SupabaseClient,
+  document: CustomerDocument,
+): Promise<CustomerDocument> {
+  if (document.previewUrl) return document
+
+  if (document.storageProvider === 'google_drive') {
+    return {
+      ...document,
+      previewUrl: await createGoogleDrivePreviewUrl(supabase, document.id),
+    }
+  }
+
+  const { data, error } = await supabase.storage
+    .from('customer-documents')
+    .createSignedUrl(document.storagePath, 60 * 5)
+
+  if (error) throw error
+  return { ...document, previewUrl: data?.signedUrl }
+}
+
 export async function deleteRemoteCustomerDocuments(
   supabase: SupabaseClient,
-  documentIds: string[],
-  storagePaths: string[],
+  shopId: string,
+  documents: CustomerDocument[],
 ) {
-  if (documentIds.length === 0) return
+  if (documents.length === 0) return
+
+  const googleDriveDocuments = documents.filter((document) => document.storageProvider === 'google_drive')
+  if (googleDriveDocuments.length > 0) {
+    await deleteGoogleDriveCustomerDocuments(supabase, shopId, googleDriveDocuments)
+  }
+
+  const supabaseDocuments = documents.filter((document) => document.storageProvider !== 'google_drive')
+  if (supabaseDocuments.length === 0) return
+
+  const documentIds = supabaseDocuments.map((document) => document.id)
+  const storagePaths = supabaseDocuments.map((document) => document.storagePath)
 
   const validPaths = storagePaths.filter(Boolean)
   if (validPaths.length > 0) {
@@ -291,4 +366,118 @@ export async function deleteRemoteCustomerDocuments(
 function parseOptionalNumber(value: string) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && value.trim() ? parsed : null
+}
+
+async function hasConnectedGoogleDrive(supabase: SupabaseClient, shopId: string) {
+  const { data, error } = await supabase
+    .from('shop_google_integrations')
+    .select('id')
+    .eq('shop_id', shopId)
+    .eq('provider', 'google')
+    .eq('connection_status', 'connected')
+    .maybeSingle()
+
+  if (error) throw error
+  return Boolean(data?.id)
+}
+
+async function getAuthAccessToken(supabase: SupabaseClient) {
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw error
+
+  const accessToken = data.session?.access_token
+  if (!accessToken) {
+    throw new Error('กรุณาเข้าสู่ระบบใหม่ก่อนใช้งาน Google Drive')
+  }
+
+  return accessToken
+}
+
+async function uploadGoogleDriveCustomerDocuments(
+  supabase: SupabaseClient,
+  customer: Customer,
+  files: File[],
+) {
+  const functionUrl = getFunctionUrl('google-drive-customer-documents-upload')
+  if (!functionUrl) {
+    throw new Error('ยังไม่ได้ตั้งค่า VITE_SUPABASE_URL สำหรับอัปโหลด Google Drive')
+  }
+
+  const formData = new FormData()
+  formData.append('shopId', customer.shopId)
+  formData.append('customerId', customer.id)
+  files.forEach((file) => formData.append('files', file))
+
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${await getAuthAccessToken(supabase)}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw await createFunctionError(response, 'อัปโหลดรูปไป Google Drive ไม่สำเร็จ')
+  }
+}
+
+async function deleteGoogleDriveCustomerDocuments(
+  supabase: SupabaseClient,
+  shopId: string,
+  documents: CustomerDocument[],
+) {
+  const functionUrl = getFunctionUrl('google-drive-customer-documents-delete')
+  if (!functionUrl) {
+    throw new Error('ยังไม่ได้ตั้งค่า VITE_SUPABASE_URL สำหรับลบรูปใน Google Drive')
+  }
+
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${await getAuthAccessToken(supabase)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      shopId,
+      documentIds: documents.map((document) => document.id),
+    }),
+  })
+
+  if (!response.ok) {
+    throw await createFunctionError(response, 'ลบรูปจาก Google Drive ไม่สำเร็จ')
+  }
+}
+
+async function createGoogleDrivePreviewUrl(
+  supabase: SupabaseClient,
+  documentId: string,
+) {
+  const functionUrl = getFunctionUrl('google-drive-customer-document')
+  if (!functionUrl) return undefined
+
+  const response = await fetch(`${functionUrl}?documentId=${encodeURIComponent(documentId)}`, {
+    headers: {
+      Authorization: `Bearer ${await getAuthAccessToken(supabase)}`,
+    },
+  })
+
+  if (!response.ok) {
+    return undefined
+  }
+
+  const blob = await response.blob()
+  if (!blob.size) {
+    return undefined
+  }
+
+  return URL.createObjectURL(blob)
+}
+
+async function createFunctionError(response: Response, fallbackMessage: string) {
+  try {
+    const body = await response.json() as { error?: string }
+    return new Error(body.error || fallbackMessage)
+  } catch {
+    return new Error(fallbackMessage)
+  }
 }

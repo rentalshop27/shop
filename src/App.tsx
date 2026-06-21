@@ -57,6 +57,7 @@ import {
   createRemoteCustomer,
   deleteRemoteCustomerDocuments,
   loadAccessibleShops,
+  loadCustomerDocumentPreview,
   loadCustomers,
   type ShopSummary,
   updateRemoteCustomer,
@@ -216,6 +217,7 @@ function App() {
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [previewCustomerDocOwnerId, setPreviewCustomerDocOwnerId] = useState<string | null>(null)
   const [previewCustomerDocIndex, setPreviewCustomerDocIndex] = useState<number>(0)
+  const googleDrivePreviewUrlsRef = useRef(new Set<string>())
   const previewCustomer = useMemo(() => {
     return customers.find((c) => c.id === previewCustomerDocOwnerId)
   }, [customers, previewCustomerDocOwnerId])
@@ -224,6 +226,14 @@ function App() {
   const [existingDocuments, setExistingDocuments] = useState<CustomerDocument[]>([])
   const [deletedDocumentIds, setDeletedDocumentIds] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    const previewUrls = googleDrivePreviewUrlsRef.current
+    return () => {
+      previewUrls.forEach((url) => URL.revokeObjectURL(url))
+      previewUrls.clear()
+    }
+  }, [])
 
   async function addDraftDocuments(files: FileList | null) {
     if (!files?.length) return
@@ -852,6 +862,58 @@ function App() {
     setIsFormOpen(true)
   }
 
+  async function loadDocumentPreview(document: CustomerDocument) {
+    if (!supabase || document.previewUrl) return document
+
+    const loadedDocument = await loadCustomerDocumentPreview(supabase, document)
+    if (loadedDocument.previewUrl?.startsWith('blob:')) {
+      googleDrivePreviewUrlsRef.current.add(loadedDocument.previewUrl)
+    }
+    return loadedDocument
+  }
+
+  async function ensureCustomerDocumentPreview(customerId: string, documentIndex: number) {
+    const customer = customers.find((entry) => entry.id === customerId)
+    const document = customer?.documents[documentIndex]
+    if (!customer || !document || document.previewUrl || !supabase) return
+
+    try {
+      const loadedDocument = await loadDocumentPreview(document)
+      setCustomers((current) => current.map((entry) =>
+        entry.id === customerId
+          ? {
+              ...entry,
+              documents: entry.documents.map((candidate) =>
+                candidate.id === loadedDocument.id ? loadedDocument : candidate,
+              ),
+            }
+          : entry,
+      ))
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    }
+  }
+
+  async function ensureExistingDocumentPreview(documentId: string) {
+    const document = existingDocuments.find((entry) => entry.id === documentId)
+    if (!document || document.previewUrl || !supabase) return
+
+    try {
+      const loadedDocument = await loadDocumentPreview(document)
+      setExistingDocuments((current) => current.map((entry) =>
+        entry.id === documentId ? loadedDocument : entry,
+      ))
+      setCustomers((current) => current.map((customer) => ({
+        ...customer,
+        documents: customer.documents.map((entry) =>
+          entry.id === documentId ? loadedDocument : entry,
+        ),
+      })))
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    }
+  }
+
   async function handleSaveCustomer() {
     setFormError('')
 
@@ -886,9 +948,9 @@ function App() {
     try {
       if (editingCustomerId) {
         let docsPendingDelete: CustomerDocument[] = []
+        const originalCustomer = customers.find((c) => c.id === editingCustomerId) ?? null
         if (supabase) {
           if (deletedDocumentIds.length > 0) {
-            const originalCustomer = customers.find((c) => c.id === editingCustomerId)
             if (originalCustomer) {
               docsPendingDelete = originalCustomer.documents.filter((doc) =>
                 deletedDocumentIds.includes(doc.id)
@@ -896,9 +958,8 @@ function App() {
             }
           }
 
-          if (docsPendingDelete.length > 0) {
-            const pathsToDelete = docsPendingDelete.map((doc) => doc.storagePath).filter(Boolean)
-            await deleteRemoteCustomerDocuments(supabase, docsPendingDelete.map((doc) => doc.id), pathsToDelete)
+          if (originalCustomer && docsPendingDelete.length > 0) {
+            await deleteRemoteCustomerDocuments(supabase, originalCustomer.shopId, docsPendingDelete)
           }
 
           const updatedCustomer = await updateRemoteCustomer(supabase, editingCustomerId, draft)
@@ -936,6 +997,7 @@ function App() {
           id: doc.id,
           customerId: editingCustomerId,
           storagePath: `customer-documents/demo/${doc.file.name}`,
+          storageProvider: 'supabase_storage' as const,
           previewUrl: doc.previewUrl,
           sortOrder: remainingExistingDocs.length + index + 1,
           createdAt: now,
@@ -1024,6 +1086,7 @@ function App() {
           id: doc.id,
           customerId: '',
           storagePath: `customer-documents/demo/${doc.file.name}`,
+          storageProvider: 'supabase_storage' as const,
           previewUrl: doc.previewUrl,
           sortOrder: index + 1,
           createdAt: now,
@@ -1162,6 +1225,7 @@ function App() {
       id: crypto.randomUUID(),
       customerId: selectedCustomer.id,
       storagePath: `customer-documents/${selectedCustomer.id}/${file.name}`,
+      storageProvider: 'supabase_storage',
       previewUrl: URL.createObjectURL(file),
       sortOrder: selectedCustomer.documents.length + index + 1,
       createdAt: now,
@@ -1479,6 +1543,7 @@ function App() {
                       onPreviewDocument={(index) => {
                         setPreviewCustomerDocOwnerId(selectedCustomer.id)
                         setPreviewCustomerDocIndex(index)
+                        void ensureCustomerDocumentPreview(selectedCustomer.id, index)
                       }}
                     />
                   </div>
@@ -1594,12 +1659,31 @@ function App() {
                     {(existingDocuments.length > 0 || draftDocuments.length > 0) && (
                        <div className="document-grid" style={{ marginTop: '12px' }}>
                          {existingDocuments.map((doc, index) => (
-                           <figure key={doc.id} style={{ position: 'relative', margin: 0 }}>
-                             <img src={doc.previewUrl} alt={`เอกสารเดิมที่ ${index + 1}`} />
+                           <figure
+                             key={doc.id}
+                             style={{
+                               position: 'relative',
+                               margin: 0,
+                               cursor: !doc.previewUrl && doc.storageProvider === 'google_drive' ? 'pointer' : undefined,
+                             }}
+                             onClick={() => {
+                               if (!doc.previewUrl && doc.storageProvider === 'google_drive') {
+                                 void ensureExistingDocumentPreview(doc.id)
+                               }
+                             }}
+                           >
+                             {doc.previewUrl ? (
+                               <img src={doc.previewUrl} alt={`เอกสารเดิมที่ ${index + 1}`} />
+                             ) : (
+                               <div className="file-placeholder">
+                                 <FileImage />
+                               </div>
+                             )}
                              <button
                                type="button"
                                disabled={isSaving}
-                               onClick={() => {
+                               onClick={(event) => {
+                                 event.stopPropagation()
                                  setExistingDocuments((current) => current.filter((d) => d.id !== doc.id))
                                  setDeletedDocumentIds((current) => [...current, doc.id])
                                }}
@@ -1759,7 +1843,10 @@ function App() {
                           key={`${previewCustomer.id}-doc-thumb-${index}`}
                           className={`document-preview-thumb ${index === previewCustomerDocIndex ? 'active' : ''}`}
                           type="button"
-                          onClick={() => setPreviewCustomerDocIndex(index)}
+                          onClick={() => {
+                            setPreviewCustomerDocIndex(index)
+                            void ensureCustomerDocumentPreview(previewCustomer.id, index)
+                          }}
                         >
                           {doc.previewUrl ? (
                             <img src={doc.previewUrl} alt={`ภาพย่อเอกสารรูปที่ ${index + 1}`} />
@@ -2063,8 +2150,12 @@ function CustomerDetail({
           {customer.documents.map((document, index) => (
             <figure
               key={document.id}
-              onClick={() => document.previewUrl && onPreviewDocument?.(index)}
-              style={document.previewUrl ? { cursor: 'pointer' } : undefined}
+              onClick={() => {
+                if (document.previewUrl || document.storageProvider === 'google_drive') {
+                  onPreviewDocument?.(index)
+                }
+              }}
+              style={document.previewUrl || document.storageProvider === 'google_drive' ? { cursor: 'pointer' } : undefined}
             >
               {document.previewUrl ? (
                 <img

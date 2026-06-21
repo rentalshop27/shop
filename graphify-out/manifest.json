@@ -11,6 +11,10 @@
     "mtime": 1781269137.696254,
     "hash": "1499120ccec5ad82f722169ef487e893"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0010_customer_documents_google_drive.sql": {
+    "mtime": 1782051437.581792,
+    "hash": "3636be93b78d59acc5360d708ec30d21"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0007_allow_archived_customer_phone_reuse.sql": {
     "mtime": 1781369268.257358,
     "hash": "572b92d06350aa1c268e41a402926853"
@@ -43,17 +47,37 @@
     "mtime": 1781269137.6959102,
     "hash": "1f6076bf5fb97f6467a02cdb88dc0744"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-drive-customer-document/index.ts": {
+    "mtime": 1782051814.5990632,
+    "hash": "b0b6e20eb22587dcc3c07eb3fd425750"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-drive-customer-documents-delete/index.ts": {
+    "mtime": 1782051814.4123976,
+    "hash": "5d95b2bec058dc59122bdd303a523751"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-oauth-start/index.ts": {
     "mtime": 1781770807.3023064,
     "hash": "931e9db3ea5bbaa85d6d91e7dfdeafa7"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-oauth-callback/index.ts": {
-    "mtime": 1781770807.3027189,
-    "hash": "0e20ba01441beb825138e52e50170f2c"
+    "mtime": 1782054355.7543116,
+    "hash": "af8ccde35103c66d1fb8a59695839d1d"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/_shared/googleToken.ts": {
+    "mtime": 1782054161.4095016,
+    "hash": "80e627c4fede157618e05538b7ce7441"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/_shared/googleOAuth.ts": {
     "mtime": 1781770807.3008184,
     "hash": "eed091867322ba5029e6e77f469afd92"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/_shared/googleDrive.ts": {
+    "mtime": 1782053660.3871877,
+    "hash": "26440ff715a6031b55d96dbccc3cac5a"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-drive-customer-documents-upload/index.ts": {
+    "mtime": 1782053660.5761273,
+    "hash": "6dcee7a26af264272dc5632a3fc99c76"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/dev-dist/workbox-f0c192c2.js": {
     "mtime": 1781759760.232661,
@@ -64,8 +88,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1781927705.9454637,
-    "hash": "be9921523bf212d4a35da654a9e13a1a"
+    "mtime": 1782054246.436031,
+    "hash": "f72ec57bbd98e826d188055461aa587c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -76,28 +100,32 @@
     "hash": "78d292ba974adecf0cd4446489baf284"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.test.ts": {
-    "mtime": 1781720052.5466874,
-    "hash": "b7810de01ca7c808344ba06799ad9442"
+    "mtime": 1782054409.567103,
+    "hash": "4c00a1855ab788da5b365ce20c05d823"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRules.ts": {
     "mtime": 1781547131.0193582,
     "hash": "6a94183ea96215ec8007f27b0d6fc310"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerTypes.ts": {
-    "mtime": 1781269137.6902816,
-    "hash": "df4fa58ba7a0ce30e54a295fa98e86eb"
+    "mtime": 1782051437.766289,
+    "hash": "1fd2617661edb17786e92f932c9fa621"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRules.test.ts": {
     "mtime": 1781547131.0189714,
     "hash": "4caa4cd6d83d43d5dd1ca68673185ab4"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.ts": {
-    "mtime": 1781719645.9953148,
-    "hash": "2cb9ba7dee7cd3f6ba406fd48c60d1fc"
+    "mtime": 1782054161.7867393,
+    "hash": "73dd704cf6a792918a07f54417c4f340"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerSeed.ts": {
     "mtime": 1781269137.690012,
     "hash": "c07a3c566353bc8080b0c6f8d4dee8be"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/googleToken.test.ts": {
+    "mtime": 1782054162.1604362,
+    "hash": "090ee6638d58a440dbd2851d3ddae4df"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/settings/SettingsPage.tsx": {
     "mtime": 1781269137.6931427,
@@ -268,8 +296,8 @@
     "hash": "b69b478902aa08b39ba0582f3bbaf2ad"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/README.md": {
-    "mtime": 1781770807.3029583,
-    "hash": "31a7b59113444b9c4ec5e57efaf620a2"
+    "mtime": 1782051606.814062,
+    "hash": "a46ebe6c0862ba465087a192903320e3"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/public/apple-touch-icon.png": {
     "mtime": 1781269137.6772583,

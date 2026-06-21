@@ -4,6 +4,9 @@
 
 - `google-oauth-start`
 - `google-oauth-callback`
+- `google-drive-customer-documents-upload`
+- `google-drive-customer-documents-delete`
+- `google-drive-customer-document`
 
 ## Required secrets
 
@@ -25,6 +28,9 @@ GOOGLE_OAUTH_STATE_SECRET=replace-with-a-long-random-secret
 ```bash
 supabase functions deploy google-oauth-start --no-verify-jwt
 supabase functions deploy google-oauth-callback --no-verify-jwt
+supabase functions deploy google-drive-customer-documents-upload --no-verify-jwt
+supabase functions deploy google-drive-customer-documents-delete --no-verify-jwt
+supabase functions deploy google-drive-customer-document --no-verify-jwt
 ```
 
 ## Local serve

@@ -10,6 +10,10 @@ export type CustomerDocument = {
   id: string
   customerId: string
   storagePath: string
+  storageProvider: 'supabase_storage' | 'google_drive'
+  externalFileId?: string
+  mimeType?: string
+  originalFileName?: string
   previewUrl?: string
   sortOrder: number
   createdAt: string
@@ -54,4 +58,3 @@ export type CustomerDraft = {
 export type CustomerDuplicateResult =
   | { kind: 'none' }
   | { kind: 'phone'; customer: Customer }
-

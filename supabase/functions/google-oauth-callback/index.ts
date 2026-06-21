@@ -7,6 +7,7 @@ import {
   fetchGoogleUserInfo,
   verifyState,
 } from '../_shared/googleOAuth.ts'
+import { resolveGoogleRefreshToken } from '../_shared/googleToken.ts'
 
 Deno.serve(async (request) => {
   if (request.method !== 'GET') {
@@ -47,6 +48,42 @@ Deno.serve(async (request) => {
 
     const supabase = createServiceClient()
 
+    const { data: existingIntegration, error: existingIntegrationError } = await supabase
+      .from('shop_google_integrations')
+      .select('id, google_user_id')
+      .eq('shop_id', payload.shopId)
+      .eq('provider', 'google')
+      .maybeSingle()
+
+    if (existingIntegrationError) {
+      throw existingIntegrationError
+    }
+
+    let existingRefreshToken: string | null = null
+    const canReuseExistingToken = Boolean(
+      existingIntegration?.google_user_id
+      && googleUser.id
+      && existingIntegration.google_user_id === googleUser.id,
+    )
+
+    if (existingIntegration && canReuseExistingToken) {
+      const { data: existingToken, error: existingTokenError } = await supabase
+        .from('shop_google_integration_tokens')
+        .select('refresh_token')
+        .eq('integration_id', existingIntegration.id)
+        .maybeSingle()
+
+      if (existingTokenError) {
+        throw existingTokenError
+      }
+      existingRefreshToken = existingToken?.refresh_token ?? null
+    }
+
+    const refreshToken = resolveGoogleRefreshToken(
+      tokenResult.refresh_token,
+      existingRefreshToken,
+    )
+
     const { data: integration, error: integrationError } = await supabase
       .from('shop_google_integrations')
       .upsert({
@@ -77,7 +114,7 @@ Deno.serve(async (request) => {
       .upsert({
         integration_id: integration.id,
         shop_id: payload.shopId,
-        refresh_token: tokenResult.refresh_token ?? '',
+        refresh_token: refreshToken,
         access_token: tokenResult.access_token,
         token_type: tokenResult.token_type ?? 'Bearer',
         scope: (tokenResult.scope ?? '').split(' ').filter(Boolean),
