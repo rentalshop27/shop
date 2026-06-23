@@ -11,6 +11,10 @@
     "mtime": 1781269137.696254,
     "hash": "1499120ccec5ad82f722169ef487e893"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0011_google_sheets_report.sql": {
+    "mtime": 1782215373.6534584,
+    "hash": "82b849e884c58904297a9e98d624c86b"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0010_customer_documents_google_drive.sql": {
     "mtime": 1782051437.581792,
     "hash": "3636be93b78d59acc5360d708ec30d21"
@@ -59,6 +63,10 @@
     "mtime": 1781770807.3023064,
     "hash": "931e9db3ea5bbaa85d6d91e7dfdeafa7"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/health/index.ts": {
+    "mtime": 1782215889.8534615,
+    "hash": "68ae1fafa0824921904d571e4b92a760"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-oauth-callback/index.ts": {
     "mtime": 1782054355.7543116,
     "hash": "af8ccde35103c66d1fb8a59695839d1d"
@@ -75,6 +83,14 @@
     "mtime": 1782053660.3871877,
     "hash": "26440ff715a6031b55d96dbccc3cac5a"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-sheets-report-sync/reportSheets.ts": {
+    "mtime": 1782216471.341953,
+    "hash": "75bd64086024ff40d56c27c6e238416b"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-sheets-report-sync/index.ts": {
+    "mtime": 1782216533.3914704,
+    "hash": "944df5e76216ad0d445f7ff49d83d120"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-drive-customer-documents-upload/index.ts": {
     "mtime": 1782053660.5761273,
     "hash": "6dcee7a26af264272dc5632a3fc99c76"
@@ -88,8 +104,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1782054246.436031,
-    "hash": "f72ec57bbd98e826d188055461aa587c"
+    "mtime": 1782215515.6257703,
+    "hash": "dc2183b6286f1432986945bb5a78ca14"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -259,13 +275,29 @@
     "mtime": 1781889748.7344644,
     "hash": "3877d73441318dcc30432d5d8506bb62"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/googleSheetsReportRemote.ts": {
+    "mtime": 1782215474.623002,
+    "hash": "35d3c420f31109f311e8a4bab59ae474"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/ReportsPage.tsx": {
-    "mtime": 1781889748.7339478,
-    "hash": "45965e344f484f47ab8d28837f781a2f"
+    "mtime": 1782215511.9859385,
+    "hash": "a07eec50d34dd9799e8224d1a1ac5eac"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/googleSheetsReportSheets.test.ts": {
+    "mtime": 1782216564.7345047,
+    "hash": "3b48348d67e6d7c63400d296384994c3"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/reportsMetrics.test.ts": {
     "mtime": 1781889748.7328167,
     "hash": "dfc49845857c991f2300c41773e1a144"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/ReportsPage.test.tsx": {
+    "mtime": 1782215596.6596138,
+    "hash": "65d8116d7c71ae7a6ec10f316418a081"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/googleSheetsReportRemote.test.ts": {
+    "mtime": 1782215553.3762476,
+    "hash": "479591be08187a7a8cd7cf2379c22d9c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/reportsMetrics.ts": {
     "mtime": 1781889748.7316601,
@@ -280,8 +312,8 @@
     "hash": "9fb3c53481f5cfa62154dd5a2a92ac2b"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/README.md": {
-    "mtime": 1781764106.274924,
-    "hash": "433c564234cfe365ba2614fe43946e76"
+    "mtime": 1782215889.8557568,
+    "hash": "272726d95debce6dc85ea648d25e38ef"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/AGENTS.md": {
     "mtime": 1781269137.6504016,
@@ -296,8 +328,8 @@
     "hash": "b69b478902aa08b39ba0582f3bbaf2ad"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/README.md": {
-    "mtime": 1782051606.814062,
-    "hash": "a46ebe6c0862ba465087a192903320e3"
+    "mtime": 1782215889.8550217,
+    "hash": "fa1307a2862fe7006109fcda454f8b61"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/public/apple-touch-icon.png": {
     "mtime": 1781269137.6772583,

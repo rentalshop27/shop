@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   TrendingUp,
   Wallet,
@@ -12,8 +12,11 @@ import {
   Sparkles,
   ArrowRight,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  ExternalLink,
+  FileSpreadsheet,
 } from 'lucide-react'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RentalOrder } from '../rentals/rentalTypes'
 import type { StockItem } from '../inventory/inventoryTypes'
 import {
@@ -22,6 +25,12 @@ import {
   buildReportsDateRange,
 } from './reportsMetrics'
 import type { DateRangeMode, DressReportItem } from './reportsMetrics'
+import {
+  disconnectedStatus,
+  loadGoogleSheetsReportStatus,
+  syncGoogleSheetsReport,
+  type GoogleSheetsReportStatus,
+} from './googleSheetsReportRemote'
 import './ReportsPage.css'
 
 // Helper to format currency
@@ -37,17 +46,38 @@ function getLocalDateString(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('th-TH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+}
+
 type SortField = 'rentalCount' | 'totalRevenue' | 'emptyDays' | 'emptyRate'
 type SortOrder = 'asc' | 'desc'
 
 export function ReportsPage({
   rentals,
   stockItems,
+  supabase,
+  shopId,
+  shopName,
 }: {
   rentals: RentalOrder[]
   stockItems: StockItem[]
+  supabase?: SupabaseClient | null
+  shopId?: string | null
+  shopName?: string
 }) {
   const [activeSubTab, setActiveSubTab] = useState<'dresses' | 'general'>('dresses')
+  const [googleReportStatus, setGoogleReportStatus] = useState<GoogleSheetsReportStatus>(() => disconnectedStatus())
+  const [isGoogleReportLoading, setIsGoogleReportLoading] = useState(false)
+  const [isGoogleReportSyncing, setIsGoogleReportSyncing] = useState(false)
+  const [googleReportError, setGoogleReportError] = useState('')
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,6 +97,40 @@ export function ReportsPage({
 
   // Get current date as string
   const todayStr = useMemo(() => getLocalDateString(new Date()), [])
+
+  useEffect(() => {
+    if (!supabase || !shopId) {
+      setGoogleReportStatus(disconnectedStatus())
+      setGoogleReportError('')
+      return
+    }
+
+    let cancelled = false
+    setIsGoogleReportLoading(true)
+    setGoogleReportError('')
+
+    loadGoogleSheetsReportStatus(supabase, shopId)
+      .then((status) => {
+        if (!cancelled) {
+          setGoogleReportStatus(status)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setGoogleReportError(getErrorMessage(error))
+          setGoogleReportStatus(disconnectedStatus())
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsGoogleReportLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [supabase, shopId])
 
   // Categories, Brands, Sizes, Colors list from stockItems for dropdowns
   const categoriesList = useMemo(() => {
@@ -203,6 +267,33 @@ export function ReportsPage({
     return sortOrder === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />
   };
 
+  const handleSyncGoogleSheets = async () => {
+    if (!supabase || !shopId || isGoogleReportSyncing) return
+
+    setIsGoogleReportSyncing(true)
+    setGoogleReportError('')
+    try {
+      const result = await syncGoogleSheetsReport(supabase, shopId)
+      setGoogleReportStatus((current) => ({
+        connected: true,
+        googleEmail: current.connected ? current.googleEmail : '',
+        spreadsheetUrl: result.spreadsheetUrl,
+        lastSyncAt: result.syncedAt,
+        lastSyncStatus: 'success',
+        lastSyncError: '',
+      }))
+    } catch (error: unknown) {
+      setGoogleReportError(getErrorMessage(error))
+      setGoogleReportStatus((current) => (
+        current.connected
+          ? { ...current, lastSyncStatus: 'error', lastSyncError: getErrorMessage(error) }
+          : current
+      ))
+    } finally {
+      setIsGoogleReportSyncing(false)
+    }
+  }
+
   return (
     <div className="reports-page-container">
       {/* Page Header */}
@@ -233,6 +324,55 @@ export function ReportsPage({
           </button>
         </div>
       </header>
+
+      <section className="reports-google-sheet-panel" aria-label="Google Sheets report sync">
+        <div className="reports-google-main">
+          <span className="reports-google-icon"><FileSpreadsheet size={22} /></span>
+          <div>
+            <h2>Google Sheets สำหรับดูรายงาน</h2>
+            <p>
+              {shopName
+                ? `ซิงก์ข้อมูลรายงานของร้าน ${shopName} ไปยังชีตที่เชื่อมกับ Google ของร้านนี้`
+                : 'ซิงก์ข้อมูลรายงานของร้านที่เลือกอยู่ไปยัง Google Sheets'}
+            </p>
+            <div className="reports-google-meta" role="status">
+              {isGoogleReportLoading
+                ? 'กำลังตรวจสถานะ Google...'
+                : googleReportStatus.connected
+                  ? `เชื่อมกับ ${googleReportStatus.googleEmail || 'Google account'}${googleReportStatus.lastSyncAt ? ` · ซิงก์ล่าสุด ${formatDateTime(googleReportStatus.lastSyncAt)}` : ''}`
+                  : 'ยังไม่ได้เชื่อม Google ในหน้าโปรไฟล์'}
+            </div>
+            {(googleReportError || (googleReportStatus.connected && googleReportStatus.lastSyncError)) && (
+              <p className="reports-google-error" role="alert">
+                {googleReportError || googleReportStatus.lastSyncError}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="reports-google-actions">
+          <button
+            className="primary-button reports-google-sync-button"
+            type="button"
+            onClick={handleSyncGoogleSheets}
+            disabled={!supabase || !shopId || !googleReportStatus.connected || isGoogleReportLoading || isGoogleReportSyncing}
+          >
+            <RefreshCw size={18} className={isGoogleReportSyncing ? 'spinning' : ''} />
+            {isGoogleReportSyncing ? 'กำลังซิงก์...' : 'ซิงก์ไป Google Sheets'}
+          </button>
+          {googleReportStatus.connected && googleReportStatus.spreadsheetUrl && (
+            <a
+              className="secondary-button reports-google-open-button"
+              href={googleReportStatus.spreadsheetUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={18} />
+              เปิดชีต
+            </a>
+          )}
+        </div>
+      </section>
 
       {/* TAB 1: DRESSES REPORTS */}
       {activeSubTab === 'dresses' && (

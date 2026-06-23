@@ -1891,6 +1891,9 @@ function App() {
           <ReportsPage
             rentals={rentals}
             stockItems={stockItems}
+            supabase={supabase}
+            shopId={shopId}
+            shopName={currentShop?.name}
           />
         )}
 

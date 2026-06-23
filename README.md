@@ -50,6 +50,31 @@ VITE_GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.c
 - Build output directory: `dist`
 - SPA fallback อยู่ที่ `public/_redirects`
 
+## Supabase Keepalive Cron
+
+ถ้าต้องการมี cron ping เพื่อช่วยลดโอกาสโปรเจกต์ Free ถูก pause:
+
+1. สร้าง token ยาว ๆ เช่น `openssl rand -hex 32`
+2. ตั้ง Supabase Edge Function secret ชื่อ `KEEPALIVE_TOKEN`
+3. ตั้ง GitHub repository variable ชื่อ `SUPABASE_PROJECT_URL`
+4. ตั้ง GitHub repository secret ชื่อ `SUPABASE_KEEPALIVE_TOKEN`
+5. deploy Edge Function `health`
+6. push workflow นี้ขึ้น GitHub
+
+```bash
+supabase secrets set KEEPALIVE_TOKEN=replace-with-a-long-random-token
+supabase functions deploy health --no-verify-jwt
+```
+
+ตั้งค่า `SUPABASE_PROJECT_URL` เป็นค่าแบบนี้:
+
+```bash
+https://your-project-ref.supabase.co
+```
+
+workflow จะยิง `https://<project-ref>.supabase.co/functions/v1/health` ทุก 12 ชั่วโมง และสั่งรันเองได้จาก `workflow_dispatch`
+ฟังก์ชันนี้เช็ก token จาก header แล้วอ่าน `public.shops` แบบเบา ๆ ผ่าน Supabase REST เพื่อให้ ping แตะ hosted database จริง
+
 ## Verification
 
 ```bash
