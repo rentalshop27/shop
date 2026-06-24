@@ -748,6 +748,7 @@
 
 .overview-metric-card.gold-bg-opacity { border-bottom: 3px solid var(--text-gold, #ead483); }
 .overview-metric-card.purple-bg-opacity { border-bottom: 3px solid #ab47bc; }
+.overview-metric-card.blue-bg-opacity { border-bottom: 3px solid #42a5f5; }
 
 .card-icon-round {
   width: 54px;
@@ -772,6 +773,11 @@
 .card-icon-round.purple-bg {
   background: rgba(171, 71, 188, 0.15);
   color: #ba68c8;
+}
+
+.card-icon-round.blue-bg {
+  background: rgba(66, 165, 245, 0.14);
+  color: #64b5f6;
 }
 
 .card-info {
@@ -802,6 +808,7 @@
 .card-value.green-color { color: #81c784; }
 .card-value.gold-color { color: var(--text-gold, #ead483); }
 .card-value.purple-color { color: #ce93d8; }
+.card-value.blue-color { color: #64b5f6; }
 
 .status-breakdown-section {
   background: rgba(22, 19, 18, 0.5);
@@ -885,8 +892,293 @@
   line-height: 1.5;
 }
 
+.reports-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+  gap: 20px;
+}
+
+.analysis-panel {
+  background: rgba(22, 19, 18, 0.5);
+  border: 1px solid rgba(179, 139, 109, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 0;
+}
+
+.analysis-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  color: var(--text-gold, #ead483);
+}
+
+.analysis-panel-header h2 {
+  color: var(--text-bright, #fff7ef);
+  font-size: 16px;
+  font-weight: 850;
+  margin: 0 0 6px 0;
+}
+
+.analysis-panel-header p {
+  color: var(--text-muted, #8f8580);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.analysis-empty-state {
+  color: var(--text-muted, #8f8580);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  padding: 28px 0;
+  text-align: center;
+}
+
+.monthly-trend-chart {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  align-items: end;
+  gap: 12px;
+  min-height: 240px;
+}
+
+.trend-month {
+  display: grid;
+  grid-template-rows: 150px auto auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.trend-bar-track {
+  display: flex;
+  align-items: flex-end;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.trend-bar-fill {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #81c784 0%, #4caf50 100%);
+  transition: height 0.25s ease;
+}
+
+.trend-value {
+  color: var(--text-bright, #fff7ef);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.trend-label {
+  color: var(--text-muted, #8f8580);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.category-chart-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+}
+
+.category-pie-chart {
+  width: 180px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.category-pie-center {
+  width: 96px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #161312;
+  border: 1px solid rgba(179, 139, 109, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px;
+}
+
+.category-pie-center span {
+  color: var(--text-muted, #8f8580);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.category-pie-center strong {
+  color: var(--text-bright, #fff7ef);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.category-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.category-legend-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.category-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+
+.category-legend-item strong,
+.category-legend-item span {
+  display: block;
+}
+
+.category-legend-item strong {
+  color: var(--text-bright, #fff7ef);
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.category-legend-item span {
+  color: var(--text-muted, #8f8580);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.deposit-summary-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deposit-summary-panel .analysis-panel-header {
+  margin-bottom: 0;
+}
+
+.deposit-summary-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.deposit-summary-totals div {
+  background: rgba(14, 12, 11, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.deposit-summary-totals span,
+.deposit-month-label span,
+.deposit-month-values span {
+  color: var(--text-muted, #8f8580);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.deposit-summary-totals strong {
+  display: block;
+  color: var(--text-bright, #fff7ef);
+  font-size: 18px;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.deposit-month-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.deposit-month-row {
+  display: grid;
+  grid-template-columns: 120px minmax(180px, 1fr) minmax(260px, 0.9fr);
+  align-items: center;
+  gap: 16px;
+  background: rgba(14, 12, 11, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.deposit-month-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deposit-month-label strong {
+  color: var(--text-bright, #fff7ef);
+  font-size: 14px;
+}
+
+.deposit-bar-track {
+  display: flex;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.deposit-bar-fill.held {
+  background: #64b5f6;
+}
+
+.deposit-bar-fill.returned {
+  background: #81c784;
+}
+
+.deposit-month-values {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.deposit-month-values strong {
+  color: var(--text-gold, #ead483);
+  font-size: 13px;
+  font-weight: 900;
+}
+
 /* Responsive Overrides */
 @media (max-width: 1100px) {
+  .reports-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .deposit-month-row {
+    grid-template-columns: 110px minmax(180px, 1fr);
+  }
+
+  .deposit-month-values {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
   .rep-row {
     grid-template-columns: 50px 90px minmax(150px, 1fr) 85px 110px 90px 90px 90px;
     font-size: 13px;
@@ -923,6 +1215,27 @@
   .filter-row-1, .filter-row-2 {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .category-chart-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .category-legend-list {
+    width: 100%;
+  }
+
+  .deposit-summary-totals {
+    grid-template-columns: 1fr;
+  }
+
+  .deposit-month-row {
+    grid-template-columns: 1fr;
+  }
+
+  .deposit-month-values {
+    gap: 8px;
   }
 
   .date-range-container {

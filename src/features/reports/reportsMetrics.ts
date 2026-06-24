@@ -24,6 +24,33 @@ export interface GeneralStoreMetrics {
   totalRevenue: number
   avgOrderValue: number
   statusCounts: Partial<Record<RentalStatus, number>>
+  monthlyRevenueTrends: MonthlyRevenueTrend[]
+  revenueByCategory: CategoryRevenueSlice[]
+  monthlyDepositSummary: MonthlyDepositSummary[]
+  totalDepositCollected: number
+  totalDepositHeld: number
+  totalDepositInReturnedOrders: number
+}
+
+export interface MonthlyRevenueTrend {
+  month: string
+  revenue: number
+  rentalCount: number
+}
+
+export interface CategoryRevenueSlice {
+  category: string
+  revenue: number
+  rentalCount: number
+  percentage: number
+}
+
+export interface MonthlyDepositSummary {
+  month: string
+  depositCollected: number
+  depositHeld: number
+  depositInReturnedOrders: number
+  rentalCount: number
 }
 
 function toUtcDay(dateStr: string) {
@@ -66,6 +93,101 @@ function isDateInRange(dateStr: string, range: DateRange) {
 
 function calculateNetRentalRevenue(rental: RentalOrder) {
   return Math.max(0, rental.collectedAmount - rental.depositAmount)
+}
+
+function getMonthKey(dateStr: string) {
+  return dateStr.substring(0, 7)
+}
+
+function addMonths(month: string, count: number) {
+  const [year, monthIndex] = month.split('-').map(Number)
+  const date = new Date(Date.UTC(year, monthIndex - 1 + count, 1))
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+function buildMonthRange(months: string[]) {
+  if (months.length === 0) return []
+
+  const sortedMonths = [...months].sort()
+  const start = sortedMonths[0]
+  const end = sortedMonths[sortedMonths.length - 1]
+  const range: string[] = []
+
+  for (let month = start; month <= end; month = addMonths(month, 1)) {
+    range.push(month)
+  }
+
+  return range
+}
+
+export function buildMonthlyRevenueTrends(rentals: RentalOrder[]): MonthlyRevenueTrend[] {
+  const monthTotals = new Map<string, MonthlyRevenueTrend>()
+
+  rentals.forEach((rental) => {
+    const month = getMonthKey(rental.pickupDate)
+    const current = monthTotals.get(month) ?? { month, revenue: 0, rentalCount: 0 }
+    current.revenue += calculateNetRentalRevenue(rental)
+    current.rentalCount += 1
+    monthTotals.set(month, current)
+  })
+
+  return buildMonthRange(Array.from(monthTotals.keys())).map((month) => (
+    monthTotals.get(month) ?? { month, revenue: 0, rentalCount: 0 }
+  ))
+}
+
+export function buildRevenueByCategory(rentals: RentalOrder[]): CategoryRevenueSlice[] {
+  const categoryTotals = new Map<string, Omit<CategoryRevenueSlice, 'percentage'>>()
+
+  rentals.forEach((rental) => {
+    const category = rental.costume.category || 'ไม่ระบุหมวดหมู่'
+    const current = categoryTotals.get(category) ?? { category, revenue: 0, rentalCount: 0 }
+    current.revenue += calculateNetRentalRevenue(rental)
+    current.rentalCount += 1
+    categoryTotals.set(category, current)
+  })
+
+  const totalRevenue = Array.from(categoryTotals.values()).reduce((sum, item) => sum + item.revenue, 0)
+
+  return Array.from(categoryTotals.values())
+    .map((item) => ({
+      ...item,
+      percentage: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue || a.category.localeCompare(b.category))
+}
+
+export function buildMonthlyDepositSummary(rentals: RentalOrder[]): MonthlyDepositSummary[] {
+  const monthTotals = new Map<string, MonthlyDepositSummary>()
+
+  rentals.forEach((rental) => {
+    const month = getMonthKey(rental.pickupDate)
+    const current = monthTotals.get(month) ?? {
+      month,
+      depositCollected: 0,
+      depositHeld: 0,
+      depositInReturnedOrders: 0,
+      rentalCount: 0,
+    }
+    current.depositCollected += rental.depositAmount
+    if (rental.status === 'returned') {
+      current.depositInReturnedOrders += rental.depositAmount
+    } else {
+      current.depositHeld += rental.depositAmount
+    }
+    current.rentalCount += 1
+    monthTotals.set(month, current)
+  })
+
+  return buildMonthRange(Array.from(monthTotals.keys())).map((month) => (
+    monthTotals.get(month) ?? {
+      month,
+      depositCollected: 0,
+      depositHeld: 0,
+      depositInReturnedOrders: 0,
+      rentalCount: 0,
+    }
+  ))
 }
 
 export function buildReportsDateRange({
@@ -170,6 +292,14 @@ export function buildGeneralStoreMetrics(rentals: RentalOrder[]): GeneralStoreMe
   const totalRentalsCount = rentals.length
   const totalRevenue = rentals.reduce((sum, rental) => sum + calculateNetRentalRevenue(rental), 0)
   const avgOrderValue = totalRentalsCount > 0 ? totalRevenue / totalRentalsCount : 0
+  const monthlyRevenueTrends = buildMonthlyRevenueTrends(rentals)
+  const revenueByCategory = buildRevenueByCategory(rentals)
+  const monthlyDepositSummary = buildMonthlyDepositSummary(rentals)
+  const totalDepositCollected = rentals.reduce((sum, rental) => sum + rental.depositAmount, 0)
+  const totalDepositHeld = rentals.reduce((sum, rental) => (
+    rental.status === 'returned' ? sum : sum + rental.depositAmount
+  ), 0)
+  const totalDepositInReturnedOrders = totalDepositCollected - totalDepositHeld
 
   const statusCounts = rentals.reduce((acc, rental) => {
     acc[rental.status] = (acc[rental.status] || 0) + 1
@@ -180,6 +310,12 @@ export function buildGeneralStoreMetrics(rentals: RentalOrder[]): GeneralStoreMe
     totalRentalsCount,
     totalRevenue,
     avgOrderValue,
-    statusCounts
+    statusCounts,
+    monthlyRevenueTrends,
+    revenueByCategory,
+    monthlyDepositSummary,
+    totalDepositCollected,
+    totalDepositHeld,
+    totalDepositInReturnedOrders,
   }
 }

@@ -53,9 +53,18 @@ function formatDateTime(value: string) {
   }).format(new Date(value))
 }
 
+function formatMonthLabel(month: string) {
+  return new Intl.DateTimeFormat('th-TH', {
+    month: 'short',
+    year: '2-digit',
+  }).format(new Date(`${month}-01T00:00:00`))
+}
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่'
 }
+
+const categoryChartColors = ['#81c784', '#ead483', '#64b5f6', '#ce93d8', '#ffb74d', '#f06292']
 
 type SortField = 'rentalCount' | 'totalRevenue' | 'emptyDays' | 'emptyRate'
 type SortOrder = 'asc' | 'desc'
@@ -252,6 +261,30 @@ export function ReportsPage({
   const generalStoreMetrics = useMemo(() => {
     return buildGeneralStoreMetrics(rentals)
   }, [rentals])
+
+  const monthlyRevenueMax = useMemo(() => {
+    return Math.max(1, ...generalStoreMetrics.monthlyRevenueTrends.map(item => item.revenue))
+  }, [generalStoreMetrics.monthlyRevenueTrends])
+
+  const monthlyDepositMax = useMemo(() => {
+    return Math.max(1, ...generalStoreMetrics.monthlyDepositSummary.map(item => item.depositCollected))
+  }, [generalStoreMetrics.monthlyDepositSummary])
+
+  const categoryPieBackground = useMemo(() => {
+    if (generalStoreMetrics.revenueByCategory.length === 0 || generalStoreMetrics.totalRevenue <= 0) {
+      return 'conic-gradient(rgba(255, 255, 255, 0.06) 0% 100%)'
+    }
+
+    let cursor = 0
+    const segments = generalStoreMetrics.revenueByCategory.map((item, index) => {
+      const start = cursor
+      const end = index === generalStoreMetrics.revenueByCategory.length - 1 ? 100 : cursor + item.percentage
+      cursor = end
+      return `${categoryChartColors[index % categoryChartColors.length]} ${start}% ${end}%`
+    })
+
+    return `conic-gradient(${segments.join(', ')})`
+  }, [generalStoreMetrics.revenueByCategory, generalStoreMetrics.totalRevenue])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -766,6 +799,17 @@ export function ReportsPage({
                 <p className="card-sub">รายได้จากการเช่าเฉลี่ยต่อหนึ่งรายการเช่า</p>
               </div>
             </div>
+
+            <div className="overview-metric-card blue-bg-opacity">
+              <div className="card-icon-round blue-bg">
+                <Wallet size={24} />
+              </div>
+              <div className="card-info">
+                <span className="card-label">เงินประกันที่ยังถืออยู่</span>
+                <h2 className="card-value blue-color">{formatBaht(generalStoreMetrics.totalDepositHeld)}</h2>
+                <p className="card-sub">รวมใบเช่าสถานะจองแล้ว ใช้งานอยู่ และเกินกำหนดส่งคืน</p>
+              </div>
+            </div>
           </section>
 
           <section className="status-breakdown-section">
@@ -794,18 +838,134 @@ export function ReportsPage({
             </div>
           </section>
 
-          {/* Informational Widget */}
-          <section className="reports-upcoming-notice">
-            <div className="notice-icon">
-              <Info size={28} />
+          <section className="reports-analysis-grid" aria-label="วิเคราะห์รายได้เชิงลึก">
+            <article className="analysis-panel revenue-trend-panel">
+              <div className="analysis-panel-header">
+                <div>
+                  <h2>แนวโน้มรายได้รายเดือน</h2>
+                  <p>นับจากเดือนรับชุด และคิดเฉพาะรายได้สุทธิหลังหักเงินประกัน</p>
+                </div>
+                <TrendingUp size={22} />
+              </div>
+
+              {generalStoreMetrics.monthlyRevenueTrends.length === 0 ? (
+                <p className="analysis-empty-state">ยังไม่มีข้อมูลรายได้รายเดือน</p>
+              ) : (
+                <div className="monthly-trend-chart" aria-label="กราฟรายได้รายเดือน">
+                  {generalStoreMetrics.monthlyRevenueTrends.map(item => (
+                    <div className="trend-month" key={item.month}>
+                      <div className="trend-bar-track">
+                        <div
+                          className="trend-bar-fill"
+                          style={{ height: item.revenue > 0 ? `${Math.max(4, (item.revenue / monthlyRevenueMax) * 100)}%` : '0%' }}
+                          title={`${formatMonthLabel(item.month)} ${formatBaht(item.revenue)}`}
+                        />
+                      </div>
+                      <span className="trend-value">{formatBaht(item.revenue)}</span>
+                      <span className="trend-label">{formatMonthLabel(item.month)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+
+            <article className="analysis-panel category-panel">
+              <div className="analysis-panel-header">
+                <div>
+                  <h2>สัดส่วนรายได้ตามหมวดหมู่</h2>
+                  <p>รวมยอดรายได้สุทธิจากทุกใบเช่าตามประเภทชุด</p>
+                </div>
+                <BarChart3 size={22} />
+              </div>
+
+              {generalStoreMetrics.revenueByCategory.length === 0 || generalStoreMetrics.totalRevenue <= 0 ? (
+                <p className="analysis-empty-state">ยังไม่มีรายได้แยกตามหมวดหมู่</p>
+              ) : (
+                <div className="category-chart-layout">
+                  <div
+                    className="category-pie-chart"
+                    style={{ background: categoryPieBackground }}
+                    aria-label="กราฟวงกลมรายได้ตามหมวดหมู่"
+                  >
+                    <div className="category-pie-center">
+                      <span>รวม</span>
+                      <strong>{formatBaht(generalStoreMetrics.totalRevenue)}</strong>
+                    </div>
+                  </div>
+                  <div className="category-legend-list">
+                    {generalStoreMetrics.revenueByCategory.map((item, index) => (
+                      <div className="category-legend-item" key={item.category}>
+                        <span
+                          className="category-color-dot"
+                          style={{ background: categoryChartColors[index % categoryChartColors.length] }}
+                        />
+                        <div>
+                          <strong>{item.category}</strong>
+                          <span>{formatBaht(item.revenue)} · {item.percentage.toFixed(1)}% · {item.rentalCount} ครั้ง</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </article>
+          </section>
+
+          <section className="analysis-panel deposit-summary-panel" aria-label="สรุปเงินประกันรายเดือน">
+            <div className="analysis-panel-header">
+              <div>
+                <h2>สรุปเงินประกันรายเดือน</h2>
+                <p>ยอดรับประกันรวม แยกเงินที่ยังถืออยู่และเงินของออเดอร์ที่คืนชุดแล้วตามเดือนรับชุด</p>
+              </div>
+              <Wallet size={22} />
             </div>
-            <div className="notice-content">
-              <h3>ระบบวิเคราะห์เชิงลึกกำลังพัฒนาเพิ่มเติม</h3>
-              <p>
-                ในเฟสถัดไปของหน้ารายงานรวม ระบบจะเพิ่มกราฟเส้นแสดงแนวโน้มรายได้รายเดือน (Monthly Revenue Trends),
-                สัดส่วนรายได้แยกตามประเภทชุด (Revenue by Category Pie Chart), และรายงานสรุปเงินประกันค้างคืนสะสมในแต่ละเดือน
-              </p>
+
+            <div className="deposit-summary-totals">
+              <div>
+                <span>รับประกันรวม</span>
+                <strong>{formatBaht(generalStoreMetrics.totalDepositCollected)}</strong>
+              </div>
+              <div>
+                <span>ยังถืออยู่</span>
+                <strong>{formatBaht(generalStoreMetrics.totalDepositHeld)}</strong>
+              </div>
+              <div>
+                <span>ออเดอร์คืนชุดแล้ว</span>
+                <strong>{formatBaht(generalStoreMetrics.totalDepositInReturnedOrders)}</strong>
+              </div>
             </div>
+
+            {generalStoreMetrics.monthlyDepositSummary.length === 0 ? (
+              <p className="analysis-empty-state">ยังไม่มีข้อมูลเงินประกันรายเดือน</p>
+            ) : (
+              <div className="deposit-month-list">
+                {generalStoreMetrics.monthlyDepositSummary.map(item => (
+                  <div className="deposit-month-row" key={item.month}>
+                    <div className="deposit-month-label">
+                      <strong>{formatMonthLabel(item.month)}</strong>
+                      <span>{item.rentalCount} ใบเช่า</span>
+                    </div>
+                    <div className="deposit-bar-cell">
+                      <div className="deposit-bar-track">
+                        <div
+                          className="deposit-bar-fill held"
+                          style={{ width: `${(item.depositHeld / monthlyDepositMax) * 100}%` }}
+                        />
+                        <div
+                          className="deposit-bar-fill returned"
+                          style={{ width: `${(item.depositInReturnedOrders / monthlyDepositMax) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="deposit-month-values">
+                      <span>ถืออยู่ {formatBaht(item.depositHeld)}</span>
+                      <span>คืนชุดแล้ว {formatBaht(item.depositInReturnedOrders)}</span>
+                      <strong>รวม {formatBaht(item.depositCollected)}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       )}
