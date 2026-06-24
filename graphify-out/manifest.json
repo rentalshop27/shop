@@ -104,8 +104,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1782215515.6257703,
-    "hash": "dc2183b6286f1432986945bb5a78ca14"
+    "mtime": 1782292694.0761876,
+    "hash": "4d8be64209880d847db97150e17abdb2"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -142,6 +142,10 @@
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/googleToken.test.ts": {
     "mtime": 1782054162.1604362,
     "hash": "090ee6638d58a440dbd2851d3ddae4df"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/CustomersPage.tsx": {
+    "mtime": 1782292694.0771196,
+    "hash": "0b4496a71814262b940ee2ed1fc3e978"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/settings/SettingsPage.tsx": {
     "mtime": 1781269137.6931427,
@@ -302,6 +306,10 @@
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/reportsMetrics.ts": {
     "mtime": 1782290132.4531152,
     "hash": "3abef9c95124d6df8be0073824276241"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/TextField.tsx": {
+    "mtime": 1782292666.0313766,
+    "hash": "bdeee20d03f34601edabbd20d8de1bcc"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/lib/supabase.ts": {
     "mtime": 1781269137.694621,
