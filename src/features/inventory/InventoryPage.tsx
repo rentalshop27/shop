@@ -28,7 +28,7 @@ type InventorySummary = {
   priced: number
 }
 
-type InventoryPageProps = {
+export type InventoryPageProps = {
   items: StockItem[]
   query: string
   setQuery: (value: string) => void

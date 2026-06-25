@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState, useRef } from 'react'
 import {
   CalendarCheck,
   CalendarDays,
@@ -14,16 +14,8 @@ import {
   CircleUserRound,
 } from 'lucide-react'
 import './index.css'
-import { DashboardPage } from './features/dashboard/DashboardPage'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
-import { RentalsPage } from './features/rentals/RentalsPage'
-import { CalendarPage } from './features/calendar/CalendarPage'
-import { SettingsPage } from './features/settings/SettingsPage'
-import { AuditLogPage } from './features/audit/AuditLogPage'
-import { ReportsPage } from './features/reports/ReportsPage'
-import { ProfilePage } from './features/profile/ProfilePage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
-import { InventoryPage } from './features/inventory/InventoryPage'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
@@ -69,7 +61,6 @@ import {
   profileStatusLabel,
   validateThaiPhone,
 } from './features/customers/customerRules'
-import { CustomersPage } from './features/customers/CustomersPage'
 import { TextField } from './components/TextField'
 
 const emptyDraft: CustomerDraft = {
@@ -103,6 +94,51 @@ const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; 
   { value: 'suspended', label: profileStatusLabel.suspended },
   { value: 'has_risk', label: 'มีสัญญาณความเสี่ยง' },
 ]
+
+const LazyDashboardPage = lazy(async () => {
+  const module = await import('./features/dashboard/DashboardPage')
+  return { default: module.DashboardPage }
+})
+
+const LazyRentalsPage = lazy(async () => {
+  const module = await import('./features/rentals/RentalsPage')
+  return { default: module.RentalsPage }
+})
+
+const LazyCalendarPage = lazy(async () => {
+  const module = await import('./features/calendar/CalendarPage')
+  return { default: module.CalendarPage }
+})
+
+const LazyInventoryPage = lazy(async () => {
+  const module = await import('./features/inventory/InventoryPage')
+  return { default: module.InventoryPage }
+})
+
+const LazyCustomersPage = lazy(async () => {
+  const module = await import('./features/customers/CustomersPage')
+  return { default: module.CustomersPage }
+})
+
+const LazySettingsPage = lazy(async () => {
+  const module = await import('./features/settings/SettingsPage')
+  return { default: module.SettingsPage }
+})
+
+const LazyAuditLogPage = lazy(async () => {
+  const module = await import('./features/audit/AuditLogPage')
+  return { default: module.AuditLogPage }
+})
+
+const LazyReportsPage = lazy(async () => {
+  const module = await import('./features/reports/ReportsPage')
+  return { default: module.ReportsPage }
+})
+
+const LazyProfilePage = lazy(async () => {
+  const module = await import('./features/profile/ProfilePage')
+  return { default: module.ProfilePage }
+})
 
 async function refreshAuditLogs(
   isAuthenticated: boolean,
@@ -1367,142 +1403,144 @@ function App() {
         )}
         {remoteError && <section className="remote-error">{remoteError}</section>}
 
-        {activeTab === 'dashboard' && (
-          <DashboardPage
-            rentals={rentals}
-            onUpdateRentalStatus={handleUpdateRentalStatus}
-            onNavigateToCustomers={() => setActiveTab('customers')}
-            onNavigateToRentals={() => setActiveTab('rentals')}
-          />
-        )}
+        <Suspense fallback={<PageLoadingFallback activeTab={activeTab} />}>
+          {activeTab === 'dashboard' && (
+            <LazyDashboardPage
+              rentals={rentals}
+              onUpdateRentalStatus={handleUpdateRentalStatus}
+              onNavigateToCustomers={() => setActiveTab('customers')}
+              onNavigateToRentals={() => setActiveTab('rentals')}
+            />
+          )}
 
-        {activeTab === 'rentals' && (
-          <RentalsPage
-            rentals={rentals}
-            customers={customers}
-            stockItems={stockItems}
-            onCreateRentals={handleCreateRentals}
-            onUpdateRentalStatus={handleUpdateRentalStatus}
-            onDeleteRental={handleDeleteRental}
-            externalSelectedRentalId={externalSelectedRentalId}
-            onSelectRental={setExternalSelectedRentalId}
-            externalIsFormOpen={externalIsFormOpen}
-            onFormOpenChange={setExternalIsFormOpen}
-            externalPickupDate={externalPickupDate}
-            externalReturnDate={externalReturnDate}
-            onClearExternalDates={handleClearExternalDates}
-          />
-        )}
+          {activeTab === 'rentals' && (
+            <LazyRentalsPage
+              rentals={rentals}
+              customers={customers}
+              stockItems={stockItems}
+              onCreateRentals={handleCreateRentals}
+              onUpdateRentalStatus={handleUpdateRentalStatus}
+              onDeleteRental={handleDeleteRental}
+              externalSelectedRentalId={externalSelectedRentalId}
+              onSelectRental={setExternalSelectedRentalId}
+              externalIsFormOpen={externalIsFormOpen}
+              onFormOpenChange={setExternalIsFormOpen}
+              externalPickupDate={externalPickupDate}
+              externalReturnDate={externalReturnDate}
+              onClearExternalDates={handleClearExternalDates}
+            />
+          )}
 
-        {activeTab === 'calendar' && (
-          <CalendarPage
-            rentals={rentals}
-            onUpdateRentalStatus={handleUpdateRentalStatus}
-            onNavigateToRentals={handleNavigateToRentals}
-            onNavigateToCreateRental={handleNavigateToCreateRental}
-            onNavigateToTab={setActiveTab}
-          />
-        )}
+          {activeTab === 'calendar' && (
+            <LazyCalendarPage
+              rentals={rentals}
+              onUpdateRentalStatus={handleUpdateRentalStatus}
+              onNavigateToRentals={handleNavigateToRentals}
+              onNavigateToCreateRental={handleNavigateToCreateRental}
+              onNavigateToTab={setActiveTab}
+            />
+          )}
 
-        {activeTab === 'inventory' && (
-          <InventoryPage {...inventoryPageProps} />
-        )}
+          {activeTab === 'inventory' && (
+            <LazyInventoryPage {...inventoryPageProps} />
+          )}
 
-        {activeTab === 'customers' && (
-          <CustomersPage
-            currentPage={currentPage}
-            totalPages={totalPages}
-            query={query}
-            statusFilter={statusFilter}
-            summary={summary}
-            statusOptions={statusOptions}
-            paginatedCustomers={paginatedCustomers}
-            selectedCustomer={selectedCustomer}
-            isMobileDetailOpen={isMobileDetailOpen}
-            isFormOpen={isFormOpen}
-            editingCustomerId={editingCustomerId}
-            draft={draft}
-            draftDocuments={draftDocuments}
-            existingDocuments={existingDocuments}
-            formError={formError}
-            isSaving={isSaving}
-            previewCustomer={previewCustomer}
-            previewCustomerDocIndex={previewCustomerDocIndex}
-            onOpenCreateForm={() => setIsFormOpen(true)}
-            onQueryChange={setQuery}
-            onStatusFilterChange={setStatusFilter}
-            onCurrentPageChange={setCurrentPage}
-            onSelectCustomer={setSelectedCustomerId}
-            onMobileDetailOpenChange={setIsMobileDetailOpen}
-            onStatusChange={updateSelectedStatus}
-            onRiskChange={updateSelectedRisk}
-            onArchiveSelectedCustomer={archiveSelectedCustomer}
-            onDocumentUpload={addDocuments}
-            onDocumentPreviewError={refreshCustomerDocumentUrls}
-            onEditCustomer={openEditCustomerForm}
-            onPreviewCustomerDocument={(customerId, index) => {
-              setPreviewCustomerDocOwnerId(customerId)
-              setPreviewCustomerDocIndex(index)
-              void ensureCustomerDocumentPreview(customerId, index)
-            }}
-            onCloseForm={closeCustomerForm}
-            onDraftChange={updateDraft}
-            onAddDraftDocuments={addDraftDocuments}
-            onExistingDocumentRemove={(documentId) => {
-              setExistingDocuments((current) => current.filter((entry) => entry.id !== documentId))
-              setDeletedDocumentIds((current) => [...current, documentId])
-            }}
-            onPreviewExistingDocument={(documentId) => {
-              void ensureExistingDocumentPreview(documentId)
-            }}
-            onRemoveDraftDocument={removeDraftDocument}
-            onResetForm={resetCustomerForm}
-            onSaveCustomer={handleSaveCustomer}
-            onClosePreview={() => setPreviewCustomerDocOwnerId(null)}
-          />
-        )}
+          {activeTab === 'customers' && (
+            <LazyCustomersPage
+              currentPage={currentPage}
+              totalPages={totalPages}
+              query={query}
+              statusFilter={statusFilter}
+              summary={summary}
+              statusOptions={statusOptions}
+              paginatedCustomers={paginatedCustomers}
+              selectedCustomer={selectedCustomer}
+              isMobileDetailOpen={isMobileDetailOpen}
+              isFormOpen={isFormOpen}
+              editingCustomerId={editingCustomerId}
+              draft={draft}
+              draftDocuments={draftDocuments}
+              existingDocuments={existingDocuments}
+              formError={formError}
+              isSaving={isSaving}
+              previewCustomer={previewCustomer}
+              previewCustomerDocIndex={previewCustomerDocIndex}
+              onOpenCreateForm={() => setIsFormOpen(true)}
+              onQueryChange={setQuery}
+              onStatusFilterChange={setStatusFilter}
+              onCurrentPageChange={setCurrentPage}
+              onSelectCustomer={setSelectedCustomerId}
+              onMobileDetailOpenChange={setIsMobileDetailOpen}
+              onStatusChange={updateSelectedStatus}
+              onRiskChange={updateSelectedRisk}
+              onArchiveSelectedCustomer={archiveSelectedCustomer}
+              onDocumentUpload={addDocuments}
+              onDocumentPreviewError={refreshCustomerDocumentUrls}
+              onEditCustomer={openEditCustomerForm}
+              onPreviewCustomerDocument={(customerId, index) => {
+                setPreviewCustomerDocOwnerId(customerId)
+                setPreviewCustomerDocIndex(index)
+                void ensureCustomerDocumentPreview(customerId, index)
+              }}
+              onCloseForm={closeCustomerForm}
+              onDraftChange={updateDraft}
+              onAddDraftDocuments={addDraftDocuments}
+              onExistingDocumentRemove={(documentId) => {
+                setExistingDocuments((current) => current.filter((entry) => entry.id !== documentId))
+                setDeletedDocumentIds((current) => [...current, documentId])
+              }}
+              onPreviewExistingDocument={(documentId) => {
+                void ensureExistingDocumentPreview(documentId)
+              }}
+              onRemoveDraftDocument={removeDraftDocument}
+              onResetForm={resetCustomerForm}
+              onSaveCustomer={handleSaveCustomer}
+              onClosePreview={() => setPreviewCustomerDocOwnerId(null)}
+            />
+          )}
 
-        {activeTab === 'settings' && (
-          <SettingsPage
-            brands={brands}
-            categories={categories}
-            colors={colors}
-            onAddBrand={handleAddBrand}
-            onDeleteBrand={handleDeleteBrand}
-            onAddCategory={handleAddCategory}
-            onDeleteCategory={handleDeleteCategory}
-            onAddColor={handleAddColor}
-            onDeleteColor={handleDeleteColor}
-          />
-        )}
+          {activeTab === 'settings' && (
+            <LazySettingsPage
+              brands={brands}
+              categories={categories}
+              colors={colors}
+              onAddBrand={handleAddBrand}
+              onDeleteBrand={handleDeleteBrand}
+              onAddCategory={handleAddCategory}
+              onDeleteCategory={handleDeleteCategory}
+              onAddColor={handleAddColor}
+              onDeleteColor={handleDeleteColor}
+            />
+          )}
 
-        {activeTab === 'audit' && (
-          <AuditLogPage
-            auditLogs={auditLogs}
-            loading={loadingAudit}
-            onRefresh={handleLoadAuditLogs}
-          />
-        )}
+          {activeTab === 'audit' && (
+            <LazyAuditLogPage
+              auditLogs={auditLogs}
+              loading={loadingAudit}
+              onRefresh={handleLoadAuditLogs}
+            />
+          )}
 
-        {activeTab === 'reports' && (
-          <ReportsPage
-            rentals={rentals}
-            stockItems={stockItems}
-            supabase={supabase}
-            shopId={shopId}
-            shopName={currentShop?.name}
-          />
-        )}
+          {activeTab === 'reports' && (
+            <LazyReportsPage
+              rentals={rentals}
+              stockItems={stockItems}
+              supabase={supabase}
+              shopId={shopId}
+              shopName={currentShop?.name}
+            />
+          )}
 
-        {activeTab === 'profile' && (
-          <ProfilePage
-            email={authUserEmail}
-            availableShops={availableShops}
-            selectedShopId={shopId}
-            onShopChange={setShopId}
-            onLogout={hasSupabaseConfig ? handleLogout : undefined}
-          />
-        )}
+          {activeTab === 'profile' && (
+            <LazyProfilePage
+              email={authUserEmail}
+              availableShops={availableShops}
+              selectedShopId={shopId}
+              onShopChange={setShopId}
+              onLogout={hasSupabaseConfig ? handleLogout : undefined}
+            />
+          )}
+        </Suspense>
 
         {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && activeTab !== 'profile' && (
           <div style={{ padding: '80px 40px', textAlign: 'center', color: '#c7bfb9' }}>
@@ -1695,6 +1733,28 @@ function LoadingScreen({
         {subtitle && <p className="subtitle">{subtitle}</p>}
       </section>
     </main>
+  )
+}
+
+function PageLoadingFallback({ activeTab }: { activeTab: ViewKey }) {
+  const labelMap: Record<ViewKey, string> = {
+    dashboard: 'แดชบอร์ด',
+    inventory: 'คลังชุด',
+    customers: 'ลูกค้า',
+    rentals: 'เช่า/คืน',
+    calendar: 'ปฏิทิน',
+    settings: 'ตั้งค่า',
+    audit: 'ประวัติระบบ',
+    reports: 'รายงาน',
+    profile: 'โปรไฟล์',
+  }
+
+  return (
+    <section className="panel" aria-live="polite" style={{ padding: '32px 28px' }}>
+      <p className="eyebrow">Precious Shop</p>
+      <h2 style={{ marginBottom: '8px' }}>กำลังโหลดหน้า {labelMap[activeTab]}</h2>
+      <p className="subtitle" style={{ marginBottom: 0 }}>ระบบจะโหลดเฉพาะหน้าที่คุณเปิดใช้งานเพื่อลดขนาด bundle เริ่มต้น</p>
+    </section>
   )
 }
 

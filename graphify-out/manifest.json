@@ -104,8 +104,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1782292694.0761876,
-    "hash": "4d8be64209880d847db97150e17abdb2"
+    "mtime": 1782361334.2588377,
+    "hash": "0931a916ae8a76247d041c17c8d04b40"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -256,8 +256,8 @@
     "hash": "17520a6fcf09ca5146b7dcafb4955cd3"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/InventoryPage.tsx": {
-    "mtime": 1781890726.8509963,
-    "hash": "23b4b4ac52df4fb2a5d44cdf0d795814"
+    "mtime": 1782361368.5490804,
+    "hash": "6b95e30eb16ad49d4d4ab635ddfdaeb2"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/InventoryPage.test.tsx": {
     "mtime": 1781890733.6762648,
@@ -268,8 +268,8 @@
     "hash": "0992b3b06ea4c1362a10812317ad53d5"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.ts": {
-    "mtime": 1781927871.0435717,
-    "hash": "77431cf1821d06399a8d523ecc1803ad"
+    "mtime": 1782361368.550482,
+    "hash": "7011ea4058e7aa19e39e3a39a5384aa5"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.test.tsx": {
     "mtime": 1781927826.7922814,
