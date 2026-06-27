@@ -106,6 +106,7 @@ export async function createRemoteCustomer(
 
 export async function updateRemoteCustomer(
   supabase: SupabaseClient,
+  shopId: string,
   customerId: string,
   draft: CustomerDraft,
 ) {
@@ -129,6 +130,7 @@ export async function updateRemoteCustomer(
     .from('customers')
     .update(payload)
     .eq('id', customerId)
+    .eq('shop_id', shopId)
     .select('*, customer_documents(*)')
     .single()
 
@@ -138,38 +140,52 @@ export async function updateRemoteCustomer(
 
 export async function updateRemoteCustomerStatus(
   supabase: SupabaseClient,
+  shopId: string,
   customerId: string,
   profileStatus: Customer['profileStatus'],
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('customers')
     .update({ profile_status: profileStatus, updated_at: new Date().toISOString() })
     .eq('id', customerId)
+    .eq('shop_id', shopId)
+    .select('id')
+    .single()
 
   if (error) throw error
+  if (!data) throw new Error('ไม่พบลูกค้าที่ต้องการอัปเดตในร้านนี้')
 }
 
 export async function updateRemoteCustomerRisk(
   supabase: SupabaseClient,
+  shopId: string,
   customerId: string,
   riskFlag: Customer['riskFlag'],
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('customers')
     .update({ risk_flag: riskFlag, updated_at: new Date().toISOString() })
     .eq('id', customerId)
+    .eq('shop_id', shopId)
+    .select('id')
+    .single()
 
   if (error) throw error
+  if (!data) throw new Error('ไม่พบลูกค้าที่ต้องการอัปเดตในร้านนี้')
 }
 
-export async function archiveRemoteCustomer(supabase: SupabaseClient, customerId: string) {
+export async function archiveRemoteCustomer(supabase: SupabaseClient, shopId: string, customerId: string) {
   const now = new Date().toISOString()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('customers')
     .update({ archived_at: now, updated_at: now })
     .eq('id', customerId)
+    .eq('shop_id', shopId)
+    .select('id')
+    .single()
 
   if (error) throw error
+  if (!data) throw new Error('ไม่พบลูกค้าที่ต้องการลบในร้านนี้')
 }
 
 export async function uploadRemoteCustomerDocuments(
@@ -346,21 +362,24 @@ export async function deleteRemoteCustomerDocuments(
   const documentIds = supabaseDocuments.map((document) => document.id)
   const storagePaths = supabaseDocuments.map((document) => document.storagePath)
 
+  const { error: dbError } = await supabase
+    .from('customer_documents')
+    .delete()
+    .eq('shop_id', shopId)
+    .in('id', documentIds)
+
+  if (dbError) throw dbError
+
   const validPaths = storagePaths.filter(Boolean)
   if (validPaths.length > 0) {
     const { error: storageError } = await supabase.storage
       .from('customer-documents')
       .remove(validPaths)
 
-    if (storageError) throw storageError
+    if (storageError) {
+      console.warn('Failed to delete customer document files after metadata delete:', validPaths, storageError)
+    }
   }
-
-  const { error: dbError } = await supabase
-    .from('customer_documents')
-    .delete()
-    .in('id', documentIds)
-
-  if (dbError) throw dbError
 }
 
 function parseOptionalNumber(value: string) {

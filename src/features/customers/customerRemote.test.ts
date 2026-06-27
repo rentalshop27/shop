@@ -7,6 +7,11 @@ import {
   loadAccessibleShops,
   loadCustomerDocumentPreview,
   loadCustomers,
+  deleteRemoteCustomerDocuments,
+  archiveRemoteCustomer,
+  updateRemoteCustomer,
+  updateRemoteCustomerRisk,
+  updateRemoteCustomerStatus,
   uploadRemoteCustomerDocuments,
 } from './customerRemote'
 
@@ -208,6 +213,135 @@ describe('customer remote', () => {
     expect(insert).toHaveBeenCalledTimes(1)
     expect(remove).toHaveBeenCalledTimes(1)
     expect(removedPaths[0]).toEqual(uploadedPaths)
+  })
+
+  it('scopes customer edits by id and selected shop id', async () => {
+    const filters: Array<[string, string]> = []
+    const row = {
+      id: 'customer_1',
+      shop_id: 'shop_1',
+      customer_code: 'PR-C001',
+      full_name: 'นนท์',
+      line_account: '',
+      phone: '0987654321',
+      phone_normalized: '0987654321',
+      current_address: '',
+      notes: '',
+      profile_status: 'verified',
+      risk_flag: 'none',
+      bust_in: null,
+      waist_in: null,
+      hip_in: null,
+      height_cm: null,
+      archived_at: null,
+      created_at: '2026-06-13T00:00:00.000Z',
+      updated_at: '2026-06-13T00:00:00.000Z',
+      customer_documents: [],
+    }
+    const single = vi.fn(() => ({ data: row, error: null }))
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        filters.push([column, value])
+        return query
+      }),
+      select: vi.fn(() => ({ single })),
+    }
+    const update = vi.fn(() => query)
+    const supabase = {
+      from: vi.fn(() => ({ update })),
+    } as unknown as SupabaseClient
+
+    await updateRemoteCustomer(supabase, 'shop_1', 'customer_1', {
+      fullName: 'นนท์',
+      lineAccount: '',
+      phone: '0987654321',
+      currentAddress: '',
+      notes: '',
+      profileStatus: 'verified',
+      riskFlag: 'none',
+      bustIn: '',
+      waistIn: '',
+      hipIn: '',
+      heightCm: '',
+    })
+
+    expect(filters).toEqual([
+      ['id', 'customer_1'],
+      ['shop_id', 'shop_1'],
+    ])
+    expect(query.select).toHaveBeenCalledWith('*, customer_documents(*)')
+    expect(single).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['status', (supabase: SupabaseClient) => updateRemoteCustomerStatus(supabase, 'shop_1', 'customer_1', 'verified')],
+    ['risk flag', (supabase: SupabaseClient) => updateRemoteCustomerRisk(supabase, 'shop_1', 'customer_1', 'has_risk')],
+    ['archive', (supabase: SupabaseClient) => archiveRemoteCustomer(supabase, 'shop_1', 'customer_1')],
+  ])('scopes quick customer %s updates by selected shop id', async (_label, action) => {
+    const filters: Array<[string, string]> = []
+    const single = vi.fn(() => ({ data: { id: 'customer_1' }, error: null }))
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        filters.push([column, value])
+        return query
+      }),
+      select: vi.fn(() => ({ single })),
+    }
+    const update = vi.fn(() => query)
+    const supabase = {
+      from: vi.fn(() => ({ update })),
+    } as unknown as SupabaseClient
+
+    await action(supabase)
+
+    expect(filters).toEqual([
+      ['id', 'customer_1'],
+      ['shop_id', 'shop_1'],
+    ])
+    expect(query.select).toHaveBeenCalledWith('id')
+  })
+
+  it('removes customer document rows before best-effort storage cleanup', async () => {
+    const calls: string[] = []
+    const filters: Array<[string, string]> = []
+    const remove = vi.fn((paths: string[]) => {
+      calls.push(`storage:${paths.join(',')}`)
+      return { error: null }
+    })
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        calls.push(`db:eq:${column}`)
+        filters.push([column, value])
+        return query
+      }),
+      in: vi.fn((column: string, values: string[]) => {
+        calls.push(`db:in:${column}:${values.join(',')}`)
+        return { error: null }
+      }),
+    }
+    const supabase = {
+      storage: {
+        from: vi.fn(() => ({ remove })),
+      },
+      from: vi.fn(() => ({ delete: vi.fn(() => query) })),
+    } as unknown as SupabaseClient
+
+    await deleteRemoteCustomerDocuments(supabase, 'shop_1', [{
+      id: 'document_1',
+      customerId: 'customer_1',
+      storagePath: 'shop_1/customer_1/document.png',
+      storageProvider: 'supabase_storage',
+      sortOrder: 1,
+      createdAt: '2026-06-13T00:00:00.000Z',
+    }])
+
+    expect(supabase.from).toHaveBeenCalledWith('customer_documents')
+    expect(filters).toEqual([['shop_id', 'shop_1']])
+    expect(calls).toEqual([
+      'db:eq:shop_id',
+      'db:in:id:document_1',
+      'storage:shop_1/customer_1/document.png',
+    ])
   })
 
   it('uploads customer documents through the Google Drive function when the shop is connected', async () => {

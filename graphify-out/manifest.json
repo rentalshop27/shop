@@ -43,6 +43,10 @@
     "mtime": 1781269137.6972377,
     "hash": "8c59fd3c65c5b0a191adc74c14cd4e5f"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0012_customer_documents_shop_guard.sql": {
+    "mtime": 1782551370.9365382,
+    "hash": "d461d842f97bf07b76b3827659d5b79c"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0005_prevent_duplicate_open_rentals.sql": {
     "mtime": 1781324076.8683248,
     "hash": "99948b184953f7387607f1104538af76"
@@ -56,8 +60,8 @@
     "hash": "b0b6e20eb22587dcc3c07eb3fd425750"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-drive-customer-documents-delete/index.ts": {
-    "mtime": 1782051814.4123976,
-    "hash": "5d95b2bec058dc59122bdd303a523751"
+    "mtime": 1782551355.0332568,
+    "hash": "5116d3dde128f5b7daed0f937529bc0f"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-oauth-start/index.ts": {
     "mtime": 1781770807.3023064,
@@ -104,8 +108,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1782361334.2588377,
-    "hash": "0931a916ae8a76247d041c17c8d04b40"
+    "mtime": 1782551342.960969,
+    "hash": "e10a3cc5c1d691446d0feab0552db5c0"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -116,8 +120,8 @@
     "hash": "78d292ba974adecf0cd4446489baf284"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.test.ts": {
-    "mtime": 1782054409.567103,
-    "hash": "4c00a1855ab788da5b365ce20c05d823"
+    "mtime": 1782551451.0998926,
+    "hash": "b84ebad8d63c101f02052bad25832d58"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRules.ts": {
     "mtime": 1781547131.0193582,
@@ -132,8 +136,8 @@
     "hash": "4caa4cd6d83d43d5dd1ca68673185ab4"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.ts": {
-    "mtime": 1782054161.7867393,
-    "hash": "73dd704cf6a792918a07f54417c4f340"
+    "mtime": 1782551322.1802142,
+    "hash": "70f05d11e66bc8b4b713f2a26596ee40"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerSeed.ts": {
     "mtime": 1781269137.690012,

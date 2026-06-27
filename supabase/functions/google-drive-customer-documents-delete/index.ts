@@ -53,19 +53,25 @@ Deno.serve(async (request) => {
 
     if (documentsError) throw documentsError
 
-    for (const document of documents ?? []) {
-      if (document.external_file_id) {
-        await deleteFileFromDrive(accessToken, document.external_file_id)
-      }
-    }
-
     const { error: deleteError } = await supabase
       .from('customer_documents')
       .delete()
       .eq('shop_id', shopId)
+      .eq('storage_provider', 'google_drive')
       .in('id', documentIds)
 
     if (deleteError) throw deleteError
+
+    await Promise.all(
+      (documents ?? []).map(async (document) => {
+        if (!document.external_file_id) return
+        try {
+          await deleteFileFromDrive(accessToken, document.external_file_id)
+        } catch (error) {
+          console.warn('Failed to delete Google Drive customer document after metadata delete:', document.id, error)
+        }
+      }),
+    )
 
     return new Response(JSON.stringify({ deleted: documentIds.length }), {
       status: 200,

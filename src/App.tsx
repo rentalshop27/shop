@@ -1004,19 +1004,22 @@ function App() {
         let docsPendingDelete: CustomerDocument[] = []
         const originalCustomer = customers.find((c) => c.id === editingCustomerId) ?? null
         if (supabase) {
-          if (deletedDocumentIds.length > 0) {
-            if (originalCustomer) {
-              docsPendingDelete = originalCustomer.documents.filter((doc) =>
-                deletedDocumentIds.includes(doc.id)
-              )
-            }
+          if (!originalCustomer) {
+            setFormError('ไม่พบลูกค้าที่ต้องการแก้ไข')
+            return
           }
 
-          if (originalCustomer && docsPendingDelete.length > 0) {
+          if (deletedDocumentIds.length > 0) {
+            docsPendingDelete = originalCustomer.documents.filter((doc) =>
+              deletedDocumentIds.includes(doc.id)
+            )
+          }
+
+          if (docsPendingDelete.length > 0) {
             await deleteRemoteCustomerDocuments(supabase, originalCustomer.shopId, docsPendingDelete)
           }
 
-          const updatedCustomer = await updateRemoteCustomer(supabase, editingCustomerId, draft)
+          const updatedCustomer = await updateRemoteCustomer(supabase, originalCustomer.shopId, editingCustomerId, draft)
           if (draftDocuments.length > 0) {
             await uploadRemoteCustomerDocuments(
               supabase,
@@ -1175,7 +1178,7 @@ function App() {
 
     if (supabase) {
       try {
-        await updateRemoteCustomerStatus(supabase, selectedCustomer.id, profileStatus)
+        await updateRemoteCustomerStatus(supabase, selectedCustomer.shopId, selectedCustomer.id, profileStatus)
       } catch (error) {
         window.alert(getErrorMessage(error))
         return
@@ -1196,7 +1199,7 @@ function App() {
 
     if (supabase) {
       try {
-        await updateRemoteCustomerRisk(supabase, selectedCustomer.id, riskFlag)
+        await updateRemoteCustomerRisk(supabase, selectedCustomer.shopId, selectedCustomer.id, riskFlag)
       } catch (error) {
         window.alert(getErrorMessage(error))
         return
@@ -1228,7 +1231,7 @@ function App() {
 
     if (supabase) {
       try {
-        await archiveRemoteCustomer(supabase, selectedCustomer.id)
+        await archiveRemoteCustomer(supabase, selectedCustomer.shopId, selectedCustomer.id)
       } catch (error) {
         window.alert(getErrorMessage(error))
         return
