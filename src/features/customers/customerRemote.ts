@@ -43,6 +43,7 @@ export type ShopSummary = {
 }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const CUSTOMER_WITH_DOCUMENTS_SELECT = '*, customer_documents!customer_documents_shop_customer_fk(*)'
 
 function getFunctionUrl(name: string) {
   if (!supabaseUrl) return ''
@@ -62,7 +63,7 @@ export async function loadAccessibleShops(supabase: SupabaseClient): Promise<Sho
 export async function loadCustomers(supabase: SupabaseClient, shopId: string) {
   const { data, error } = await supabase
     .from('customers')
-    .select('*, customer_documents(*)')
+    .select(CUSTOMER_WITH_DOCUMENTS_SELECT)
     .eq('shop_id', shopId)
     .is('archived_at', null)
     .order('created_at', { ascending: false })
@@ -97,7 +98,7 @@ export async function createRemoteCustomer(
   const { data, error } = await supabase
     .from('customers')
     .insert(payload)
-    .select('*, customer_documents(*)')
+    .select(CUSTOMER_WITH_DOCUMENTS_SELECT)
     .single()
 
   if (error) throw error
@@ -131,7 +132,7 @@ export async function updateRemoteCustomer(
     .update(payload)
     .eq('id', customerId)
     .eq('shop_id', shopId)
-    .select('*, customer_documents(*)')
+    .select(CUSTOMER_WITH_DOCUMENTS_SELECT)
     .single()
 
   if (error) throw error

@@ -81,7 +81,7 @@ describe('customer remote', () => {
     await loadCustomers(supabase, 'shop_1')
 
     expect(supabase.from).toHaveBeenCalledWith('customers')
-    expect(select).toHaveBeenCalledWith('*, customer_documents(*)')
+    expect(select).toHaveBeenCalledWith('*, customer_documents!customer_documents_shop_customer_fk(*)')
     expect(filters).toEqual([
       ['shop_id', 'shop_1'],
       ['archived_at', null],
@@ -269,7 +269,7 @@ describe('customer remote', () => {
       ['id', 'customer_1'],
       ['shop_id', 'shop_1'],
     ])
-    expect(query.select).toHaveBeenCalledWith('*, customer_documents(*)')
+    expect(query.select).toHaveBeenCalledWith('*, customer_documents!customer_documents_shop_customer_fk(*)')
     expect(single).toHaveBeenCalledTimes(1)
   })
 
