@@ -5,18 +5,19 @@ export type PublicCatalogResponse = {
   shop: {
     id: string
     name: string
+    publicCatalogSlug?: string | null
   }
   items: CatalogDisplayItem[]
 }
 
-export async function loadPublicCatalog(shopId: string): Promise<PublicCatalogResponse> {
+export async function loadPublicCatalog(catalogKey: string): Promise<PublicCatalogResponse> {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('ยังไม่ได้ตั้งค่า Supabase สำหรับ public catalog')
   }
 
   const functionsBaseUrl = supabaseUrl.replace(/\/+$/, '')
   const url = new URL(`${functionsBaseUrl}/functions/v1/public-catalog`)
-  url.searchParams.set('shopId', shopId)
+  url.searchParams.set('catalogKey', catalogKey)
 
   const response = await fetch(url, {
     headers: {

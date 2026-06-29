@@ -2183,6 +2183,10 @@ select {
     padding: 18px 12px 40px;
   }
 
+  .catalog-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .active-shop-banner {
     align-items: flex-start;
     flex-direction: column;
@@ -4483,10 +4487,52 @@ select {
   margin-bottom: 22px;
 }
 
-.catalog-category-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.catalog-filter-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+}
+
+.catalog-filter-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.catalog-filter-field span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.catalog-filter-field select {
+  appearance: none;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  color: var(--text-bright);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0 36px 0 12px;
+  width: 100%;
+}
+
+.catalog-filter-field {
+  position: relative;
+}
+
+.catalog-filter-field::after {
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text-muted);
+  bottom: 18px;
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  right: 14px;
 }
 
 .catalog-grid {
@@ -4544,6 +4590,7 @@ select {
   color: #86efac;
 }
 
+.catalog-status-unavailable,
 .catalog-status-booked,
 .catalog-status-rented {
   color: #fef3c7;

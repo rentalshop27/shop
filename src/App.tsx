@@ -200,9 +200,14 @@ function getPreferredShopId(userId: string | null, shops: ShopSummary[]) {
   return shops.length === 1 ? shops[0].id : null
 }
 
-function getPublicCatalogShopId() {
+function getPublicCatalogKey() {
   const match = window.location.pathname.match(/^\/catalog\/([^/]+)\/?$/)
   return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
+function getPublicCatalogUrl(origin: string, shop: ShopSummary | null) {
+  const catalogKey = shop?.publicCatalogSlug || shop?.id
+  return catalogKey ? `${origin}/catalog/${encodeURIComponent(catalogKey)}` : undefined
 }
 
 function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
@@ -224,12 +229,12 @@ function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
 // SideNav items list is now dynamically defined inside SideNav component
 
 function App() {
-  const publicCatalogShopId = getPublicCatalogShopId()
+  const publicCatalogKey = getPublicCatalogKey()
 
-  if (publicCatalogShopId) {
+  if (publicCatalogKey) {
     return (
       <Suspense fallback={<LoadingScreen title="กำลังโหลดหน้า catalog" subtitle="กำลังเตรียมรายการชุดสำหรับลูกค้า" />}>
-        <LazyPublicCatalogRoute shopId={publicCatalogShopId} />
+        <LazyPublicCatalogRoute catalogKey={publicCatalogKey} />
       </Suspense>
     )
   }
@@ -1514,7 +1519,7 @@ function PrivateApp() {
               items={stockItems}
               rentals={rentals}
               shopName={currentShop?.name}
-              publicUrl={shopId && publicCatalogEnabled ? `${window.location.origin}/catalog/${shopId}` : undefined}
+              publicUrl={publicCatalogEnabled ? getPublicCatalogUrl(window.location.origin, currentShop) : undefined}
               onBackToInventory={() => setActiveTab('inventory')}
             />
           )}

@@ -22,6 +22,9 @@ export type CatalogDisplayItem = Pick<
   availabilityStatus?: 'available' | 'booked'
 }
 
+type CatalogAvailabilityFilter = 'all' | 'available' | 'unavailable'
+type CatalogAvailabilityStatus = 'available' | 'unavailable'
+
 type CustomerCatalogPageProps = {
   items: CatalogDisplayItem[]
   rentals: RentalOrder[]
@@ -40,7 +43,11 @@ export function CustomerCatalogPage({
   onBackToInventory,
 }: CustomerCatalogPageProps) {
   const [query, setQuery] = useState('')
+  const [brandFilter, setBrandFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [colorFilter, setColorFilter] = useState('all')
+  const [sizeFilter, setSizeFilter] = useState('all')
+  const [availabilityFilter, setAvailabilityFilter] = useState<CatalogAvailabilityFilter>('all')
 
   const today = getTodayString()
   const customerReadyItems = useMemo(() => {
@@ -50,15 +57,33 @@ export function CustomerCatalogPage({
     })
   }, [items, rentals, today])
 
-  const categories = useMemo(() => {
-    return Array.from(new Set(customerReadyItems.map((item) => item.category).filter(Boolean))).sort()
-  }, [customerReadyItems])
+  const brands = useCatalogOptions(customerReadyItems, 'brand')
+  const categories = useCatalogOptions(customerReadyItems, 'category')
+  const colors = useCatalogOptions(customerReadyItems, 'primaryColor')
+  const sizes = useCatalogOptions(customerReadyItems, 'size')
+
+  const availabilityCounts = useMemo(() => {
+    return customerReadyItems.reduce(
+      (counts, item) => {
+        const availability = getCatalogAvailability(item, rentals, today)
+        counts.all += 1
+        counts[availability] += 1
+        return counts
+      },
+      { all: 0, available: 0, unavailable: 0 },
+    )
+  }, [customerReadyItems, rentals, today])
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
 
     return customerReadyItems.filter((item) => {
+      const availability = getCatalogAvailability(item, rentals, today)
+      const matchesBrand = brandFilter === 'all' || item.brand === brandFilter
       const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter
+      const matchesColor = colorFilter === 'all' || item.primaryColor === colorFilter
+      const matchesSize = sizeFilter === 'all' || item.size === sizeFilter
+      const matchesAvailability = availabilityFilter === 'all' || availability === availabilityFilter
       const searchable = [
         item.productName,
         item.brand,
@@ -70,9 +95,16 @@ export function CustomerCatalogPage({
         .join(' ')
         .toLowerCase()
 
-      return matchesCategory && (!normalizedQuery || searchable.includes(normalizedQuery))
+      return (
+        matchesBrand &&
+        matchesCategory &&
+        matchesColor &&
+        matchesSize &&
+        matchesAvailability &&
+        (!normalizedQuery || searchable.includes(normalizedQuery))
+      )
     })
-  }, [customerReadyItems, query, categoryFilter])
+  }, [customerReadyItems, query, brandFilter, categoryFilter, colorFilter, sizeFilter, availabilityFilter, rentals, today])
 
   return (
     <>
@@ -109,30 +141,52 @@ export function CustomerCatalogPage({
             placeholder="ค้นหาชื่อชุด แบรนด์ สี ไซซ์ หรือรายละเอียด..."
           />
         </label>
-        <div className="catalog-category-filter" role="list" aria-label="ประเภทชุด">
-          <button
-            className={`filter-chip ${categoryFilter === 'all' ? 'active' : ''}`}
-            type="button"
-            onClick={() => setCategoryFilter('all')}
-          >
-            ทั้งหมด ({customerReadyItems.length})
-          </button>
-          {categories.map((category) => (
-            <button
-              className={`filter-chip ${categoryFilter === category ? 'active' : ''}`}
-              key={category}
-              type="button"
-              onClick={() => setCategoryFilter(category)}
+        <div className="catalog-filter-grid">
+          <CatalogSelectFilter
+            label="Brands"
+            value={brandFilter}
+            allLabel="ทุกแบรนด์"
+            options={brands}
+            onChange={setBrandFilter}
+          />
+          <CatalogSelectFilter
+            label="หมวดหมู่"
+            value={categoryFilter}
+            allLabel="ทุกหมวดหมู่"
+            options={categories}
+            onChange={setCategoryFilter}
+          />
+          <CatalogSelectFilter
+            label="สี"
+            value={colorFilter}
+            allLabel="ทุกสี"
+            options={colors}
+            onChange={setColorFilter}
+          />
+          <CatalogSelectFilter
+            label="ไซซ์"
+            value={sizeFilter}
+            allLabel="ทุกไซซ์"
+            options={sizes}
+            onChange={setSizeFilter}
+          />
+          <label className="catalog-filter-field">
+            <span>สถานะ</span>
+            <select
+              value={availabilityFilter}
+              onChange={(event) => setAvailabilityFilter(event.target.value as CatalogAvailabilityFilter)}
             >
-              {category}
-            </button>
-          ))}
+              <option value="all">ทุกสถานะ ({availabilityCounts.all})</option>
+              <option value="available">พร้อมให้เช่า ({availabilityCounts.available})</option>
+              <option value="unavailable">ไม่ว่าง ({availabilityCounts.unavailable})</option>
+            </select>
+          </label>
         </div>
       </section>
 
       <section className="catalog-grid" aria-label="รายการชุดสำหรับลูกค้า">
         {filteredItems.map((item, index) => {
-          const primaryStatus = getCatalogStatus(item, rentals, today)
+          const availability = getCatalogAvailability(item, rentals, today)
 
           return (
             <article className="catalog-card" key={`${item.productName}-${item.createdAt}-${index}`}>
@@ -144,8 +198,8 @@ export function CustomerCatalogPage({
                     <FileImage size={34} />
                   </div>
                 )}
-                <span className={`catalog-status catalog-status-${primaryStatus}`}>
-                  {primaryStatus === 'available' ? 'พร้อมให้เช่า' : 'มีคิวจอง'}
+                <span className={`catalog-status catalog-status-${availability}`}>
+                  {availability === 'available' ? 'พร้อมให้เช่า' : 'ไม่ว่าง'}
                 </span>
               </div>
               <div className="catalog-card-body">
@@ -172,6 +226,40 @@ export function CustomerCatalogPage({
       </section>
     </>
   )
+}
+
+function useCatalogOptions(items: CatalogDisplayItem[], key: keyof CatalogDisplayItem) {
+  return useMemo(() => {
+    return Array.from(new Set(items.map((item) => item[key]).filter((value): value is string => typeof value === 'string' && value.length > 0))).sort((a, b) => a.localeCompare(b, 'th'))
+  }, [items, key])
+}
+
+type CatalogSelectFilterProps = {
+  label: string
+  value: string
+  allLabel: string
+  options: string[]
+  onChange: (value: string) => void
+}
+
+function CatalogSelectFilter({ label, value, allLabel, options, onChange }: CatalogSelectFilterProps) {
+  return (
+    <label className="catalog-filter-field">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="all">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function getCatalogAvailability(item: CatalogDisplayItem, rentals: RentalOrder[], today: string): CatalogAvailabilityStatus {
+  return getCatalogStatus(item, rentals, today) === 'available' ? 'available' : 'unavailable'
 }
 
 function getCatalogStatus(item: CatalogDisplayItem, rentals: RentalOrder[], today: string) {

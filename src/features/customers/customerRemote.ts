@@ -40,6 +40,7 @@ type CustomerRow = {
 export type ShopSummary = {
   id: string
   name: string
+  publicCatalogSlug?: string | null
 }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -53,11 +54,15 @@ function getFunctionUrl(name: string) {
 export async function loadAccessibleShops(supabase: SupabaseClient): Promise<ShopSummary[]> {
   const { data, error } = await supabase
     .from('shops')
-    .select('id, name')
+    .select('id, name, public_catalog_slug')
     .order('created_at', { ascending: true })
 
   if (error) throw error
-  return (data ?? []) as ShopSummary[]
+  return (data ?? []).map((shop) => ({
+    id: shop.id,
+    name: shop.name,
+    publicCatalogSlug: shop.public_catalog_slug,
+  }))
 }
 
 export async function loadCustomers(supabase: SupabaseClient, shopId: string) {

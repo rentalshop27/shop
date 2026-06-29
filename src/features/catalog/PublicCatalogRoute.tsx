@@ -3,10 +3,10 @@ import { CustomerCatalogPage, type CatalogDisplayItem } from './CustomerCatalogP
 import { loadPublicCatalog } from './publicCatalogRemote'
 
 type PublicCatalogRouteProps = {
-  shopId: string
+  catalogKey: string
 }
 
-export function PublicCatalogRoute({ shopId }: PublicCatalogRouteProps) {
+export function PublicCatalogRoute({ catalogKey }: PublicCatalogRouteProps) {
   const [items, setItems] = useState<CatalogDisplayItem[]>([])
   const [shopName, setShopName] = useState('')
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -18,7 +18,7 @@ export function PublicCatalogRoute({ shopId }: PublicCatalogRouteProps) {
     setStatus('loading')
     setError('')
 
-    loadPublicCatalog(shopId)
+    loadPublicCatalog(catalogKey)
       .then((catalog) => {
         if (cancelled) return
         setItems(catalog.items)
@@ -34,7 +34,7 @@ export function PublicCatalogRoute({ shopId }: PublicCatalogRouteProps) {
     return () => {
       cancelled = true
     }
-  }, [shopId])
+  }, [catalogKey])
 
   return (
     <main className="public-catalog-shell">

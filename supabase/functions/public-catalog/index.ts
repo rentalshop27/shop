@@ -3,6 +3,7 @@ import { createServiceClient } from '../_shared/googleOAuth.ts'
 type ShopRow = {
   id: string
   name: string
+  public_catalog_slug: string
   public_catalog_enabled: boolean
 }
 
@@ -42,6 +43,10 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders })
@@ -53,18 +58,26 @@ Deno.serve(async (request) => {
 
   try {
     const url = new URL(request.url)
-    const shopId = url.searchParams.get('shopId')?.trim() || ''
+    const catalogKey = (
+      url.searchParams.get('catalogKey')
+      ?? url.searchParams.get('shopId')
+      ?? ''
+    ).trim()
 
-    if (!shopId) {
-      return jsonResponse({ error: 'Missing shopId' }, 400)
+    if (!catalogKey) {
+      return jsonResponse({ error: 'Missing catalogKey' }, 400)
     }
 
     const supabase = createServiceClient()
-    const { data: shop, error: shopError } = await supabase
+    const shopQuery = supabase
       .from('shops')
-      .select('id, name, public_catalog_enabled')
-      .eq('id', shopId)
-      .maybeSingle()
+      .select('id, name, public_catalog_slug, public_catalog_enabled')
+
+    const { data: shop, error: shopError } = await (
+      isUuid(catalogKey)
+        ? shopQuery.eq('id', catalogKey)
+        : shopQuery.eq('public_catalog_slug', catalogKey.toLowerCase())
+    ).maybeSingle()
 
     if (shopError) throw shopError
     if (!shop) {
@@ -72,6 +85,7 @@ Deno.serve(async (request) => {
     }
 
     const typedShop = shop as ShopRow
+    const shopId = typedShop.id
     if (!typedShop.public_catalog_enabled) {
       return jsonResponse({ error: 'ร้านนี้ยังไม่ได้เปิด public catalog' }, 403)
     }
@@ -151,6 +165,7 @@ Deno.serve(async (request) => {
       shop: {
         id: typedShop.id,
         name: typedShop.name,
+        publicCatalogSlug: typedShop.public_catalog_slug,
       },
       items,
     })

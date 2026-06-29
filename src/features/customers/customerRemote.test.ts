@@ -41,8 +41,8 @@ describe('customer remote', () => {
   it('loads every accessible shop for the authenticated user', async () => {
     const order = vi.fn(() => ({
       data: [
-        { id: 'shop_1', name: 'Precious Siam' },
-        { id: 'shop_2', name: 'Precious Silom' },
+        { id: 'shop_1', name: 'Precious Siam', public_catalog_slug: 'precious-siam' },
+        { id: 'shop_2', name: 'Precious Silom', public_catalog_slug: null },
       ],
       error: null,
     }))
@@ -54,11 +54,11 @@ describe('customer remote', () => {
     const shops = await loadAccessibleShops(supabase)
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
-    expect(select).toHaveBeenCalledWith('id, name')
+    expect(select).toHaveBeenCalledWith('id, name, public_catalog_slug')
     expect(order).toHaveBeenCalledWith('created_at', { ascending: true })
     expect(shops).toEqual([
-      { id: 'shop_1', name: 'Precious Siam' },
-      { id: 'shop_2', name: 'Precious Silom' },
+      { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam' },
+      { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: null },
     ])
   })
 

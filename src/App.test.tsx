@@ -109,8 +109,8 @@ describe('App shop selection', () => {
     })
 
     loadAccessibleShops.mockResolvedValue([
-      { id: 'shop_1', name: 'Precious Siam' },
-      { id: 'shop_2', name: 'Precious Silom' },
+      { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam' },
+      { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: 'precious-silom' },
     ])
     loadCustomers.mockResolvedValue([])
     loadStockItems.mockResolvedValue([])
@@ -152,12 +152,12 @@ describe('App shop selection', () => {
   })
 
   it('opens public catalog routes without starting the authenticated app shell', async () => {
-    window.history.pushState({}, '', '/catalog/shop_1')
+    window.history.pushState({}, '', '/catalog/precious-siam')
 
     render(<App />)
 
     expect(await screen.findByText('Public Ruby Dress')).toBeTruthy()
-    expect(loadPublicCatalog).toHaveBeenCalledWith('shop_1')
+    expect(loadPublicCatalog).toHaveBeenCalledWith('precious-siam')
     expect(supabase.auth.getSession).not.toHaveBeenCalled()
     expect(screen.queryByText('ร้านที่กำลังใช้งาน')).toBeNull()
   })
