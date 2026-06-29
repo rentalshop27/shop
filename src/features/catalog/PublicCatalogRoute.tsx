@@ -12,6 +12,16 @@ export function PublicCatalogRoute({ catalogKey }: PublicCatalogRouteProps) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
 
+  // Apply light-theme class to root so the public catalog doesn't inherit dark admin styles
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'public')
+    document.body.style.background = '#faf6f0'
+    return () => {
+      document.documentElement.removeAttribute('data-theme')
+      document.body.style.background = ''
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -36,32 +46,38 @@ export function PublicCatalogRoute({ catalogKey }: PublicCatalogRouteProps) {
     }
   }, [catalogKey])
 
+  if (status === 'loading') {
+    return (
+      <div className="prc-loading-screen">
+        <div className="prc-loading-logo">
+          <span className="prc-logo-text">PRECIOUS</span>
+          <span className="prc-logo-sub">RENTAL</span>
+        </div>
+        <div className="prc-spinner" />
+        <p className="prc-loading-text">กำลังโหลดชุดให้เช่า...</p>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="prc-loading-screen">
+        <div className="prc-loading-logo">
+          <span className="prc-logo-text">PRECIOUS</span>
+          <span className="prc-logo-sub">RENTAL</span>
+        </div>
+        <p className="prc-loading-title">เปิด catalog ไม่ได้</p>
+        <p className="prc-loading-text">{error}</p>
+      </div>
+    )
+  }
+
   return (
-    <main className="public-catalog-shell">
-      {status === 'loading' && (
-        <section className="modal-panel auth-panel">
-          <p className="eyebrow">Customer Catalog</p>
-          <h1>กำลังโหลดชุดให้เช่า</h1>
-          <p className="subtitle">กำลังเตรียมรายการชุดล่าสุดของร้าน</p>
-        </section>
-      )}
-
-      {status === 'error' && (
-        <section className="modal-panel auth-panel">
-          <p className="eyebrow">Customer Catalog</p>
-          <h1>เปิด catalog ไม่ได้</h1>
-          <p className="subtitle">{error}</p>
-        </section>
-      )}
-
-      {status === 'ready' && (
-        <CustomerCatalogPage
-          items={items}
-          rentals={[]}
-          shopName={shopName}
-          subtitle="เลือกดูชุดให้เช่าที่ร้านเปิดเผยไว้สำหรับลูกค้า"
-        />
-      )}
-    </main>
+    <CustomerCatalogPage
+      items={items}
+      rentals={[]}
+      shopName={shopName}
+      subtitle="เลือกดูชุดให้เช่าผ่านเว็บไซต์สำหรับลูกค้า"
+    />
   )
 }
