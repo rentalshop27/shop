@@ -5885,6 +5885,7 @@ select {
   border-bottom: 1px solid var(--prc-border);
   position: sticky;
   top: 0;
+  overflow: visible;
   z-index: 100;
 }
 
@@ -5894,11 +5895,15 @@ select {
   justify-content: space-between;
   margin: 0 auto;
   max-width: 1280px;
-  padding: 12px 40px;
+  min-height: 92px;
+  padding: 12px 40px 8px;
+  position: relative;
 }
 
 .prc-nav-left {
   flex: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .prc-nav-back {
@@ -5924,6 +5929,8 @@ select {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .prc-nav-link {
@@ -5949,28 +5956,19 @@ select {
 }
 
 .prc-logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  text-decoration: none;
-  line-height: 1;
+  left: 50%;
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  width: clamp(120px, 11vw, 156px);
+  z-index: 2;
 }
 
-.prc-logo-text {
-  color: var(--prc-gold-dark);
-  font-family: 'Outfit', serif;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 4px;
-}
-
-.prc-logo-sub {
-  color: var(--prc-text-light);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+.prc-logo img {
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(44, 32, 22, 0.08));
+  height: auto;
+  width: 100%;
 }
 
 .prc-nav-icon {
@@ -6976,9 +6974,41 @@ select {
     align-items: flex-start;
     gap: 10px;
   }
+
+  .prc-nav-inner {
+    min-height: 72px;
+    padding-top: 10px;
+  }
+
+  .prc-logo {
+    top: 10px;
+    width: 108px;
+  }
+
+  .prc-nav-link {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
+  .prc-nav-inner {
+    gap: 12px;
+    min-height: auto;
+    padding-top: 16px;
+    padding-bottom: 12px;
+  }
+
+  .prc-logo {
+    position: static;
+    transform: none;
+    width: 92px;
+  }
+
+  .prc-nav-left,
+  .prc-nav-right {
+    flex: 1 1 0;
+  }
+
   .prc-filter-grid {
     grid-template-columns: 1fr 1fr;
   }

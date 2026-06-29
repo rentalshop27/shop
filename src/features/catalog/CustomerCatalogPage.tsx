@@ -179,9 +179,8 @@ export function CustomerCatalogPage({
               </button>
             )}
           </div>
-          <div className="prc-logo">
-            <span className="prc-logo-text">PRECIOUS</span>
-            <span className="prc-logo-sub">RENTAL</span>
+          <div className="prc-logo" aria-label="Precious Rental">
+            <img src="/web-logo.png" alt="Precious Rental" />
           </div>
           <div className="prc-nav-right">
             {publicUrl && (

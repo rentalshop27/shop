@@ -71,4 +71,19 @@ describe('CustomerCatalogPage filters', () => {
     expect(screen.getByText('Ruby Evening Dress')).toBeInTheDocument()
     expect(screen.getByText('Pearl Wedding Gown')).toBeInTheDocument()
   })
+
+  it('shows the staff public catalog link when a public URL is available', () => {
+    render(
+      <CustomerCatalogPage
+        items={catalogItems}
+        rentals={[]}
+        publicUrl="https://example.test/catalog/precious-siam"
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: /เปิด public link/i })).toHaveAttribute(
+      'href',
+      'https://example.test/catalog/precious-siam',
+    )
+  })
 })
