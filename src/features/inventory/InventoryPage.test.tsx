@@ -74,6 +74,7 @@ function renderInventoryPage(overrides: Partial<ComponentProps<typeof InventoryP
       colors={[]}
       rentals={[]}
       onUpdateStatus={vi.fn()}
+      onOpenCatalog={vi.fn()}
       {...overrides}
     />,
   )

@@ -14,6 +14,7 @@ import {
   Plus,
   Search,
   ShieldAlert,
+  Store,
   Trash2,
   X,
 } from 'lucide-react'
@@ -28,7 +29,7 @@ type InventorySummary = {
   priced: number
 }
 
-export type InventoryPageProps = {
+export type InventoryControllerPageProps = {
   items: StockItem[]
   query: string
   setQuery: (value: string) => void
@@ -57,6 +58,10 @@ export type InventoryPageProps = {
   colors: string[]
   rentals: RentalOrder[]
   onUpdateStatus: (itemId: string, status: StockItemStatus) => void
+}
+
+export type InventoryPageProps = InventoryControllerPageProps & {
+  onOpenCatalog: () => void
 }
 
 export function InventoryPage({
@@ -88,6 +93,7 @@ export function InventoryPage({
   colors,
   rentals,
   onUpdateStatus,
+  onOpenCatalog,
 }: InventoryPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
@@ -133,10 +139,16 @@ export function InventoryPage({
           <h1>คลังชุด</h1>
           <p className="subtitle">จัดการ SKU รายการชุด ค่าเช่า ค่าปรับล่าช้า และเงินประกัน</p>
         </div>
-        <button className="primary-button" type="button" onClick={onOpenForm}>
-          <Plus size={22} />
-          เพิ่มสต๊อก
-        </button>
+        <div className="page-header-actions">
+          <button className="secondary-button" type="button" onClick={onOpenCatalog}>
+            <Store size={20} />
+            ดูหน้าลูกค้า
+          </button>
+          <button className="primary-button" type="button" onClick={onOpenForm}>
+            <Plus size={22} />
+            เพิ่มสต๊อก
+          </button>
+        </div>
       </header>
 
       <section className="system-strip inventory-summary-strip" aria-label="ภาพรวมคลังชุด">

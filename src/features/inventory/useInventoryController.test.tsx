@@ -66,7 +66,7 @@ function TestHarness({ items = stockItems }: { items?: StockItem[] }) {
     onLoadAuditLogs: vi.fn(),
   })
 
-  return <InventoryPage {...pageProps} />
+  return <InventoryPage {...pageProps} onOpenCatalog={vi.fn()} />
 }
 
 function SwitchableShopHarness() {
@@ -91,7 +91,7 @@ function SwitchableShopHarness() {
   return (
     <>
       <button type="button" onClick={() => setShopId('shop_2')}>สลับร้านทดสอบ</button>
-      <InventoryPage {...pageProps} />
+      <InventoryPage {...pageProps} onOpenCatalog={vi.fn()} />
     </>
   )
 }

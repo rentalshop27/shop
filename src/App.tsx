@@ -12,6 +12,7 @@ import {
   Shirt,
   BarChart3,
   CircleUserRound,
+  Store,
 } from 'lucide-react'
 import './index.css'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
@@ -77,7 +78,7 @@ const emptyDraft: CustomerDraft = {
   heightCm: '',
 }
 
-type ViewKey = 'dashboard' | 'inventory' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
+type ViewKey = 'dashboard' | 'inventory' | 'catalog' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
 
 const demoStockItems: StockItem[] = demoStockItemsForRentals
 const DEMO_SHOP_ID = 'shop_demo'
@@ -113,6 +114,16 @@ const LazyCalendarPage = lazy(async () => {
 const LazyInventoryPage = lazy(async () => {
   const module = await import('./features/inventory/InventoryPage')
   return { default: module.InventoryPage }
+})
+
+const LazyCustomerCatalogPage = lazy(async () => {
+  const module = await import('./features/catalog/CustomerCatalogPage')
+  return { default: module.CustomerCatalogPage }
+})
+
+const LazyPublicCatalogRoute = lazy(async () => {
+  const module = await import('./features/catalog/PublicCatalogRoute')
+  return { default: module.PublicCatalogRoute }
 })
 
 const LazyCustomersPage = lazy(async () => {
@@ -188,6 +199,11 @@ function getPreferredShopId(userId: string | null, shops: ShopSummary[]) {
   return shops.length === 1 ? shops[0].id : null
 }
 
+function getPublicCatalogShopId() {
+  const match = window.location.pathname.match(/^\/catalog\/([^/]+)\/?$/)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
 function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
   return {
     fullName: customer.fullName,
@@ -207,6 +223,20 @@ function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
 // SideNav items list is now dynamically defined inside SideNav component
 
 function App() {
+  const publicCatalogShopId = getPublicCatalogShopId()
+
+  if (publicCatalogShopId) {
+    return (
+      <Suspense fallback={<LoadingScreen title="กำลังโหลดหน้า catalog" subtitle="กำลังเตรียมรายการชุดสำหรับลูกค้า" />}>
+        <LazyPublicCatalogRoute shopId={publicCatalogShopId} />
+      </Suspense>
+    )
+  }
+
+  return <PrivateApp />
+}
+
+function PrivateApp() {
   const [activeTab, setActiveTab] = useState<ViewKey>('dashboard')
   const [externalSelectedRentalId, setExternalSelectedRentalId] = useState<string>('')
   const [externalIsFormOpen, setExternalIsFormOpen] = useState<boolean>(false)
@@ -1445,7 +1475,17 @@ function App() {
           )}
 
           {activeTab === 'inventory' && (
-            <LazyInventoryPage {...inventoryPageProps} />
+            <LazyInventoryPage {...inventoryPageProps} onOpenCatalog={() => setActiveTab('catalog')} />
+          )}
+
+          {activeTab === 'catalog' && (
+            <LazyCustomerCatalogPage
+              items={stockItems}
+              rentals={rentals}
+              shopName={currentShop?.name}
+              publicUrl={shopId ? `${window.location.origin}/catalog/${shopId}` : undefined}
+              onBackToInventory={() => setActiveTab('inventory')}
+            />
           )}
 
           {activeTab === 'customers' && (
@@ -1545,7 +1585,7 @@ function App() {
           )}
         </Suspense>
 
-        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && activeTab !== 'profile' && (
+        {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'catalog' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && activeTab !== 'profile' && (
           <div style={{ padding: '80px 40px', textAlign: 'center', color: '#c7bfb9' }}>
             <p className="eyebrow" style={{ marginBottom: '16px' }}>Precious Shop</p>
             <h2 style={{ fontSize: '36px', fontWeight: 900, color: '#fff7ef', marginBottom: '12px' }}>
@@ -1614,6 +1654,7 @@ function SideNav({
   const items: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
     { id: 'inventory', label: 'คลังชุด', icon: Menu },
+    { id: 'catalog', label: 'หน้าลูกค้า', icon: Store },
     { id: 'customers', label: 'ลูกค้า', icon: UserRound },
     { id: 'rentals', label: 'เช่า/คืน', icon: CalendarCheck },
     { id: 'calendar', label: 'ปฏิทิน', icon: CalendarDays },
@@ -1743,6 +1784,7 @@ function PageLoadingFallback({ activeTab }: { activeTab: ViewKey }) {
   const labelMap: Record<ViewKey, string> = {
     dashboard: 'แดชบอร์ด',
     inventory: 'คลังชุด',
+    catalog: 'หน้าลูกค้า',
     customers: 'ลูกค้า',
     rentals: 'เช่า/คืน',
     calendar: 'ปฏิทิน',

@@ -52,6 +52,7 @@ supabase functions deploy google-oauth-callback --no-verify-jwt
 supabase functions deploy google-drive-customer-documents-upload --no-verify-jwt
 supabase functions deploy google-drive-customer-documents-delete --no-verify-jwt
 supabase functions deploy google-drive-customer-document --no-verify-jwt
+supabase functions deploy public-catalog --no-verify-jwt
 ```
 
 `health` เป็น public endpoint สำหรับ cron ping/uptime checks:

@@ -377,6 +377,14 @@ button {
   margin-bottom: 24px;
 }
 
+.page-header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 .eyebrow {
   color: var(--text-gold);
   font-size: 13px;
@@ -446,6 +454,10 @@ h1 {
 .ghost-button:hover {
   border-color: #475569;
   background: rgba(255, 255, 255, 0.03);
+}
+
+a.secondary-button {
+  text-decoration: none;
 }
 
 .archive-button {
@@ -2159,6 +2171,10 @@ select {
     padding: 16px 12px 90px !important;
   }
 
+  .public-catalog-shell {
+    padding: 18px 12px 40px;
+  }
+
   .active-shop-banner {
     align-items: flex-start;
     flex-direction: column;
@@ -2168,6 +2184,15 @@ select {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+  }
+
+  .page-header-actions {
+    justify-content: stretch;
+  }
+
+  .page-header-actions .primary-button,
+  .page-header-actions .secondary-button {
+    flex: 1 1 160px;
   }
 
   .page-header h1 {
@@ -4353,6 +4378,158 @@ select {
 .stock-card-action-buttons {
   display: flex;
   gap: 6px;
+}
+
+/* Customer Catalog */
+.public-catalog-shell {
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 40px 48px 56px;
+  width: min(100%, 1280px);
+}
+
+.catalog-header {
+  align-items: flex-start;
+}
+
+.catalog-toolbar {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.catalog-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.catalog-card {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.catalog-card-image {
+  aspect-ratio: 4 / 5;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  position: relative;
+}
+
+.catalog-card-image img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.catalog-card-placeholder {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  height: 100%;
+  justify-content: center;
+}
+
+.catalog-status {
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  left: 12px;
+  padding: 5px 10px;
+  position: absolute;
+  top: 12px;
+}
+
+.catalog-status-available {
+  color: #86efac;
+}
+
+.catalog-status-booked,
+.catalog-status-rented {
+  color: #fef3c7;
+}
+
+.catalog-card-body {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.catalog-card-meta {
+  color: var(--text-gold);
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.catalog-card h2 {
+  color: var(--text-bright);
+  font-size: 18px;
+  line-height: 1.3;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.catalog-card-description {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 0;
+}
+
+.catalog-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.catalog-card-tags span {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  color: #dbe4ef;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+}
+
+.catalog-card-price {
+  align-items: flex-end;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+
+.catalog-card-price span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.catalog-card-price strong {
+  color: var(--text-gold);
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.catalog-empty {
+  grid-column: 1 / -1;
 }
 
 /* Calendar Page Styles */

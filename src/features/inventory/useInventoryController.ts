@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { InventoryPageProps } from './InventoryPage'
+import type { InventoryControllerPageProps } from './InventoryPage'
 import {
   countRemoteRentalsForStockSku,
   createRemoteStockItem,
@@ -453,7 +453,7 @@ export function useInventoryController({
     }
   }
 
-  const pageProps: InventoryPageProps = {
+  const pageProps: InventoryControllerPageProps = {
     items: filteredItems,
     query,
     setQuery,
