@@ -29,6 +29,7 @@ const emptyStockDraft: StockDraft = {
   depositAmount: '',
   imageUrls: [],
   status: 'available',
+  publicVisible: false,
 }
 
 type InventoryControllerOptions = {
@@ -115,7 +116,7 @@ export function useInventoryController({
     return stockItems.find((item) => item.id === previewStockId) ?? null
   }, [previewStockId, stockItems])
 
-  function updateDraft(field: keyof StockDraft, value: string) {
+  function updateDraft<Field extends keyof StockDraft>(field: Field, value: StockDraft[Field]) {
     setDraft((current) => ({ ...current, [field]: value }))
   }
 
@@ -503,6 +504,7 @@ function toEditableStockDraft(item: StockItem): StockDraft {
     depositAmount: item.depositAmount ? String(item.depositAmount) : '',
     imageUrls: item.imageUrls ?? [],
     status: item.status || 'available',
+    publicVisible: Boolean(item.publicVisible),
   }
 }
 
@@ -522,6 +524,7 @@ function normalizeStockDraft(draft: StockDraft): NormalizedStockDraft {
     depositAmount: parseOptionalNumber(draft.depositAmount) ?? 0,
     imageUrls: draft.imageUrls,
     status: (draft.status as StockItemStatus) || 'available',
+    publicVisible: draft.publicVisible,
   }
 }
 

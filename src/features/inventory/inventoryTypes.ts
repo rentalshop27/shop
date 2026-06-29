@@ -16,6 +16,7 @@ export type StockItem = {
   depositAmount: number
   imageUrls: string[]
   status: StockItemStatus
+  publicVisible?: boolean
   createdAt: string
 }
 
@@ -34,4 +35,5 @@ export type StockDraft = {
   depositAmount: string
   imageUrls: string[]
   status: string
+  publicVisible: boolean
 }

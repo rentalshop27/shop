@@ -20,8 +20,8 @@
     "hash": "3636be93b78d59acc5360d708ec30d21"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0013_public_catalog.sql": {
-    "mtime": 1782718759.163195,
-    "hash": "9047540de3fddeb2fd34542eab15ec45"
+    "mtime": 1782721000.5136352,
+    "hash": "0aeb32cdaa5711b6c2e21d5a0c400019"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0007_allow_archived_customer_phone_reuse.sql": {
     "mtime": 1781369268.257358,
@@ -92,8 +92,8 @@
     "hash": "26440ff715a6031b55d96dbccc3cac5a"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/public-catalog/index.ts": {
-    "mtime": 1782718786.954241,
-    "hash": "f713cc7b3ca0a7651d949c74c107e4de"
+    "mtime": 1782720994.9761379,
+    "hash": "3a0f5614c45d372b47743268831ab6ea"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-sheets-report-sync/reportSheets.ts": {
     "mtime": 1782216471.341953,
@@ -116,16 +116,16 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1782718753.7932436,
-    "hash": "a162abbce2c4793b0e238f1fa7ff5e4a"
+    "mtime": 1782721155.6615007,
+    "hash": "13f6115aae63b0eacaee4c53dddda052"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
     "hash": "787e5a07efeb2bf6209d5937195f2f68"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.test.tsx": {
-    "mtime": 1781927789.5305119,
-    "hash": "78d292ba974adecf0cd4446489baf284"
+    "mtime": 1782721174.7289424,
+    "hash": "af4993486f273e0d464721a55d07f3f2"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.test.ts": {
     "mtime": 1782567943.0827842,
@@ -160,8 +160,8 @@
     "hash": "0b4496a71814262b940ee2ed1fc3e978"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/settings/SettingsPage.tsx": {
-    "mtime": 1781269137.6931427,
-    "hash": "3cebf21d615ef08b7367fe6ddce1928d"
+    "mtime": 1782721078.3674855,
+    "hash": "7f9989184e7a0e155012caf8be24cbc6"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/settings/UpdatePrompt.tsx": {
     "mtime": 1781269137.6934338,
@@ -220,8 +220,8 @@
     "hash": "7314342a6f81e271f096791e12b6857a"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/CustomerCatalogPage.tsx": {
-    "mtime": 1782718723.904224,
-    "hash": "f7131a1ac85df55584d1c213303b4fae"
+    "mtime": 1782720978.6936836,
+    "hash": "71abdb9367789fa9a930461f609601fb"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/publicCatalogRemote.ts": {
     "mtime": 1782718692.8766215,
@@ -272,28 +272,28 @@
     "hash": "be95579b8dbe916978f8180244e8f04d"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/inventoryTypes.ts": {
-    "mtime": 1781889748.7264814,
-    "hash": "8132e08ab515c7bae670c18b75f8021b"
+    "mtime": 1782721138.619102,
+    "hash": "4dbc14d2c4ba05b926fa3c1848d975cf"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.test.ts": {
-    "mtime": 1781927799.1427543,
-    "hash": "17520a6fcf09ca5146b7dcafb4955cd3"
+    "mtime": 1782721119.6378562,
+    "hash": "df16c51320ebf06844e91d130c50fc65"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/InventoryPage.tsx": {
-    "mtime": 1782717822.3278925,
-    "hash": "b387c291333e53e6535fc25fdabe181e"
+    "mtime": 1782721145.843066,
+    "hash": "cde00b820b512b1dd1d53f5beb66d08f"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/InventoryPage.test.tsx": {
-    "mtime": 1782717919.9836998,
-    "hash": "c123a46397a43ff0cb825d11d5986ca0"
+    "mtime": 1782721211.5724046,
+    "hash": "e1202f5008a88b1f283e92c997714e14"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts": {
-    "mtime": 1781927705.943674,
-    "hash": "0992b3b06ea4c1362a10812317ad53d5"
+    "mtime": 1782720898.3127306,
+    "hash": "f5607e1e5cbe78a2e64240c514fe026d"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.ts": {
-    "mtime": 1782717826.2757492,
-    "hash": "0ecf83af183012e3216f58eda8903dd2"
+    "mtime": 1782721217.4310558,
+    "hash": "5ff2756dc0f0909a92c801eb36165a58"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.test.tsx": {
     "mtime": 1782717924.7430015,

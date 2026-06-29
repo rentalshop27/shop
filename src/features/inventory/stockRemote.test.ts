@@ -64,6 +64,7 @@ describe('stock remote', () => {
         brands: ['Precious'],
         categories: ['ชุดราตรี'],
         colors: ['ดำ'],
+        public_catalog_enabled: true,
       },
       error: null,
     }))
@@ -79,13 +80,14 @@ describe('stock remote', () => {
     const settings = await loadShopSettings(supabase, 'shop_1')
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
-    expect(select).toHaveBeenCalledWith('brands, categories, colors')
+    expect(select).toHaveBeenCalledWith('brands, categories, colors, public_catalog_enabled')
     expect(filters).toEqual([['id', 'shop_1']])
     expect(maybeSingle).toHaveBeenCalled()
     expect(settings).toEqual({
       brands: ['Precious'],
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
+      publicCatalogEnabled: true,
     })
   })
 
@@ -108,6 +110,7 @@ describe('stock remote', () => {
       brands: ['Precious'],
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
+      publicCatalogEnabled: false,
     })
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
@@ -116,6 +119,7 @@ describe('stock remote', () => {
       brands: ['Precious'],
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
+      public_catalog_enabled: false,
     })
   })
 
@@ -138,6 +142,7 @@ describe('stock remote', () => {
       deposit_amount: 2000,
       image_urls: [],
       status: 'available',
+      public_visible: false,
       created_at: '2026-06-13T00:00:00.000Z',
       updated_at: '2026-06-20T00:00:00.000Z',
     }
@@ -174,6 +179,7 @@ describe('stock remote', () => {
         depositAmount: 2000,
         imageUrls: [],
         status: 'available',
+        publicVisible: false,
       },
       [],
     )

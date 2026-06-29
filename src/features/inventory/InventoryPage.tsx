@@ -44,7 +44,7 @@ export type InventoryControllerPageProps = {
   onEdit: (item: StockItem) => void
   onDelete: (item: StockItem) => void
   onPreview: (item: StockItem, index?: number) => void
-  onDraftChange: (field: keyof StockDraft, value: string) => void
+  onDraftChange: <Field extends keyof StockDraft>(field: Field, value: StockDraft[Field]) => void
   onResetDraft: () => void
   onImageUpload: (files: FileList | null) => void
   onImageRemove: (imageUrl: string) => void
@@ -480,6 +480,15 @@ export function InventoryPage({
                     <option value="repair">ซ่อม</option>
                     <option value="wash">ซัก</option>
                   </select>
+                </label>
+                <label className="checkbox-field inventory-public-toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft.publicVisible)}
+                    onChange={(event) => onDraftChange('publicVisible', event.target.checked)}
+                    disabled={isSaving}
+                  />
+                  <span>โชว์ชุดนี้ในหน้า public catalog</span>
                 </label>
               </div>
               <label className="field wide">

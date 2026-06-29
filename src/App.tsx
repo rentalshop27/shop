@@ -85,6 +85,7 @@ const DEMO_SHOP_ID = 'shop_demo'
 const DEFAULT_BRANDS = ['Precious', 'Chanel', 'Dior', 'Gucci']
 const DEFAULT_CATEGORIES = ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
 const DEFAULT_COLORS = ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
+const DEFAULT_PUBLIC_CATALOG_ENABLED = false
 const LAST_SELECTED_SHOP_KEY_PREFIX = 'precious_last_shop:'
 
 const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; label: string }> = [
@@ -341,6 +342,7 @@ function PrivateApp() {
   const [brands, setBrands] = useState<string[]>(() => getLocalArray('precious_brands', DEFAULT_BRANDS))
   const [categories, setCategories] = useState<string[]>(() => getLocalArray('precious_categories', DEFAULT_CATEGORIES))
   const [colors, setColors] = useState<string[]>(() => getLocalArray('precious_colors', DEFAULT_COLORS))
+  const [publicCatalogEnabled, setPublicCatalogEnabled] = useState(DEFAULT_PUBLIC_CATALOG_ENABLED)
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
   const [authUserId, setAuthUserId] = useState<string | null>(null)
   const [authUserEmail, setAuthUserEmail] = useState<string | null>(null)
@@ -365,15 +367,31 @@ function PrivateApp() {
 
   useEffect(() => {
     if (hasSupabaseConfig) return
+    localStorage.setItem('precious_public_catalog_enabled', JSON.stringify(publicCatalogEnabled))
+  }, [publicCatalogEnabled])
+
+  useEffect(() => {
+    if (hasSupabaseConfig) return
     localStorage.setItem('precious_stock_items', JSON.stringify(stockItems))
   }, [stockItems])
+
+  async function saveShopSettings(nextSettings: {
+    brands: string[]
+    categories: string[]
+    colors: string[]
+    publicCatalogEnabled: boolean
+  }) {
+    if (supabase && isAuthenticated && shopId) {
+      await updateShopSettings(supabase, shopId, nextSettings)
+    }
+  }
 
   const handleAddBrand = async (brand: string) => {
     const updated = [...brands, brand]
     setBrands(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await updateShopSettings(supabase, shopId, { brands: updated, categories, colors })
+        await saveShopSettings({ brands: updated, categories, colors, publicCatalogEnabled })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -386,7 +404,7 @@ function PrivateApp() {
     setBrands(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await updateShopSettings(supabase, shopId, { brands: updated, categories, colors })
+        await saveShopSettings({ brands: updated, categories, colors, publicCatalogEnabled })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -399,7 +417,7 @@ function PrivateApp() {
     setCategories(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await updateShopSettings(supabase, shopId, { brands, categories: updated, colors })
+        await saveShopSettings({ brands, categories: updated, colors, publicCatalogEnabled })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -412,7 +430,7 @@ function PrivateApp() {
     setCategories(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await updateShopSettings(supabase, shopId, { brands, categories: updated, colors })
+        await saveShopSettings({ brands, categories: updated, colors, publicCatalogEnabled })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -425,7 +443,7 @@ function PrivateApp() {
     setColors(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await updateShopSettings(supabase, shopId, { brands, categories, colors: updated })
+        await saveShopSettings({ brands, categories, colors: updated, publicCatalogEnabled })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -438,11 +456,22 @@ function PrivateApp() {
     setColors(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await updateShopSettings(supabase, shopId, { brands, categories, colors: updated })
+        await saveShopSettings({ brands, categories, colors: updated, publicCatalogEnabled })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
       }
+    }
+  }
+
+  const handlePublicCatalogEnabledChange = async (enabled: boolean) => {
+    setPublicCatalogEnabled(enabled)
+    try {
+      await saveShopSettings({ brands, categories, colors, publicCatalogEnabled: enabled })
+    } catch (err) {
+      setPublicCatalogEnabled(!enabled)
+      console.error('Failed to save public catalog setting:', err)
+      window.alert('บันทึกการตั้งค่า public catalog ล้มเหลว: ' + getErrorMessage(err))
     }
   }
 
@@ -798,6 +827,7 @@ function PrivateApp() {
     setBrands(DEFAULT_BRANDS)
     setCategories(DEFAULT_CATEGORIES)
     setColors(DEFAULT_COLORS)
+    setPublicCatalogEnabled(DEFAULT_PUBLIC_CATALOG_ENABLED)
 
     Promise.all([
       loadCustomers(client, shopId),
@@ -821,6 +851,7 @@ function PrivateApp() {
         if (settings?.brands?.length) setBrands(settings.brands)
         if (settings?.categories?.length) setCategories(settings.categories)
         if (settings?.colors?.length) setColors(settings.colors)
+        if (settings) setPublicCatalogEnabled(settings.publicCatalogEnabled)
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -1483,7 +1514,7 @@ function PrivateApp() {
               items={stockItems}
               rentals={rentals}
               shopName={currentShop?.name}
-              publicUrl={shopId ? `${window.location.origin}/catalog/${shopId}` : undefined}
+              publicUrl={shopId && publicCatalogEnabled ? `${window.location.origin}/catalog/${shopId}` : undefined}
               onBackToInventory={() => setActiveTab('inventory')}
             />
           )}
@@ -1547,12 +1578,14 @@ function PrivateApp() {
               brands={brands}
               categories={categories}
               colors={colors}
+              publicCatalogEnabled={publicCatalogEnabled}
               onAddBrand={handleAddBrand}
               onDeleteBrand={handleDeleteBrand}
               onAddCategory={handleAddCategory}
               onDeleteCategory={handleDeleteCategory}
               onAddColor={handleAddColor}
               onDeleteColor={handleDeleteColor}
+              onPublicCatalogEnabledChange={handlePublicCatalogEnabledChange}
             />
           )}
 

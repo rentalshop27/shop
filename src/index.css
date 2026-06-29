@@ -3823,6 +3823,46 @@ select {
   padding: 28px;
 }
 
+.settings-public-panel {
+  grid-column: 1 / -1;
+}
+
+.settings-toggle-row,
+.checkbox-field {
+  align-items: flex-start;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-bright);
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.settings-toggle-row input,
+.checkbox-field input {
+  accent-color: var(--text-gold);
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+
+.settings-toggle-row span,
+.checkbox-field span {
+  display: grid;
+  font-weight: 700;
+  gap: 3px;
+}
+
+.settings-toggle-row small {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.inventory-public-toggle {
+  min-height: 50px;
+}
+
 .panel-header-row {
   display: flex;
   align-items: center;

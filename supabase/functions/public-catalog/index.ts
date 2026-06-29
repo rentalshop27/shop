@@ -7,7 +7,6 @@ type ShopRow = {
 }
 
 type StockItemRow = {
-  id: string
   sku: string
   product_name: string
   brand: string
@@ -17,7 +16,6 @@ type StockItemRow = {
   public_description: string
   set_count: number
   rental_price_per_day: number
-  deposit_amount: number
   image_urls: string[]
   status: string
   created_at: string
@@ -81,7 +79,6 @@ Deno.serve(async (request) => {
     const { data: stockRows, error: stockError } = await supabase
       .from('stock_items')
       .select(`
-        id,
         sku,
         product_name,
         brand,
@@ -91,7 +88,6 @@ Deno.serve(async (request) => {
         public_description,
         set_count,
         rental_price_per_day,
-        deposit_amount,
         image_urls,
         status,
         created_at
@@ -135,9 +131,6 @@ Deno.serve(async (request) => {
       )
 
       return {
-        id: row.id,
-        sku: '',
-        serialNumber: '',
         productName: row.product_name,
         brand: row.brand ?? '',
         category: row.category ?? '',
@@ -146,10 +139,9 @@ Deno.serve(async (request) => {
         publicDescription: row.public_description ?? '',
         setCount: row.set_count ?? 1,
         rentalPricePerDay: Number(row.rental_price_per_day) || 0,
-        lateFeeRule: '',
-        depositAmount: Number(row.deposit_amount) || 0,
         imageUrls: imageUrls.filter(Boolean),
         status: 'available',
+        publicVisible: true,
         availabilityStatus: bookedSkus.has(row.sku) ? 'booked' : 'available',
         createdAt: row.created_at,
       }

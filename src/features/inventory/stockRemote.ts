@@ -18,6 +18,7 @@ type StockItemRow = {
   deposit_amount: number
   image_urls: string[]
   status?: string
+  public_visible?: boolean
   created_at: string
   updated_at: string
 }
@@ -105,6 +106,7 @@ async function mapStockItemRow(supabase: SupabaseClient, row: StockItemRow): Pro
     depositAmount: Number(row.deposit_amount) || 0,
     imageUrls: imageUrls.filter(Boolean),
     status: (row.status as 'available' | 'repair' | 'wash') || 'available',
+    publicVisible: Boolean(row.public_visible),
     createdAt: row.created_at,
   }
 }
@@ -208,6 +210,7 @@ export async function createRemoteStockItem(
     deposit_amount: item.depositAmount,
     image_urls: imagePaths,
     status: item.status || 'available',
+    public_visible: item.publicVisible,
   }
 
   const { data, error } = await supabase
@@ -283,6 +286,7 @@ export async function updateRemoteStockItem(
     deposit_amount: item.depositAmount,
     image_urls: newPaths,
     status: item.status || 'available',
+    public_visible: item.publicVisible,
     updated_at: new Date().toISOString(),
   }
 
@@ -376,7 +380,7 @@ export async function countRemoteRentalsForStockSku(
 export async function updateShopSettings(
   supabase: SupabaseClient,
   shopId: string,
-  settings: { brands: string[]; categories: string[]; colors: string[] }
+  settings: { brands: string[]; categories: string[]; colors: string[]; publicCatalogEnabled: boolean }
 ): Promise<void> {
   const { error } = await supabase
     .from('shops')
@@ -384,6 +388,7 @@ export async function updateShopSettings(
       brands: settings.brands,
       categories: settings.categories,
       colors: settings.colors,
+      public_catalog_enabled: settings.publicCatalogEnabled,
       updated_at: new Date().toISOString()
     })
     .eq('id', shopId)
@@ -394,13 +399,20 @@ export async function updateShopSettings(
 export async function loadShopSettings(
   supabase: SupabaseClient,
   shopId: string
-): Promise<{ brands: string[]; categories: string[]; colors: string[] } | null> {
+): Promise<{ brands: string[]; categories: string[]; colors: string[]; publicCatalogEnabled: boolean } | null> {
   const { data, error } = await supabase
     .from('shops')
-    .select('brands, categories, colors')
+    .select('brands, categories, colors, public_catalog_enabled')
     .eq('id', shopId)
     .maybeSingle()
 
   if (error) throw error
-  return data
+  if (!data) return null
+
+  return {
+    brands: data.brands,
+    categories: data.categories,
+    colors: data.colors,
+    publicCatalogEnabled: Boolean(data.public_catalog_enabled),
+  }
 }

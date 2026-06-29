@@ -10,6 +10,7 @@ const {
   loadShopSettings,
   loadRentals,
   loadAuditLogs,
+  loadPublicCatalog,
   authStateChange,
   supabase,
 } = vi.hoisted(() => {
@@ -24,6 +25,7 @@ const {
     loadShopSettings: vi.fn(),
     loadRentals: vi.fn(),
     loadAuditLogs: vi.fn(),
+    loadPublicCatalog: vi.fn(),
     authStateChange,
     supabase: {
       auth: {
@@ -46,7 +48,13 @@ const {
 
 vi.mock('./lib/supabase', () => ({
   hasSupabaseConfig: true,
+  supabaseUrl: 'https://example.supabase.co',
+  supabaseAnonKey: 'anon-key',
   supabase,
+}))
+
+vi.mock('./features/catalog/publicCatalogRemote', () => ({
+  loadPublicCatalog,
 }))
 
 vi.mock('./features/customers/customerRemote', () => ({
@@ -89,6 +97,7 @@ describe('App shop selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    window.history.pushState({}, '', '/')
     authStateChange.callback = null
 
     supabase.auth.getSession.mockResolvedValue({
@@ -108,6 +117,26 @@ describe('App shop selection', () => {
     loadShopSettings.mockResolvedValue(null)
     loadRentals.mockResolvedValue([])
     loadAuditLogs.mockResolvedValue([])
+    loadPublicCatalog.mockResolvedValue({
+      shop: { id: 'shop_1', name: 'Precious Siam' },
+      items: [
+        {
+          productName: 'Public Ruby Dress',
+          brand: 'Precious',
+          category: 'ชุดราตรี',
+          size: 'M',
+          primaryColor: 'แดง',
+          publicDescription: 'ชุดสำหรับออกงาน',
+          setCount: 1,
+          rentalPricePerDay: 2200,
+          imageUrls: [],
+          status: 'available',
+          publicVisible: true,
+          availabilityStatus: 'available',
+          createdAt: '2026-06-29T00:00:00.000Z',
+        },
+      ],
+    })
     supabase.auth.signOut.mockResolvedValue({ error: null })
   })
 
@@ -120,6 +149,17 @@ describe('App shop selection', () => {
 
     expect(await screen.findByText('หน้าแดชบอร์ดภาพรวมสาขา')).toBeTruthy()
     expect(screen.queryByText('เลือกร้านที่ต้องการเข้าใช้งาน')).toBeNull()
+  })
+
+  it('opens public catalog routes without starting the authenticated app shell', async () => {
+    window.history.pushState({}, '', '/catalog/shop_1')
+
+    render(<App />)
+
+    expect(await screen.findByText('Public Ruby Dress')).toBeTruthy()
+    expect(loadPublicCatalog).toHaveBeenCalledWith('shop_1')
+    expect(supabase.auth.getSession).not.toHaveBeenCalled()
+    expect(screen.queryByText('ร้านที่กำลังใช้งาน')).toBeNull()
   })
 
   it('multi-shop overview loads customers/stock/rentals separately for each shop id', async () => {

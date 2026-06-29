@@ -4,7 +4,21 @@ import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 
-export type CatalogDisplayItem = StockItem & {
+export type CatalogDisplayItem = Pick<
+  StockItem,
+  | 'productName'
+  | 'brand'
+  | 'category'
+  | 'size'
+  | 'primaryColor'
+  | 'publicDescription'
+  | 'setCount'
+  | 'rentalPricePerDay'
+  | 'imageUrls'
+  | 'status'
+  | 'publicVisible'
+  | 'createdAt'
+> & {
   availabilityStatus?: 'available' | 'booked'
 }
 
@@ -32,7 +46,7 @@ export function CustomerCatalogPage({
   const customerReadyItems = useMemo(() => {
     return items.filter((item) => {
       const primaryStatus = getCatalogStatus(item, rentals, today)
-      return primaryStatus !== 'repair' && primaryStatus !== 'wash'
+      return item.publicVisible && primaryStatus !== 'repair' && primaryStatus !== 'wash'
     })
   }, [items, rentals, today])
 
@@ -117,11 +131,11 @@ export function CustomerCatalogPage({
       </section>
 
       <section className="catalog-grid" aria-label="รายการชุดสำหรับลูกค้า">
-        {filteredItems.map((item) => {
+        {filteredItems.map((item, index) => {
           const primaryStatus = getCatalogStatus(item, rentals, today)
 
           return (
-            <article className="catalog-card" key={item.id}>
+            <article className="catalog-card" key={`${item.productName}-${item.createdAt}-${index}`}>
               <div className="catalog-card-image">
                 {item.imageUrls.length > 0 ? (
                   <img src={item.imageUrls[0]} alt={item.productName} />
@@ -162,7 +176,7 @@ export function CustomerCatalogPage({
 
 function getCatalogStatus(item: CatalogDisplayItem, rentals: RentalOrder[], today: string) {
   if (item.availabilityStatus) return item.availabilityStatus
-  return getInventoryDisplayStatus(item, rentals, today).primaryStatus
+  return getInventoryDisplayStatus(item as StockItem, rentals, today).primaryStatus
 }
 
 function getTodayString() {

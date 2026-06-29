@@ -1,28 +1,32 @@
 import { useState } from 'react'
-import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette } from 'lucide-react'
+import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette, Globe2 } from 'lucide-react'
 
 interface SettingsPageProps {
   brands: string[]
   categories: string[]
   colors: string[]
+  publicCatalogEnabled: boolean
   onAddBrand: (brand: string) => void
   onDeleteBrand: (brand: string) => void
   onAddCategory: (category: string) => void
   onDeleteCategory: (category: string) => void
   onAddColor: (color: string) => void
   onDeleteColor: (color: string) => void
+  onPublicCatalogEnabledChange: (enabled: boolean) => void
 }
 
 export function SettingsPage({
   brands,
   categories,
   colors,
+  publicCatalogEnabled,
   onAddBrand,
   onDeleteBrand,
   onAddCategory,
   onDeleteCategory,
   onAddColor,
   onDeleteColor,
+  onPublicCatalogEnabledChange,
 }: SettingsPageProps) {
   const [newBrand, setNewBrand] = useState('')
   const [newCategory, setNewCategory] = useState('')
@@ -138,6 +142,30 @@ export function SettingsPage({
       </header>
 
       <div className="settings-grid">
+        <section className="panel settings-panel settings-public-panel" aria-labelledby="public-catalog-title">
+          <div className="panel-header-row">
+            <div className="title-icon-wrapper brand-theme">
+              <Globe2 size={22} />
+            </div>
+            <div>
+              <h2 id="public-catalog-title" className="panel-section-title">Public catalog</h2>
+              <p className="panel-section-subtitle">เปิดเมื่อต้องการให้ลูกค้าเข้าลิงก์หน้ารายการชุดได้โดยไม่ต้องล็อกอิน</p>
+            </div>
+          </div>
+
+          <label className="settings-toggle-row">
+            <input
+              type="checkbox"
+              checked={publicCatalogEnabled}
+              onChange={(event) => onPublicCatalogEnabledChange(event.target.checked)}
+            />
+            <span>
+              {publicCatalogEnabled ? 'เปิด public catalog แล้ว' : 'ปิด public catalog อยู่'}
+              <small>ชุดแต่ละรายการต้องเปิด “โชว์ชุดนี้ในหน้า public catalog” เพิ่มด้วย</small>
+            </span>
+          </label>
+        </section>
+
         {/* Brand Settings Section */}
         <section className="panel settings-panel" aria-labelledby="brand-title">
           <div className="panel-header-row">

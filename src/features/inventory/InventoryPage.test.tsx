@@ -41,6 +41,7 @@ const draft: StockDraft = {
   depositAmount: '',
   imageUrls: [],
   status: 'available',
+  publicVisible: false,
 }
 
 function renderInventoryPage(overrides: Partial<ComponentProps<typeof InventoryPage>> = {}) {
