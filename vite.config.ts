@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'favicon.svg', 'apple-touch-icon.png', 'logo-192x192.png', 'logo-512x512.png'],
       manifest: {
         name: 'Precious Rental',
@@ -47,4 +47,3 @@ export default defineConfig({
     })
   ],
 })
-
