@@ -204,7 +204,7 @@ export async function uploadRemoteCustomerDocuments(
     return
   }
 
-  const sortOrders = getAvailableDocumentSortOrders(customer.documents, files.length)
+  const existingCount = customer.documents.length
   const uploadedPaths: string[] = []
   const rows: Array<{
     shop_id: string
@@ -236,7 +236,7 @@ export async function uploadRemoteCustomerDocuments(
         external_file_id: null,
         mime_type: file.type,
         original_file_name: file.name,
-        sort_order: sortOrders[index],
+        sort_order: existingCount + index + 1,
       })
     }
 
@@ -246,18 +246,6 @@ export async function uploadRemoteCustomerDocuments(
     await cleanupUploadedCustomerDocumentPaths(supabase, uploadedPaths)
     throw error
   }
-}
-
-function getAvailableDocumentSortOrders(documents: CustomerDocument[], incomingCount: number) {
-  const usedSortOrders = new Set(documents.map((document) => document.sortOrder))
-  const availableSortOrders = Array.from({ length: 5 }, (_, index) => index + 1)
-    .filter((sortOrder) => !usedSortOrders.has(sortOrder))
-
-  if (availableSortOrders.length < incomingCount) {
-    throw new Error('รูปเอกสารเต็ม 5 รูปต่อลูกค้าแล้ว')
-  }
-
-  return availableSortOrders.slice(0, incomingCount)
 }
 
 async function cleanupUploadedCustomerDocumentPaths(

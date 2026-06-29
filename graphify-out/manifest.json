@@ -108,8 +108,8 @@
     "hash": "944df5e76216ad0d445f7ff49d83d120"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-drive-customer-documents-upload/index.ts": {
-    "mtime": 1782728101.7157254,
-    "hash": "362a9115f6e94c6ec45ed2c008c55650"
+    "mtime": 1782729274.8974304,
+    "hash": "6dcee7a26af264272dc5632a3fc99c76"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/dev-dist/workbox-f0c192c2.js": {
     "mtime": 1781759760.232661,
@@ -132,8 +132,8 @@
     "hash": "941a533cd31107508a22be35bae23df9"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.test.ts": {
-    "mtime": 1782728140.0907295,
-    "hash": "611d3ab45187568c33b07fdad4fe4dc4"
+    "mtime": 1782729274.8944898,
+    "hash": "603b4a2a0de61fa62907889d5090d15c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRules.ts": {
     "mtime": 1781547131.0193582,
@@ -148,8 +148,8 @@
     "hash": "4caa4cd6d83d43d5dd1ca68673185ab4"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerRemote.ts": {
-    "mtime": 1782728093.879893,
-    "hash": "274c856f68d53712a30e1cae74ca386e"
+    "mtime": 1782729274.8952138,
+    "hash": "59263f99a315eb91b49dee957c7e9c07"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/customers/customerSeed.ts": {
     "mtime": 1781269137.690012,
@@ -224,12 +224,12 @@
     "hash": "d2d491ed0118d4648fafbeb6b65cb9bc"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/CustomerCatalogPage.test.tsx": {
-    "mtime": 1782728146.2521598,
-    "hash": "0a308140153e58865066bae1aab5ee2f"
+    "mtime": 1782729550.9664655,
+    "hash": "f97ecedcd463d08e51687dc40424d0ae"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/CustomerCatalogPage.tsx": {
-    "mtime": 1782728884.6493442,
-    "hash": "f4f2df675fe3d6542c5b6d23af861d33"
+    "mtime": 1782729544.1597981,
+    "hash": "4657fa5f431c690b0491c047b9b27f07"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/publicCatalogRemote.ts": {
     "mtime": 1782725839.4689913,
@@ -376,8 +376,8 @@
     "hash": "25c4c8cb5cb06c5b5c476177fef9fc71"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/public/web-logo.png": {
-    "mtime": 1782728913.7793636,
-    "hash": "a385b883a902241a0ac1ac894959a62f"
+    "mtime": 1782729274.8918986,
+    "hash": "07931859ea2bba0154a831adb2cf7514"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/public/logo-512x512.png": {
     "mtime": 1781269137.6796572,

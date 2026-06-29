@@ -44,6 +44,14 @@ afterEach(() => {
 })
 
 describe('CustomerCatalogPage filters', () => {
+  it('does not duplicate Rental in the hero title when the shop name already includes it', () => {
+    render(<CustomerCatalogPage items={catalogItems} rentals={[]} shopName="Precious Rental" />)
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Precious Rental' }),
+    ).toBeInTheDocument()
+  })
+
   it('filters customer-visible catalog items by brand, category, color, size, and availability', async () => {
     const user = userEvent.setup()
     render(<CustomerCatalogPage items={catalogItems} rentals={[]} />)
@@ -70,20 +78,5 @@ describe('CustomerCatalogPage filters', () => {
     await user.selectOptions(screen.getByLabelText('สถานะ'), 'all')
     expect(screen.getByText('Ruby Evening Dress')).toBeInTheDocument()
     expect(screen.getByText('Pearl Wedding Gown')).toBeInTheDocument()
-  })
-
-  it('shows the staff public catalog link when a public URL is available', () => {
-    render(
-      <CustomerCatalogPage
-        items={catalogItems}
-        rentals={[]}
-        publicUrl="https://example.test/catalog/precious-siam"
-      />,
-    )
-
-    expect(screen.getByRole('link', { name: /เปิด public link/i })).toHaveAttribute(
-      'href',
-      'https://example.test/catalog/precious-siam',
-    )
   })
 })

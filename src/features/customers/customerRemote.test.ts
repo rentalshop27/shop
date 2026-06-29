@@ -215,53 +215,6 @@ describe('customer remote', () => {
     expect(removedPaths[0]).toEqual(uploadedPaths)
   })
 
-  it('uploads replacement documents into the lowest available sort order slot', async () => {
-    const insertedRows: Array<{ sort_order: number }> = []
-    const upload = vi.fn(() => ({ error: null }))
-    const remove = vi.fn(() => ({ error: null }))
-    const insert = vi.fn((rows: Array<{ sort_order: number }>) => {
-      insertedRows.push(...rows)
-      return { error: null }
-    })
-    const maybeSingle = vi.fn(() => ({ data: null, error: null }))
-    const integrationEqStatus = vi.fn(() => ({ maybeSingle }))
-    const integrationEqProvider = vi.fn(() => ({ eq: integrationEqStatus }))
-    const integrationEqShop = vi.fn(() => ({ eq: integrationEqProvider }))
-    const integrationSelect = vi.fn(() => ({ eq: integrationEqShop }))
-    const supabase = {
-      storage: {
-        from: vi.fn(() => ({ upload, remove })),
-      },
-      auth: {
-        getSession: vi.fn(),
-      },
-      from: vi.fn((table: string) => {
-        if (table === 'customer_documents') return { insert }
-        if (table === 'shop_google_integrations') return { select: integrationSelect }
-        throw new Error(`Unexpected table ${table}`)
-      }),
-    } as unknown as SupabaseClient
-
-    await uploadRemoteCustomerDocuments(
-      supabase,
-      {
-        ...customer,
-        documents: [1, 3, 4, 5].map((sortOrder) => ({
-          id: `document_${sortOrder}`,
-          customerId: customer.id,
-          storagePath: `${customer.shopId}/${customer.id}/document-${sortOrder}.png`,
-          storageProvider: 'supabase_storage',
-          sortOrder,
-          createdAt: '2026-06-13T00:00:00.000Z',
-        })),
-      },
-      [new File(['front'], 'id-card-front.png', { type: 'image/png' })],
-    )
-
-    expect(insertedRows).toHaveLength(1)
-    expect(insertedRows[0].sort_order).toBe(2)
-  })
-
   it('scopes customer edits by id and selected shop id', async () => {
     const filters: Array<[string, string]> = []
     const row = {

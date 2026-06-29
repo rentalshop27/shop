@@ -57,6 +57,7 @@ export function CustomerCatalogPage({
   const [imageIndex, setImageIndex] = useState(0)
 
   const today = getTodayString()
+  const heroTitle = getCatalogHeroTitle(shopName)
 
   const customerReadyItems = useMemo(() => {
     return items.filter((item) => {
@@ -179,8 +180,9 @@ export function CustomerCatalogPage({
               </button>
             )}
           </div>
-          <div className="prc-logo" aria-label="Precious Rental">
-            <img src="/web-logo.png" alt="Precious Rental" />
+          <div className="prc-logo">
+            <span className="prc-logo-text">PRECIOUS</span>
+            <span className="prc-logo-sub">RENTAL</span>
           </div>
           <div className="prc-nav-right">
             {publicUrl && (
@@ -201,9 +203,7 @@ export function CustomerCatalogPage({
       <section className="prc-hero">
         <div className="prc-hero-content">
           <p className="prc-hero-eyebrow">ชุดให้เช่า</p>
-          <h1 className="prc-hero-title">
-            {shopName ? `${shopName} Rental` : 'Precious Rental'}
-          </h1>
+          <h1 className="prc-hero-title">{heroTitle}</h1>
           <p className="prc-hero-subtitle">{subtitle}</p>
 
           <label className="prc-search-box" htmlFor="prc-search-input">
@@ -529,6 +529,16 @@ export function CustomerCatalogPage({
 }
 
 // ── Helpers ──
+
+function getCatalogHeroTitle(shopName?: string) {
+  const normalizedName = shopName?.trim()
+
+  if (!normalizedName) {
+    return 'Precious Rental'
+  }
+
+  return /rental$/i.test(normalizedName) ? normalizedName : `${normalizedName} Rental`
+}
 
 function useCatalogOptions(items: CatalogDisplayItem[], key: keyof CatalogDisplayItem) {
   return useMemo(() => {

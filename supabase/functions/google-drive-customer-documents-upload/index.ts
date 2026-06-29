@@ -67,16 +67,14 @@ Deno.serve(async (request) => {
 
     const { data: existingDocuments, error: existingDocumentsError } = await supabase
       .from('customer_documents')
-      .select('id, sort_order')
+      .select('id')
       .eq('customer_id', customerId)
       .order('sort_order', { ascending: true })
 
     if (existingDocumentsError) throw existingDocumentsError
 
-    const usedSortOrders = new Set((existingDocuments ?? []).map((document) => document.sort_order))
-    const availableSortOrders = Array.from({ length: 5 }, (_, index) => index + 1)
-      .filter((sortOrder) => !usedSortOrders.has(sortOrder))
-    if (availableSortOrders.length < files.length) {
+    const existingCount = (existingDocuments ?? []).length
+    if (existingCount + files.length > 5) {
       throw new Error('รูปเอกสารเต็ม 5 รูปต่อลูกค้าแล้ว')
     }
 
@@ -136,7 +134,7 @@ Deno.serve(async (request) => {
           external_file_id: driveFile.id,
           mime_type: file.type || driveFile.mimeType || '',
           original_file_name: file.name,
-          sort_order: availableSortOrders[index],
+          sort_order: existingCount + index + 1,
         })
       }
 
