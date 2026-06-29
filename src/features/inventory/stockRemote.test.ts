@@ -7,6 +7,7 @@ import {
   loadShopSettings,
   loadStockItems,
   updateRemoteStockItem,
+  updateRemoteStockItemPublicVisibility,
   updateRemoteStockItemStatus,
   updateShopSettings,
 } from './stockRemote'
@@ -226,6 +227,26 @@ describe('stock remote', () => {
     } as unknown as SupabaseClient
 
     await updateRemoteStockItemStatus(supabase, 'shop_1', 'stock_1', 'repair')
+
+    expect(filters).toEqual([
+      ['id', 'stock_1'],
+      ['shop_id', 'shop_1'],
+    ])
+  })
+
+  it('updates stock public visibility by both id and active shop', async () => {
+    const filters: Array<[string, string]> = []
+    const query = {
+      eq: vi.fn((column: string, value: string) => {
+        filters.push([column, value])
+        return filters.length === 2 ? { error: null } : query
+      }),
+    }
+    const supabase = {
+      from: vi.fn(() => ({ update: vi.fn(() => query) })),
+    } as unknown as SupabaseClient
+
+    await updateRemoteStockItemPublicVisibility(supabase, 'shop_1', 'stock_1', true)
 
     expect(filters).toEqual([
       ['id', 'stock_1'],

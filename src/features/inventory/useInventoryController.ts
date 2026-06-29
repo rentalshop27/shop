@@ -9,6 +9,7 @@ import {
   deleteRemoteStockItem,
   loadStockItems,
   updateRemoteStockItem,
+  updateRemoteStockItemPublicVisibility,
   updateRemoteStockItemStatus,
 } from './stockRemote'
 import type { StockDraft, StockItem, StockItemStatus } from './inventoryTypes'
@@ -261,6 +262,26 @@ export function useInventoryController({
     }
   }
 
+  async function handleTogglePublicVisibility(itemId: string, publicVisible: boolean) {
+    try {
+      if (supabase && isAuthenticated) {
+        if (!shopId) {
+          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+          return
+        }
+
+        await updateRemoteStockItemPublicVisibility(supabase, shopId, itemId, publicVisible)
+        await onLoadAuditLogs()
+      }
+
+      setStockItems((current) =>
+        current.map((item) => (item.id === itemId ? { ...item, publicVisible } : item)),
+      )
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    }
+  }
+
   async function handleSave() {
     setFormError('')
 
@@ -483,6 +504,7 @@ export function useInventoryController({
     colors,
     rentals,
     onUpdateStatus: handleUpdateStatus,
+    onTogglePublicVisibility: handleTogglePublicVisibility,
   }
 
   return { pageProps }

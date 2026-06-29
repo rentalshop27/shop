@@ -362,6 +362,24 @@ export async function updateRemoteStockItemStatus(
   if (error) throw error
 }
 
+export async function updateRemoteStockItemPublicVisibility(
+  supabase: SupabaseClient,
+  shopId: string,
+  stockId: string,
+  publicVisible: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from('stock_items')
+    .update({
+      public_visible: publicVisible,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', stockId)
+    .eq('shop_id', shopId)
+
+  if (error) throw error
+}
+
 export async function countRemoteRentalsForStockSku(
   supabase: SupabaseClient,
   shopId: string,

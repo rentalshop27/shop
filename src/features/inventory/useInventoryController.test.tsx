@@ -127,6 +127,15 @@ describe('useInventoryController', () => {
     expect(screen.getByDisplayValue('PR-002')).toBeInTheDocument()
   })
 
+  it('toggles public catalog visibility directly from the card view', async () => {
+    const user = userEvent.setup()
+    render(<TestHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'โชว์หน้าเว็บ PR-001' }))
+
+    expect(screen.getByRole('button', { name: 'ซ่อนจากหน้าเว็บ PR-001' })).toBeInTheDocument()
+  })
+
   it('creates a local stock item through the extracted save path', async () => {
     const user = userEvent.setup()
     render(<TestHarness items={[]} />)

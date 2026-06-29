@@ -11,6 +11,8 @@ import {
   List,
   Menu,
   Pencil,
+  Eye,
+  EyeOff,
   Plus,
   Search,
   ShieldAlert,
@@ -58,6 +60,7 @@ export type InventoryControllerPageProps = {
   colors: string[]
   rentals: RentalOrder[]
   onUpdateStatus: (itemId: string, status: StockItemStatus) => void
+  onTogglePublicVisibility: (itemId: string, publicVisible: boolean) => void
 }
 
 export type InventoryPageProps = InventoryControllerPageProps & {
@@ -93,6 +96,7 @@ export function InventoryPage({
   colors,
   rentals,
   onUpdateStatus,
+  onTogglePublicVisibility,
   onOpenCatalog,
 }: InventoryPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -272,6 +276,15 @@ export function InventoryPage({
                   <span>{item.lateFeeRule || '-'}</span>
                   <span>{formatBaht(item.depositAmount)}</span>
                   <div className="stock-action-group">
+                    <button
+                      className={`inline-link-button stock-visibility-button ${item.publicVisible ? 'active' : ''}`}
+                      type="button"
+                      onClick={() => onTogglePublicVisibility(item.id, !item.publicVisible)}
+                      aria-label={`${item.publicVisible ? 'ซ่อนจากหน้าเว็บ' : 'โชว์หน้าเว็บ'} ${item.sku}`}
+                    >
+                      {item.publicVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+                      {item.publicVisible ? 'ซ่อนจากเว็บ' : 'โชว์หน้าเว็บ'}
+                    </button>
                     <button className="icon-action-button compact" type="button" onClick={() => onEdit(item)} aria-label={`แก้ไข ${item.sku}`}>
                       <Pencil size={16} />
                     </button>
@@ -352,6 +365,15 @@ export function InventoryPage({
                     </div>
                   </div>
                   <div className="stock-card-actions">
+                    <button
+                      className={`stock-card-visibility-toggle ${item.publicVisible ? 'active' : ''}`}
+                      type="button"
+                      onClick={() => onTogglePublicVisibility(item.id, !item.publicVisible)}
+                      aria-label={`${item.publicVisible ? 'ซ่อนจากหน้าเว็บ' : 'โชว์หน้าเว็บ'} ${item.sku}`}
+                    >
+                      {item.publicVisible ? <Eye size={15} /> : <EyeOff size={15} />}
+                      <span>{item.publicVisible ? 'ซ่อนจากเว็บ' : 'โชว์หน้าเว็บ'}</span>
+                    </button>
                     <div className="stock-card-action-buttons">
                       <button className="icon-action-button compact" type="button" onClick={() => onEdit(item)} aria-label={`แก้ไข ${item.sku}`} title="แก้ไข">
                         <Pencil size={15} />

@@ -1551,6 +1551,14 @@ select {
   color: #f4d277;
 }
 
+.stock-visibility-button {
+  border-radius: 999px;
+}
+
+.stock-visibility-button.active {
+  color: #86efac;
+}
+
 .stock-modal-panel {
   width: min(1040px, 100%);
 }
@@ -4408,16 +4416,53 @@ select {
 
 .stock-card-actions {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.015);
 }
 
+.stock-card-visibility-toggle {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: #cbd5e1;
+  display: inline-flex;
+  flex: 1 1 auto;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 12px;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.stock-card-visibility-toggle:hover {
+  border-color: rgba(223, 183, 80, 0.35);
+  color: var(--text-bright);
+}
+
+.stock-card-visibility-toggle.active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #86efac;
+}
+
+.stock-card-visibility-toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stock-card-action-buttons {
   display: flex;
   gap: 6px;
+  flex: 0 0 auto;
 }
 
 /* Customer Catalog */

@@ -2,6 +2,7 @@
 
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { InventoryPage } from './InventoryPage'
@@ -23,6 +24,7 @@ const item: StockItem = {
   depositAmount: 1000,
   imageUrls: [],
   status: 'available',
+  publicVisible: false,
   createdAt: '2026-06-20T00:00:00.000Z',
 }
 
@@ -75,6 +77,7 @@ function renderInventoryPage(overrides: Partial<ComponentProps<typeof InventoryP
       colors={[]}
       rentals={[]}
       onUpdateStatus={vi.fn()}
+      onTogglePublicVisibility={vi.fn()}
       onOpenCatalog={vi.fn()}
       {...overrides}
     />,
@@ -111,5 +114,16 @@ describe('InventoryPage shared CSS contract', () => {
     const field = productNameInput.closest('label')
 
     expect(field?.querySelector('span b')).toHaveTextContent('*')
+  })
+
+  it('renders a card toggle for public catalog visibility', async () => {
+    const user = userEvent.setup()
+    const onTogglePublicVisibility = vi.fn()
+
+    renderInventoryPage({ onTogglePublicVisibility })
+
+    await user.click(screen.getByRole('button', { name: 'โชว์หน้าเว็บ PR-001' }))
+
+    expect(onTogglePublicVisibility).toHaveBeenCalledWith('stock_1', true)
   })
 })
