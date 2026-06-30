@@ -6,6 +6,7 @@ export type PublicCatalogResponse = {
     id: string
     name: string
     publicCatalogSlug?: string | null
+    catalogHeroImageUrl?: string | null
   }
   items: CatalogDisplayItem[]
 }

@@ -5,6 +5,7 @@ type ShopRow = {
   name: string
   public_catalog_slug: string
   public_catalog_enabled: boolean
+  catalog_hero_image_path: string | null
 }
 
 type StockItemRow = {
@@ -71,7 +72,7 @@ Deno.serve(async (request) => {
     const supabase = createServiceClient()
     const shopQuery = supabase
       .from('shops')
-      .select('id, name, public_catalog_slug, public_catalog_enabled')
+      .select('id, name, public_catalog_slug, public_catalog_enabled, catalog_hero_image_path')
 
     const { data: shop, error: shopError } = await (
       isUuid(catalogKey)
@@ -161,11 +162,23 @@ Deno.serve(async (request) => {
       }
     }))
 
+    const catalogHeroImageUrl = typedShop.catalog_hero_image_path
+      ? await (async () => {
+          const { data, error } = await supabase.storage
+            .from('shop-assets')
+            .createSignedUrl(typedShop.catalog_hero_image_path, 60 * 60)
+
+          if (error) return null
+          return data.signedUrl
+        })()
+      : null
+
     return jsonResponse({
       shop: {
         id: typedShop.id,
         name: typedShop.name,
         publicCatalogSlug: typedShop.public_catalog_slug,
+        catalogHeroImageUrl,
       },
       items,
     })

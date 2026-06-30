@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, ExternalLink, Heart, LayoutGrid, LayoutList, Search, SlidersHorizontal, X } from 'lucide-react'
+import { type ChangeEvent, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, ExternalLink, Heart, ImagePlus, LayoutGrid, LayoutList, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
@@ -33,6 +33,10 @@ type CustomerCatalogPageProps = {
   shopName?: string
   subtitle?: string
   publicUrl?: string
+  heroBackgroundUrl?: string | null
+  onUploadHeroBackground?: (file: File) => void | Promise<void>
+  onRemoveHeroBackground?: () => void | Promise<void>
+  isUploadingHeroBackground?: boolean
   onBackToInventory?: () => void
 }
 
@@ -42,6 +46,10 @@ export function CustomerCatalogPage({
   shopName,
   subtitle = 'เลือกดูชุดให้เช่าผ่านเว็บไซต์สำหรับลูกค้า',
   publicUrl,
+  heroBackgroundUrl,
+  onUploadHeroBackground,
+  onRemoveHeroBackground,
+  isUploadingHeroBackground = false,
   onBackToInventory,
 }: CustomerCatalogPageProps) {
   const [query, setQuery] = useState('')
@@ -168,6 +176,22 @@ export function CustomerCatalogPage({
     ...categories.map((c) => ({ label: c, value: c })),
   ]
 
+  const canEditHeroBackground = Boolean(onUploadHeroBackground || onRemoveHeroBackground)
+  const heroBackgroundStyle = heroBackgroundUrl
+    ? {
+        backgroundImage: `linear-gradient(135deg, rgba(245, 237, 224, 0.8) 0%, rgba(250, 246, 240, 0.84) 50%, rgba(240, 232, 216, 0.88) 100%), url("${heroBackgroundUrl}")`,
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+      }
+    : undefined
+
+  async function handleHeroBackgroundChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !onUploadHeroBackground) return
+    await onUploadHeroBackground(file)
+  }
+
   return (
     <div className="prc-page">
       {/* ── NAVBAR ── */}
@@ -199,8 +223,43 @@ export function CustomerCatalogPage({
         </div>
       </nav>
 
+      {canEditHeroBackground && (
+        <section className="prc-hero-editor" aria-label="ตั้งค่ารูปพื้นหลังหน้าลูกค้า">
+          <div className="prc-hero-editor-copy">
+            <p className="prc-hero-editor-title">รูปพื้นหลังส่วนชื่อร้าน</p>
+            <p className="prc-hero-editor-note">ใช้จริงขั้นต่ำ: 1600 x 600 px</p>
+            <p className="prc-hero-editor-note">ถ้าอยากเผื่อจอใหญ่/Retina: 1920 x 720 px</p>
+            <p className="prc-hero-editor-note">Safe area สำหรับข้อความชื่อร้าน: วางเนื้อหาสำคัญไว้ฝั่งซ้าย และเผื่อขอบซ้าย-ขวาอย่างน้อย 60px บน desktop</p>
+            <p className="prc-hero-editor-note">ถ้าจะทำเวอร์ชันมือถือแยก: 1080 x 720 px</p>
+          </div>
+          <div className="prc-hero-editor-actions">
+            <label className="prc-hero-editor-upload">
+              <ImagePlus size={16} />
+              {isUploadingHeroBackground ? 'กำลังอัปโหลด...' : 'อัปโหลดรูป BG'}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleHeroBackgroundChange}
+                disabled={isUploadingHeroBackground}
+              />
+            </label>
+            {heroBackgroundUrl && onRemoveHeroBackground && (
+              <button
+                className="prc-hero-editor-remove"
+                type="button"
+                onClick={() => void onRemoveHeroBackground()}
+                disabled={isUploadingHeroBackground}
+              >
+                <Trash2 size={16} />
+                ลบรูป
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ── HERO BANNER ── */}
-      <section className="prc-hero">
+      <section className={`prc-hero${heroBackgroundUrl ? ' prc-hero--custom-bg' : ''}`} style={heroBackgroundStyle}>
         <div className="prc-hero-content">
           <p className="prc-hero-eyebrow">ชุดให้เช่า</p>
           <h1 className="prc-hero-title">{heroTitle}</h1>
@@ -373,7 +432,6 @@ export function CustomerCatalogPage({
                 <div className="prc-card-footer">
                   <div className="prc-card-price-block">
                     <span className="prc-card-price">{formatBaht(item.rentalPricePerDay)}</span>
-                    <span className="prc-card-price-unit">/ 4 วัน</span>
                     {item.size && <span className="prc-card-size">ไซซ์ {item.size}</span>}
                   </div>
                   <div className="prc-card-actions">
@@ -476,7 +534,6 @@ export function CustomerCatalogPage({
 
                 <div className="prc-modal-price">
                   <span className="prc-modal-price-value">{formatBaht(selectedItem.rentalPricePerDay)}</span>
-                  <span className="prc-modal-price-unit">/ 4 วัน</span>
                 </div>
 
                 <div className="prc-modal-specs">

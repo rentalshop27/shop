@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   countRemoteRentalsForStockSku,
   createRemoteStockItems,
+  deleteShopHeroImage,
   deleteRemoteStockItem,
   loadShopSettings,
   loadStockItems,
+  uploadShopHeroImage,
   updateRemoteStockItem,
   updateRemoteStockItemPublicVisibility,
   updateRemoteStockItemStatus,
@@ -66,6 +68,7 @@ describe('stock remote', () => {
         categories: ['ชุดราตรี'],
         colors: ['ดำ'],
         public_catalog_enabled: true,
+        catalog_hero_image_path: 'shop_1/catalog/hero.png',
       },
       error: null,
     }))
@@ -74,21 +77,27 @@ describe('stock remote', () => {
       return { maybeSingle }
     })
     const select = vi.fn(() => ({ eq }))
+    const createSignedUrl = vi.fn(() => ({ data: { signedUrl: 'https://example.com/hero-signed' }, error: null }))
     const supabase = {
       from: vi.fn(() => ({ select })),
+      storage: {
+        from: vi.fn(() => ({ createSignedUrl })),
+      },
     } as unknown as SupabaseClient
 
     const settings = await loadShopSettings(supabase, 'shop_1')
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
-    expect(select).toHaveBeenCalledWith('brands, categories, colors, public_catalog_enabled')
+    expect(select).toHaveBeenCalledWith('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path')
     expect(filters).toEqual([['id', 'shop_1']])
     expect(maybeSingle).toHaveBeenCalled()
+    expect(createSignedUrl).toHaveBeenCalledWith('shop_1/catalog/hero.png', 60 * 15)
     expect(settings).toEqual({
       brands: ['Precious'],
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
       publicCatalogEnabled: true,
+      catalogHeroImageUrl: 'https://example.com/hero-signed',
     })
   })
 
@@ -112,6 +121,7 @@ describe('stock remote', () => {
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
       publicCatalogEnabled: false,
+      catalogHeroImageUrl: 'https://example.supabase.co/storage/v1/object/sign/shop-assets/shop_1/catalog/hero.png?token=abc',
     })
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
@@ -121,7 +131,53 @@ describe('stock remote', () => {
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
       public_catalog_enabled: false,
+      catalog_hero_image_path: 'shop_1/catalog/hero.png',
     })
+  })
+
+  it('uploads a shop hero image and removes the previous asset path', async () => {
+    const upload = vi.fn(() => ({ error: null }))
+    const createSignedUrl = vi.fn(() => ({ data: { signedUrl: 'https://example.com/new-hero-signed' }, error: null }))
+    const remove = vi.fn(() => ({ error: null }))
+    const supabase = {
+      storage: {
+        from: vi.fn((bucket: string) => {
+          if (bucket === 'shop-assets') {
+            return { upload, createSignedUrl, remove }
+          }
+          throw new Error(`Unexpected bucket ${bucket}`)
+        }),
+      },
+    } as unknown as SupabaseClient
+
+    const file = new File(['hero'], 'hero.png', { type: 'image/png' })
+    const signedUrl = await uploadShopHeroImage(
+      supabase,
+      'shop_1',
+      file,
+      'https://example.supabase.co/storage/v1/object/sign/shop-assets/shop_1/catalog/old-hero.png?token=abc',
+    )
+
+    expect(signedUrl).toBe('https://example.com/new-hero-signed')
+    expect(upload).toHaveBeenCalledTimes(1)
+    expect(createSignedUrl).toHaveBeenCalledTimes(1)
+    expect(remove).toHaveBeenCalledWith(['shop_1/catalog/old-hero.png'])
+  })
+
+  it('deletes a shop hero image by parsed storage path', async () => {
+    const remove = vi.fn(() => ({ error: null }))
+    const supabase = {
+      storage: {
+        from: vi.fn(() => ({ remove })),
+      },
+    } as unknown as SupabaseClient
+
+    await deleteShopHeroImage(
+      supabase,
+      'https://example.supabase.co/storage/v1/object/sign/shop-assets/shop_1/catalog/hero.png?token=abc',
+    )
+
+    expect(remove).toHaveBeenCalledWith(['shop_1/catalog/hero.png'])
   })
 
   it('updates a stock item by both id and active shop', async () => {

@@ -79,4 +79,18 @@ describe('CustomerCatalogPage filters', () => {
     expect(screen.getByText('Ruby Evening Dress')).toBeInTheDocument()
     expect(screen.getByText('Pearl Wedding Gown')).toBeInTheDocument()
   })
+
+  it('renders hero background upload guidance in admin preview mode', () => {
+    render(
+      <CustomerCatalogPage
+        items={catalogItems}
+        rentals={[]}
+        onUploadHeroBackground={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('รูปพื้นหลังส่วนชื่อร้าน')).toBeInTheDocument()
+    expect(screen.getByText('ใช้จริงขั้นต่ำ: 1600 x 600 px')).toBeInTheDocument()
+    expect(screen.getByText('อัปโหลดรูป BG')).toBeInTheDocument()
+  })
 })

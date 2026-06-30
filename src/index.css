@@ -6008,6 +6008,70 @@ select {
   width: 16px;
 }
 
+.prc-hero-editor {
+  align-items: flex-start;
+  background: var(--prc-white);
+  border-bottom: 1px solid var(--prc-border);
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 20px 40px;
+}
+
+.prc-hero-editor-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prc-hero-editor-title {
+  color: var(--prc-text);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.prc-hero-editor-note {
+  color: var(--prc-text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.prc-hero-editor-actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.prc-hero-editor-upload,
+.prc-hero-editor-remove {
+  align-items: center;
+  background: var(--prc-white);
+  border: 1px solid var(--prc-border);
+  border-radius: 999px;
+  color: var(--prc-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prc-hero-editor-upload:hover,
+.prc-hero-editor-remove:hover {
+  border-color: var(--prc-gold);
+  box-shadow: 0 10px 24px rgba(184, 150, 90, 0.12);
+  color: var(--prc-gold);
+}
+
+.prc-hero-editor-upload input {
+  display: none;
+}
+
 /* ── HERO BANNER ── */
 .prc-hero {
   background: linear-gradient(135deg, #f5ede0 0%, #faf6f0 50%, #f0e8d8 100%);
@@ -6017,6 +6081,14 @@ select {
   min-height: 300px;
   overflow: hidden;
   position: relative;
+}
+
+.prc-hero--custom-bg::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
 }
 
 .prc-hero::before {
@@ -6934,6 +7006,7 @@ select {
 
 @media (max-width: 768px) {
   .prc-nav-inner,
+  .prc-hero-editor,
   .prc-hero-content,
   .prc-filter-inner,
   .prc-category-tabs-inner,
@@ -6946,6 +7019,15 @@ select {
 
   .prc-filter-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .prc-hero-editor {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .prc-hero-editor-actions {
+    flex-wrap: wrap;
   }
 
   .prc-modal-body {
@@ -6994,5 +7076,11 @@ select {
 
   .prc-hero-title {
     font-size: 28px;
+  }
+
+  .prc-hero-editor-upload,
+  .prc-hero-editor-remove {
+    justify-content: center;
+    width: 100%;
   }
 }

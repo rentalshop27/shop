@@ -9,6 +9,7 @@ type PublicCatalogRouteProps = {
 export function PublicCatalogRoute({ catalogKey }: PublicCatalogRouteProps) {
   const [items, setItems] = useState<CatalogDisplayItem[]>([])
   const [shopName, setShopName] = useState('')
+  const [catalogHeroImageUrl, setCatalogHeroImageUrl] = useState<string | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
 
@@ -33,6 +34,7 @@ export function PublicCatalogRoute({ catalogKey }: PublicCatalogRouteProps) {
         if (cancelled) return
         setItems(catalog.items)
         setShopName(catalog.shop.name)
+        setCatalogHeroImageUrl(catalog.shop.catalogHeroImageUrl ?? null)
         setStatus('ready')
       })
       .catch((err: unknown) => {
@@ -78,6 +80,7 @@ export function PublicCatalogRoute({ catalogKey }: PublicCatalogRouteProps) {
       rentals={[]}
       shopName={shopName}
       subtitle="เลือกดูชุดให้เช่าผ่านเว็บไซต์สำหรับลูกค้า"
+      heroBackgroundUrl={catalogHeroImageUrl}
     />
   )
 }

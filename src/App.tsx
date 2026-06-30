@@ -44,9 +44,12 @@ import {
   uploadRemoteCustomerDocuments,
 } from './features/customers/customerRemote'
 import {
+  deleteShopHeroImage,
   loadStockItems,
+  type ShopSettings,
   updateShopSettings,
   loadShopSettings,
+  uploadShopHeroImage,
 } from './features/inventory/stockRemote'
 import type {
   Customer,
@@ -87,6 +90,7 @@ const DEFAULT_CATEGORIES = ['ชุดราตรี', 'ชุดไทย', '�
 const DEFAULT_COLORS = ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
 const DEFAULT_PUBLIC_CATALOG_ENABLED = false
 const LAST_SELECTED_SHOP_KEY_PREFIX = 'precious_last_shop:'
+const LOCAL_CATALOG_HERO_IMAGE_KEY = 'precious_catalog_hero_image_url'
 
 const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; label: string }> = [
   { value: 'all', label: 'ทุกสถานะ' },
@@ -182,6 +186,23 @@ function getLocalArray<T>(key: string, fallback: T[]): T[] {
   } catch {
     return fallback
   }
+}
+
+function getLocalString(key: string): string | null {
+  if (hasSupabaseConfig) return null
+  return localStorage.getItem(key)
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result)
+      else reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'))
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('อ่านไฟล์รูปไม่สำเร็จ'))
+    reader.readAsDataURL(file)
+  })
 }
 
 function getLastSelectedShopKey(userId: string) {
@@ -348,6 +369,8 @@ function PrivateApp() {
   const [categories, setCategories] = useState<string[]>(() => getLocalArray('precious_categories', DEFAULT_CATEGORIES))
   const [colors, setColors] = useState<string[]>(() => getLocalArray('precious_colors', DEFAULT_COLORS))
   const [publicCatalogEnabled, setPublicCatalogEnabled] = useState(DEFAULT_PUBLIC_CATALOG_ENABLED)
+  const [catalogHeroImageUrl, setCatalogHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_HERO_IMAGE_KEY))
+  const [isCatalogHeroUploading, setIsCatalogHeroUploading] = useState(false)
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
   const [authUserId, setAuthUserId] = useState<string | null>(null)
   const [authUserEmail, setAuthUserEmail] = useState<string | null>(null)
@@ -377,15 +400,19 @@ function PrivateApp() {
 
   useEffect(() => {
     if (hasSupabaseConfig) return
+    if (catalogHeroImageUrl) {
+      localStorage.setItem(LOCAL_CATALOG_HERO_IMAGE_KEY, catalogHeroImageUrl)
+    } else {
+      localStorage.removeItem(LOCAL_CATALOG_HERO_IMAGE_KEY)
+    }
+  }, [catalogHeroImageUrl])
+
+  useEffect(() => {
+    if (hasSupabaseConfig) return
     localStorage.setItem('precious_stock_items', JSON.stringify(stockItems))
   }, [stockItems])
 
-  async function saveShopSettings(nextSettings: {
-    brands: string[]
-    categories: string[]
-    colors: string[]
-    publicCatalogEnabled: boolean
-  }) {
+  async function saveShopSettings(nextSettings: ShopSettings) {
     if (supabase && isAuthenticated && shopId) {
       await updateShopSettings(supabase, shopId, nextSettings)
     }
@@ -396,7 +423,7 @@ function PrivateApp() {
     setBrands(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await saveShopSettings({ brands: updated, categories, colors, publicCatalogEnabled })
+        await saveShopSettings({ brands: updated, categories, colors, publicCatalogEnabled, catalogHeroImageUrl })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -409,7 +436,7 @@ function PrivateApp() {
     setBrands(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await saveShopSettings({ brands: updated, categories, colors, publicCatalogEnabled })
+        await saveShopSettings({ brands: updated, categories, colors, publicCatalogEnabled, catalogHeroImageUrl })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -422,7 +449,7 @@ function PrivateApp() {
     setCategories(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await saveShopSettings({ brands, categories: updated, colors, publicCatalogEnabled })
+        await saveShopSettings({ brands, categories: updated, colors, publicCatalogEnabled, catalogHeroImageUrl })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -435,7 +462,7 @@ function PrivateApp() {
     setCategories(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await saveShopSettings({ brands, categories: updated, colors, publicCatalogEnabled })
+        await saveShopSettings({ brands, categories: updated, colors, publicCatalogEnabled, catalogHeroImageUrl })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -448,7 +475,7 @@ function PrivateApp() {
     setColors(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await saveShopSettings({ brands, categories, colors: updated, publicCatalogEnabled })
+        await saveShopSettings({ brands, categories, colors: updated, publicCatalogEnabled, catalogHeroImageUrl })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('บันทึกข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -461,7 +488,7 @@ function PrivateApp() {
     setColors(updated)
     if (supabase && isAuthenticated && shopId) {
       try {
-        await saveShopSettings({ brands, categories, colors: updated, publicCatalogEnabled })
+        await saveShopSettings({ brands, categories, colors: updated, publicCatalogEnabled, catalogHeroImageUrl })
       } catch (err) {
         console.error('Failed to save settings:', err)
         window.alert('ลบข้อมูลการตั้งค่าล้มเหลว: ' + getErrorMessage(err))
@@ -472,11 +499,55 @@ function PrivateApp() {
   const handlePublicCatalogEnabledChange = async (enabled: boolean) => {
     setPublicCatalogEnabled(enabled)
     try {
-      await saveShopSettings({ brands, categories, colors, publicCatalogEnabled: enabled })
+      await saveShopSettings({ brands, categories, colors, publicCatalogEnabled: enabled, catalogHeroImageUrl })
     } catch (err) {
       setPublicCatalogEnabled(!enabled)
       console.error('Failed to save public catalog setting:', err)
       window.alert('บันทึกการตั้งค่า public catalog ล้มเหลว: ' + getErrorMessage(err))
+    }
+  }
+
+  const handleCatalogHeroImageUpload = async (file: File) => {
+    try {
+      setIsCatalogHeroUploading(true)
+
+      if (supabase && isAuthenticated && shopId) {
+        const nextUrl = await uploadShopHeroImage(supabase, shopId, file, catalogHeroImageUrl)
+        setCatalogHeroImageUrl(nextUrl)
+        await saveShopSettings({ brands, categories, colors, publicCatalogEnabled, catalogHeroImageUrl: nextUrl })
+        return
+      }
+
+      const nextUrl = await fileToDataUrl(file)
+      setCatalogHeroImageUrl(nextUrl)
+    } catch (error) {
+      console.error('Failed to upload catalog hero image:', error)
+      window.alert('อัปโหลดรูปพื้นหลังไม่สำเร็จ: ' + getErrorMessage(error))
+    } finally {
+      setIsCatalogHeroUploading(false)
+    }
+  }
+
+  const handleCatalogHeroImageRemove = async () => {
+    if (!catalogHeroImageUrl) return
+
+    const previousUrl = catalogHeroImageUrl
+    setCatalogHeroImageUrl(null)
+
+    try {
+      if (supabase && isAuthenticated) {
+        setIsCatalogHeroUploading(true)
+        await deleteShopHeroImage(supabase, previousUrl)
+        if (shopId) {
+          await saveShopSettings({ brands, categories, colors, publicCatalogEnabled, catalogHeroImageUrl: null })
+        }
+      }
+    } catch (error) {
+      setCatalogHeroImageUrl(previousUrl)
+      console.error('Failed to remove catalog hero image:', error)
+      window.alert('ลบรูปพื้นหลังไม่สำเร็จ: ' + getErrorMessage(error))
+    } finally {
+      setIsCatalogHeroUploading(false)
     }
   }
 
@@ -833,6 +904,7 @@ function PrivateApp() {
     setCategories(DEFAULT_CATEGORIES)
     setColors(DEFAULT_COLORS)
     setPublicCatalogEnabled(DEFAULT_PUBLIC_CATALOG_ENABLED)
+    setCatalogHeroImageUrl(null)
 
     Promise.all([
       loadCustomers(client, shopId),
@@ -857,6 +929,7 @@ function PrivateApp() {
         if (settings?.categories?.length) setCategories(settings.categories)
         if (settings?.colors?.length) setColors(settings.colors)
         if (settings) setPublicCatalogEnabled(settings.publicCatalogEnabled)
+        setCatalogHeroImageUrl(settings?.catalogHeroImageUrl ?? null)
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -1520,6 +1593,10 @@ function PrivateApp() {
               rentals={rentals}
               shopName={currentShop?.name}
               publicUrl={publicCatalogEnabled ? getPublicCatalogUrl(window.location.origin, currentShop) : undefined}
+              heroBackgroundUrl={catalogHeroImageUrl}
+              onUploadHeroBackground={handleCatalogHeroImageUpload}
+              onRemoveHeroBackground={handleCatalogHeroImageRemove}
+              isUploadingHeroBackground={isCatalogHeroUploading}
               onBackToInventory={() => setActiveTab('inventory')}
             />
           )}

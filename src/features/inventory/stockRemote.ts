@@ -28,6 +28,16 @@ type UploadedStockImages = {
   uploadedPaths: string[]
 }
 
+export type ShopSettings = {
+  brands: string[]
+  categories: string[]
+  colors: string[]
+  publicCatalogEnabled: boolean
+  catalogHeroImageUrl: string | null
+}
+
+const SHOP_HERO_BUCKET = 'shop-assets'
+
 // Function to extract storage paths from signed URLs or public URLs
 export function getPathFromUrl(url: string, bucketName = 'stock-images'): string | null {
   if (url.startsWith('data:')) return null // Data URL, needs upload
@@ -111,6 +121,25 @@ async function mapStockItemRow(supabase: SupabaseClient, row: StockItemRow): Pro
   }
 }
 
+async function createSignedStorageUrl(
+  supabase: SupabaseClient,
+  bucketName: string,
+  path: string,
+  expiresInSeconds: number,
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(path, expiresInSeconds)
+
+    if (error) throw error
+    return data?.signedUrl ?? null
+  } catch (error) {
+    console.error('Failed to create signed URL for:', path, error)
+    return null
+  }
+}
+
 // Upload stock images helper
 async function uploadStockImages(
   supabase: SupabaseClient,
@@ -161,6 +190,16 @@ async function removeStockImagePaths(
   if (paths.length === 0) return null
 
   const { error } = await supabase.storage.from('stock-images').remove(paths)
+  return error
+}
+
+async function removeShopAssetPaths(
+  supabase: SupabaseClient,
+  paths: string[],
+): Promise<Error | null> {
+  if (paths.length === 0) return null
+
+  const { error } = await supabase.storage.from(SHOP_HERO_BUCKET).remove(paths)
   return error
 }
 
@@ -398,8 +437,12 @@ export async function countRemoteRentalsForStockSku(
 export async function updateShopSettings(
   supabase: SupabaseClient,
   shopId: string,
-  settings: { brands: string[]; categories: string[]; colors: string[]; publicCatalogEnabled: boolean }
+  settings: ShopSettings
 ): Promise<void> {
+  const catalogHeroImagePath = settings.catalogHeroImageUrl
+    ? getPathFromUrl(settings.catalogHeroImageUrl, SHOP_HERO_BUCKET) ?? settings.catalogHeroImageUrl
+    : null
+
   const { error } = await supabase
     .from('shops')
     .update({
@@ -407,6 +450,7 @@ export async function updateShopSettings(
       categories: settings.categories,
       colors: settings.colors,
       public_catalog_enabled: settings.publicCatalogEnabled,
+      catalog_hero_image_path: catalogHeroImagePath,
       updated_at: new Date().toISOString()
     })
     .eq('id', shopId)
@@ -417,20 +461,78 @@ export async function updateShopSettings(
 export async function loadShopSettings(
   supabase: SupabaseClient,
   shopId: string
-): Promise<{ brands: string[]; categories: string[]; colors: string[]; publicCatalogEnabled: boolean } | null> {
+): Promise<ShopSettings | null> {
   const { data, error } = await supabase
     .from('shops')
-    .select('brands, categories, colors, public_catalog_enabled')
+    .select('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path')
     .eq('id', shopId)
     .maybeSingle()
 
   if (error) throw error
   if (!data) return null
 
+  const catalogHeroImageUrl = data.catalog_hero_image_path
+    ? await createSignedStorageUrl(supabase, SHOP_HERO_BUCKET, data.catalog_hero_image_path, 60 * 15)
+    : null
+
   return {
     brands: data.brands,
     categories: data.categories,
     colors: data.colors,
     publicCatalogEnabled: Boolean(data.public_catalog_enabled),
+    catalogHeroImageUrl,
   }
+}
+
+export async function uploadShopHeroImage(
+  supabase: SupabaseClient,
+  shopId: string,
+  file: File,
+  previousImageUrl?: string | null,
+): Promise<string> {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+  const safeExt = ext.replace(/[^a-z0-9]/g, '') || 'jpg'
+  const storagePath = `${shopId}/catalog/${crypto.randomUUID()}.${safeExt}`
+  const previousPath = previousImageUrl ? getPathFromUrl(previousImageUrl, SHOP_HERO_BUCKET) : null
+
+  const { error: uploadError } = await supabase.storage
+    .from(SHOP_HERO_BUCKET)
+    .upload(storagePath, file, { upsert: false })
+
+  if (uploadError) throw uploadError
+
+  try {
+    const signedUrl = await createSignedStorageUrl(supabase, SHOP_HERO_BUCKET, storagePath, 60 * 15)
+    if (!signedUrl) {
+      throw new Error('สร้างลิงก์รูปพื้นหลังไม่สำเร็จ')
+    }
+
+    if (previousPath) {
+      const cleanupError = await removeShopAssetPaths(supabase, [previousPath])
+      if (cleanupError) {
+        console.warn('Failed to delete previous shop hero image:', previousPath, cleanupError)
+      }
+    }
+
+    return signedUrl
+  } catch (error) {
+    const cleanupError = await removeShopAssetPaths(supabase, [storagePath])
+    if (cleanupError) {
+      console.warn('Failed to cleanup uploaded shop hero image after error:', storagePath, cleanupError)
+    }
+    throw error
+  }
+}
+
+export async function deleteShopHeroImage(
+  supabase: SupabaseClient,
+  imageUrl: string | null | undefined,
+): Promise<void> {
+  if (!imageUrl) return
+
+  const path = getPathFromUrl(imageUrl, SHOP_HERO_BUCKET)
+  if (!path) return
+
+  const error = await removeShopAssetPaths(supabase, [path])
+  if (error) throw error
 }
