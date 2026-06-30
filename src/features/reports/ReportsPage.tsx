@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RentalOrder } from '../rentals/rentalTypes'
-import type { StockItem } from '../inventory/inventoryTypes'
+import type { FlatStockItem } from '../inventory/inventoryTypes'
 import {
   buildDressReportsData,
   buildGeneralStoreMetrics,
@@ -77,7 +77,7 @@ export function ReportsPage({
   shopName,
 }: {
   rentals: RentalOrder[]
-  stockItems: StockItem[]
+  stockItems: FlatStockItem[]
   supabase?: SupabaseClient | null
   shopId?: string | null
   shopName?: string

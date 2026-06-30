@@ -11,14 +11,14 @@ import {
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
-import type { StockItem } from '../inventory/inventoryTypes'
+import type { FlatStockItem } from '../inventory/inventoryTypes'
 import { findOpenRentalConflict } from './rentalRules'
 import { canCreateRentalForCustomer } from '../customers/customerRules'
 
 interface RentalsPageProps {
   rentals: RentalOrder[]
   customers: Customer[]
-  stockItems: StockItem[]
+  stockItems: FlatStockItem[]
   onCreateRentals: (drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]) => boolean | Promise<boolean>
   onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus) => void
   onDeleteRental?: (rentalId: string | string[]) => void
@@ -90,7 +90,7 @@ export function RentalsPage({
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
 
   const [costumeSearch, setCostumeSearch] = useState('')
-  const [selectedCostumes, setSelectedCostumes] = useState<StockItem[]>([])
+  const [selectedCostumes, setSelectedCostumes] = useState<FlatStockItem[]>([])
   const [showCostumeDropdown, setShowCostumeDropdown] = useState(false)
 
   const [pickupDate, setPickupDate] = useState(getTodayString())

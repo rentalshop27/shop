@@ -1,5 +1,5 @@
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
-import type { StockItem } from '../inventory/inventoryTypes'
+import type { FlatStockItem } from '../inventory/inventoryTypes'
 
 export type DateRangeMode = 'all' | '30days' | 'this_month' | '90days' | 'custom'
 
@@ -9,7 +9,7 @@ export interface DateRange {
 }
 
 export interface DressReportItem {
-  stockItem: StockItem
+  stockItem: FlatStockItem
   rentalCount: number
   totalRevenue: number
   averageRevenue: number
@@ -201,7 +201,7 @@ export function buildReportsDateRange({
   mode: DateRangeMode
   customStartDate: string
   customEndDate: string
-  stockItems: StockItem[]
+  stockItems: FlatStockItem[]
   rentals: RentalOrder[]
   todayStr: string
 }): DateRange {
@@ -237,7 +237,7 @@ export function buildReportsDateRange({
 }
 
 export function buildDressReportsData(
-  stockItems: StockItem[],
+  stockItems: FlatStockItem[],
   rentals: RentalOrder[],
   activeDateRange: DateRange,
 ): DressReportItem[] {

@@ -11,7 +11,7 @@ export function getInventoryDisplayStatus(
 } {
   const isRented = (rentals || []).some((rental) => {
     return (
-      rental.costume.sku === item.sku &&
+      rental.costume.id === item.id &&
       ((rental.status === 'active' && rental.pickupDate <= today && rental.returnDate >= today) ||
        (rental.status === 'overdue' && rental.pickupDate <= today))
     )
@@ -19,7 +19,7 @@ export function getInventoryDisplayStatus(
 
   // Get next upcoming booked rental (earliest pickupDate, status is booked)
   const bookedRentals = (rentals || [])
-    .filter((rental) => rental.costume.sku === item.sku && rental.status === 'booked')
+    .filter((rental) => rental.costume.id === item.id && rental.status === 'booked')
     .sort((a, b) => a.pickupDate.localeCompare(b.pickupDate))
   const nextBookedRental = bookedRentals[0] || null
 

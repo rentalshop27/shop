@@ -3,39 +3,38 @@ import type { Dispatch, SetStateAction } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { InventoryControllerPageProps } from './InventoryPage'
 import {
-  countRemoteRentalsForStockSku,
-  createRemoteStockItem,
-  createRemoteStockItems,
+  countRemoteRentalsForProduct,
+  countRemoteRentalsForStockItem,
+  createProductWithVariants,
+  addStockToVariant,
+  deleteRemoteProduct,
   deleteRemoteStockItem,
-  loadStockItems,
-  updateRemoteStockItem,
-  updateRemoteStockItemPublicVisibility,
+  loadProductsWithStock,
+  updateRemoteProduct,
+  updateRemoteProductPublicVisibility,
   updateRemoteStockItemStatus,
 } from './stockRemote'
-import type { StockDraft, StockItem, StockItemStatus } from './inventoryTypes'
+import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 
-const emptyStockDraft: StockDraft = {
-  sku: '',
-  serialNumber: '',
+const emptyProductDraft: ProductDraft = {
+  baseSku: '',
   productName: '',
   brand: '',
   category: '',
-  size: 'M',
   primaryColor: 'น้ำเงินมิดไนต์',
   publicDescription: '',
-  setCount: '1',
   rentalPricePerDay: '',
   lateFeeRule: '',
   depositAmount: '',
   imageUrls: [],
-  status: 'available',
   publicVisible: false,
+  variants: [],
 }
 
 type InventoryControllerOptions = {
-  stockItems: StockItem[]
-  setStockItems: Dispatch<SetStateAction<StockItem[]>>
+  products: ProductWithStockSummary[]
+  setProducts: Dispatch<SetStateAction<ProductWithStockSummary[]>>
   rentals: RentalOrder[]
   brands: string[]
   categories: string[]
@@ -48,11 +47,9 @@ type InventoryControllerOptions = {
   onLoadAuditLogs: () => Promise<void> | void
 }
 
-type NormalizedStockDraft = Omit<StockItem, 'id' | 'createdAt'>
-
 export function useInventoryController({
-  stockItems,
-  setStockItems,
+  products,
+  setProducts,
   rentals,
   brands,
   categories,
@@ -66,99 +63,95 @@ export function useInventoryController({
 }: InventoryControllerOptions) {
   const [query, setQuery] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingStockId, setEditingStockId] = useState<string | null>(null)
-  const [previewStockId, setPreviewStockId] = useState<string | null>(null)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [previewProductId, setPreviewProductId] = useState<string | null>(null)
   const [previewImageIndex, setPreviewImageIndex] = useState(0)
-  const [draft, setDraft] = useState<StockDraft>(emptyStockDraft)
+  const [draft, setDraft] = useState<ProductDraft>(emptyProductDraft)
   const [formError, setFormError] = useState('')
 
   useEffect(() => {
     setQuery('')
     setIsFormOpen(false)
-    setEditingStockId(null)
-    setPreviewStockId(null)
+    setEditingProductId(null)
+    setPreviewProductId(null)
     setPreviewImageIndex(0)
-    setDraft(emptyStockDraft)
+    setDraft(emptyProductDraft)
     setFormError('')
   }, [isAuthenticated, shopId])
 
-  const filteredItems = useMemo(() => {
+  const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-
-    return stockItems.filter((item) => {
+    return products.filter((product) => {
       const searchable = [
-        item.sku,
-        item.serialNumber,
-        item.productName,
-        item.brand,
-        item.category,
-        item.size,
-        item.primaryColor,
-      ]
-        .join(' ')
-        .toLowerCase()
+        product.baseSku,
+        product.productName,
+        product.brand,
+        product.category,
+        product.primaryColor,
+      ].join(' ').toLowerCase()
 
       return !normalizedQuery || searchable.includes(normalizedQuery)
     })
-  }, [stockItems, query])
+  }, [products, query])
 
-  const summary = useMemo(
-    () => ({
-      total: stockItems.length,
-      sets: stockItems.reduce((total, item) => total + item.setCount, 0),
-      deposits: stockItems.reduce((total, item) => total + item.depositAmount, 0),
-      priced: stockItems.filter((item) => item.rentalPricePerDay > 0).length,
-    }),
-    [stockItems],
-  )
+  const summary = useMemo(() => {
+    let totalItems = 0
+    let sets = 0
+    let priced = 0
+    let deposits = 0
+
+    products.forEach((product) => {
+      sets += 1
+      totalItems += product.stockItems.length
+      if (product.rentalPricePerDay > 0) priced += 1
+      deposits += product.depositAmount
+    })
+
+    return { total: totalItems, sets, priced, deposits }
+  }, [products])
 
   const previewItem = useMemo(() => {
-    if (!previewStockId) return null
-    return stockItems.find((item) => item.id === previewStockId) ?? null
-  }, [previewStockId, stockItems])
+    if (!previewProductId) return null
+    return products.find((item) => item.id === previewProductId) ?? null
+  }, [previewProductId, products])
 
-  function updateDraft<Field extends keyof StockDraft>(field: Field, value: StockDraft[Field]) {
+  function updateDraft<Field extends keyof ProductDraft>(field: Field, value: ProductDraft[Field]) {
     setDraft((current) => ({ ...current, [field]: value }))
   }
 
   function openCreateForm() {
-    setEditingStockId(null)
-    setDraft(emptyStockDraft)
+    setEditingProductId(null)
+    setDraft(emptyProductDraft)
     setFormError('')
     setIsFormOpen(true)
   }
 
-  function openEditForm(item: StockItem) {
-    setEditingStockId(item.id)
-    setDraft(toEditableStockDraft(item))
+  function openEditForm(product: ProductWithStockSummary) {
+    setEditingProductId(product.id)
+    setDraft(toEditableProductDraft(product))
     setFormError('')
     setIsFormOpen(true)
   }
 
   function closeForm() {
     setIsFormOpen(false)
-    setEditingStockId(null)
+    setEditingProductId(null)
     setFormError('')
   }
 
   async function addImages(files: FileList | null) {
     if (!files?.length) return
-
     const incomingFiles = Array.from(files).filter((file) => file.type.startsWith('image/'))
     const remainingSlots = 5 - draft.imageUrls.length
-
     if (remainingSlots <= 0) {
       window.alert('รูปชุดเต็ม 5 รูปแล้ว')
       return
     }
-
     const filesToUpload = incomingFiles.slice(0, remainingSlots)
     if (incomingFiles.length > remainingSlots) {
       window.alert(`สามารถเพิ่มรูปชุดได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
     }
-
     const imageUrls = await Promise.all(filesToUpload.map((file) => readFileAsDataUrl(file)))
-
     setDraft((current) => ({
       ...current,
       imageUrls: [...current.imageUrls, ...imageUrls],
@@ -172,35 +165,25 @@ export function useInventoryController({
     }))
   }
 
-  function openPreview(item: StockItem, index = 0) {
-    if (!item.imageUrls.length) return
-    setPreviewStockId(item.id)
+  function openPreview(product: ProductWithStockSummary, index = 0) {
+    if (!product.imageUrls.length) return
+    setPreviewProductId(product.id)
     setPreviewImageIndex(index)
   }
 
   function closePreview() {
-    setPreviewStockId(null)
+    setPreviewProductId(null)
     setPreviewImageIndex(0)
   }
 
-  async function handleDelete(item: StockItem) {
+  async function handleDeleteProduct(product: ProductWithStockSummary) {
     try {
-      let relatedRentalCount = rentals.filter(
-        (rental) => rental.costume.id === item.id || rental.costume.sku === item.sku,
-      ).length
-
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+      if (supabase && isAuthenticated && shopId) {
+        const rentalsCount = await countRemoteRentalsForProduct(supabase, shopId, product.id)
+        if (rentalsCount > 0) {
+          window.alert(`ยังลบชุด ${product.baseSku} ไม่ได้ เพราะมีคิวเช่าสำหรับลูกชุด ${rentalsCount} รายการ`)
           return
         }
-
-        relatedRentalCount = await countRemoteRentalsForStockSku(supabase, shopId, item.sku)
-      }
-
-      if (relatedRentalCount > 0) {
-        window.alert(`ยังลบชุด ${item.sku} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงชุดนี้อยู่ ${relatedRentalCount} รายการ`)
-        return
       }
     } catch (error) {
       window.alert(getErrorMessage(error))
@@ -208,32 +191,70 @@ export function useInventoryController({
     }
 
     const confirmed = window.confirm(
-      `คุณต้องการลบชุด "${item.productName}" (${item.sku}) ใช่หรือไม่?\n\nข้อมูลชุดและรูปภาพของชุดนี้จะถูกลบออกจากระบบ`,
+      `คุณต้องการลบชุด "${product.productName}" (${product.baseSku}) รวมถึงรายการตัวชุดย่อยทั้งหมดใช่หรือไม่?\n\nข้อมูลชุดและรูปภาพจะถูกลบออกจากระบบ`,
     )
     if (!confirmed) return
 
-    setFormError('')
     setIsSaving(true)
-
     try {
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
-          return
-        }
-
-        await deleteRemoteStockItem(supabase, shopId, item.id, item.imageUrls)
+      if (supabase && isAuthenticated && shopId) {
+        await deleteRemoteProduct(supabase, shopId, product.id, product.imageUrls)
         await onLoadAuditLogs()
       }
+      setProducts((current) => current.filter((p) => p.id !== product.id))
+      if (editingProductId === product.id) closeForm()
+      if (previewProductId === product.id) closePreview()
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
-      setStockItems((current) => current.filter((stockItem) => stockItem.id !== item.id))
-
-      if (editingStockId === item.id) {
-        closeForm()
+  async function handleDeleteVariant(productId: string, stockId: string) {
+    try {
+      if (supabase && isAuthenticated && shopId) {
+        const rentalsCount = await countRemoteRentalsForStockItem(supabase, shopId, stockId)
+        if (rentalsCount > 0) {
+          window.alert(`ไม่สามารถลบลูกชุดนี้ได้ เพราะมีคิวเช่าแล้ว`)
+          return
+        }
       }
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+      return
+    }
 
-      if (previewStockId === item.id) {
-        closePreview()
+    const confirmed = window.confirm('คุณต้องการลบรายการชุดย่อยนี้ใช่หรือไม่?')
+    if (!confirmed) return
+
+    setIsSaving(true)
+    try {
+      if (supabase && isAuthenticated && shopId) {
+        await deleteRemoteStockItem(supabase, shopId, stockId)
+        await onLoadAuditLogs()
+      }
+      setProducts((current) =>
+        current.map((p) =>
+          p.id === productId ? { ...p, stockItems: p.stockItems.filter((si) => si.id !== stockId) } : p
+        )
+      )
+    } catch (error) {
+      window.alert(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleAddStock(productId: string, size: string, quantity: number) {
+    setIsSaving(true)
+    try {
+      if (supabase && isAuthenticated && shopId) {
+        await addStockToVariant(supabase, shopId, productId, size, quantity)
+        // Refresh whole stock to get new variants
+        const reloaded = await loadProductsWithStock(supabase, shopId)
+        setProducts(reloaded)
+        await onLoadAuditLogs()
       }
     } catch (error) {
       window.alert(getErrorMessage(error))
@@ -242,40 +263,35 @@ export function useInventoryController({
     }
   }
 
-  async function handleUpdateStatus(itemId: string, newStatus: StockItemStatus) {
+  async function handleUpdateStatus(productId: string, stockId: string, newStatus: StockItemStatus) {
     try {
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
-          return
-        }
-
-        await updateRemoteStockItemStatus(supabase, shopId, itemId, newStatus)
+      if (supabase && isAuthenticated && shopId) {
+        await updateRemoteStockItemStatus(supabase, shopId, stockId, newStatus)
         await onLoadAuditLogs()
       }
-
-      setStockItems((current) =>
-        current.map((item) => (item.id === itemId ? { ...item, status: newStatus } : item)),
+      setProducts((current) =>
+        current.map((p) =>
+          p.id === productId
+            ? {
+                ...p,
+                stockItems: p.stockItems.map((si) => (si.id === stockId ? { ...si, status: newStatus } : si)),
+              }
+            : p
+        )
       )
     } catch (error) {
       window.alert(getErrorMessage(error))
     }
   }
 
-  async function handleTogglePublicVisibility(itemId: string, publicVisible: boolean) {
+  async function handleTogglePublicVisibility(productId: string, publicVisible: boolean) {
     try {
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
-          return
-        }
-
-        await updateRemoteStockItemPublicVisibility(supabase, shopId, itemId, publicVisible)
+      if (supabase && isAuthenticated && shopId) {
+        await updateRemoteProductPublicVisibility(supabase, shopId, productId, publicVisible)
         await onLoadAuditLogs()
       }
-
-      setStockItems((current) =>
-        current.map((item) => (item.id === itemId ? { ...item, publicVisible } : item)),
+      setProducts((current) =>
+        current.map((p) => (p.id === productId ? { ...p, publicVisible } : p)),
       )
     } catch (error) {
       window.alert(getErrorMessage(error))
@@ -284,191 +300,51 @@ export function useInventoryController({
 
   async function handleSave() {
     setFormError('')
+    const normalizedDraft = normalizeProductDraft(draft)
 
-    const normalizedDraft = normalizeStockDraft(draft)
-
-    if (!normalizedDraft.sku) {
-      setFormError('กรุณากรอก SKU/รหัสสต๊อก')
+    if (!normalizedDraft.baseSku) {
+      setFormError('กรุณากรอก Base SKU/รหัสหลักของชุด')
       return
     }
-
-    const setCount = Number(draft.setCount)
-    if (!Number.isInteger(setCount) || setCount < 1) {
-      setFormError('จำนวนชุดต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป')
-      return
-    }
-
     if (!normalizedDraft.productName) {
       setFormError('กรุณากรอกชื่อสินค้า')
       return
     }
 
-    let baseSku = normalizedDraft.sku
-    const suffixRegex = /-(\d{2,})$/
-    if (!editingStockId && setCount > 1) {
-      const match = baseSku.match(suffixRegex)
-      if (match) {
-        baseSku = baseSku.replace(suffixRegex, '')
-      }
-    }
-
-    let baseSerial = normalizedDraft.serialNumber
-    if (!editingStockId && setCount > 1 && baseSerial) {
-      const match = baseSerial.match(suffixRegex)
-      if (match) {
-        baseSerial = baseSerial.replace(suffixRegex, '')
-      }
-    }
-
-    const existingItem = editingStockId ? stockItems.find((item) => item.id === editingStockId) : undefined
-
-    if (editingStockId) {
-      if (
-        stockItems.some(
-          (item) =>
-            item.id !== editingStockId && item.sku.toLowerCase() === normalizedDraft.sku.toLowerCase(),
-        )
-      ) {
-        setFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
+    if (!editingProductId) {
+      // Create new product
+      if (products.some((p) => p.baseSku.toLowerCase() === normalizedDraft.baseSku.toLowerCase())) {
+        setFormError('Base SKU นี้มีอยู่แล้วในระบบ')
         return
       }
 
-      if (existingItem && existingItem.sku !== normalizedDraft.sku) {
-        let relatedRentalCount: number
-
-        try {
-          relatedRentalCount =
-            supabase && isAuthenticated && shopId
-              ? await countRemoteRentalsForStockSku(supabase, shopId, existingItem.sku)
-              : rentals.filter(
-                  (rental) =>
-                    rental.costume.id === existingItem.id || rental.costume.sku === existingItem.sku,
-                ).length
-        } catch (error) {
-          setFormError(getErrorMessage(error))
-          return
-        }
-
-        if (relatedRentalCount > 0) {
-          setFormError(
-            `แก้ไข SKU ของชุด ${existingItem.sku} ไม่ได้ เพราะมีใบเช่าที่อ้างอิงชุดนี้อยู่ ${relatedRentalCount} รายการ`,
-          )
-          return
-        }
-      }
-    } else if (setCount > 1) {
-      const duplicatedSkus: string[] = []
-
-      for (let i = 1; i <= setCount; i++) {
-        const suffix = String(i).padStart(2, '0')
-        const itemSku = `${baseSku}-${suffix}`
-
-        if (stockItems.some((item) => item.sku.toLowerCase() === itemSku.toLowerCase())) {
-          duplicatedSkus.push(itemSku)
-        }
-      }
-
-      if (duplicatedSkus.length > 0) {
-        setFormError(`SKU ต่อไปนี้มีอยู่ในระบบแล้ว: ${duplicatedSkus.join(', ')}`)
+      if (normalizedDraft.variants.length === 0) {
+        setFormError('กรุณาเพิ่มรายการชุดอย่างน้อย 1 รายการ')
         return
       }
-    } else if (stockItems.some((item) => item.sku.toLowerCase() === normalizedDraft.sku.toLowerCase())) {
-      setFormError('SKU/รหัสสต๊อกนี้มีอยู่แล้ว')
-      return
     }
 
     setIsSaving(true)
-
     try {
-      if (supabase && isAuthenticated) {
-        if (!shopId) {
-          setFormError('ยังไม่พบร้านสำหรับบัญชีนี้')
-          return
-        }
-
-        if (editingStockId) {
-          const savedItem = await updateRemoteStockItem(
+      if (supabase && isAuthenticated && shopId) {
+        if (editingProductId) {
+          await updateRemoteProduct(
             supabase,
             shopId,
-            editingStockId,
-            { ...normalizedDraft, setCount },
-            existingItem?.imageUrls ?? [],
+            editingProductId,
+            normalizedDraft
           )
-
-          setStockItems((current) => current.map((item) => (item.id === editingStockId ? savedItem : item)))
-        } else if (setCount > 1) {
-          const itemDrafts = Array.from({ length: setCount }, (_, index) => {
-            const suffix = String(index + 1).padStart(2, '0')
-
-            return {
-              ...normalizedDraft,
-              sku: `${baseSku}-${suffix}`,
-              serialNumber: baseSerial ? `${baseSerial}-${suffix}` : '',
-              setCount: 1,
-            }
-          })
-
-          await createRemoteStockItems(supabase, shopId, itemDrafts)
-          const loadedStock = await loadStockItems(supabase, shopId)
-          setStockItems(loadedStock)
         } else {
-          const savedItem = await createRemoteStockItem(supabase, shopId, {
-            ...normalizedDraft,
-            setCount: 1,
-          })
-
-          setStockItems((current) => [savedItem, ...current])
+          await createProductWithVariants(supabase, shopId, normalizedDraft)
         }
-
+        
+        // Reload all products to get correct db-generated IDs/SKUs
+        const reloaded = await loadProductsWithStock(supabase, shopId)
+        setProducts(reloaded)
         await onLoadAuditLogs()
-        closeForm()
-      } else if (editingStockId) {
-        const savedItem: StockItem = {
-          ...normalizedDraft,
-          setCount,
-          id: editingStockId,
-          createdAt: existingItem?.createdAt ?? new Date().toISOString(),
-        }
-
-        setStockItems((current) => current.map((item) => (item.id === editingStockId ? savedItem : item)))
-        closeForm()
-      } else {
-        const savedItems =
-          setCount > 1
-            ? Array.from({ length: setCount }, (_, index) => {
-                const suffix = String(index + 1).padStart(2, '0')
-
-                return {
-                  ...normalizedDraft,
-                  sku: `${baseSku}-${suffix}`,
-                  serialNumber: baseSerial ? `${baseSerial}-${suffix}` : '',
-                  setCount: 1,
-                  id: crypto.randomUUID(),
-                  createdAt: new Date().toISOString(),
-                }
-              })
-            : [
-                {
-                  ...normalizedDraft,
-                  setCount: 1,
-                  id: crypto.randomUUID(),
-                  createdAt: new Date().toISOString(),
-                },
-              ]
-
-        setStockItems((current) => [...savedItems, ...current])
         closeForm()
       }
     } catch (error) {
-      if (supabase && isAuthenticated && shopId) {
-        try {
-          const loadedStock = await loadStockItems(supabase, shopId)
-          setStockItems(loadedStock)
-        } catch (reloadError) {
-          console.warn('Failed to reload stock after save error:', reloadError)
-        }
-      }
-
       setFormError(getErrorMessage(error))
     } finally {
       setIsSaving(false)
@@ -476,22 +352,24 @@ export function useInventoryController({
   }
 
   const pageProps: InventoryControllerPageProps = {
-    items: filteredItems,
+    products: filteredProducts,
     query,
     setQuery,
     summary,
     isFormOpen,
-    isEditing: Boolean(editingStockId),
+    isEditing: Boolean(editingProductId),
     draft,
     formError,
     isSaving,
     onOpenForm: openCreateForm,
     onCloseForm: closeForm,
     onEdit: openEditForm,
-    onDelete: handleDelete,
+    onDeleteProduct: handleDeleteProduct,
+    onDeleteVariant: handleDeleteVariant,
+    onAddStock: handleAddStock,
     onPreview: openPreview,
     onDraftChange: updateDraft,
-    onResetDraft: () => setDraft(emptyStockDraft),
+    onResetDraft: () => setDraft(emptyProductDraft),
     onImageUpload: addImages,
     onImageRemove: removeImage,
     onSave: handleSave,
@@ -510,49 +388,42 @@ export function useInventoryController({
   return { pageProps }
 }
 
-function toEditableStockDraft(item: StockItem): StockDraft {
+function toEditableProductDraft(product: ProductWithStockSummary): ProductDraft {
   return {
-    sku: item.sku,
-    serialNumber: item.serialNumber,
-    productName: item.productName,
-    brand: item.brand,
-    category: item.category,
-    size: item.size,
-    primaryColor: item.primaryColor,
-    publicDescription: item.publicDescription,
-    setCount: String(item.setCount),
-    rentalPricePerDay: item.rentalPricePerDay ? String(item.rentalPricePerDay) : '',
-    lateFeeRule: item.lateFeeRule,
-    depositAmount: item.depositAmount ? String(item.depositAmount) : '',
-    imageUrls: item.imageUrls ?? [],
-    status: item.status || 'available',
-    publicVisible: Boolean(item.publicVisible),
+    baseSku: product.baseSku,
+    productName: product.productName,
+    brand: product.brand,
+    category: product.category,
+    primaryColor: product.primaryColor,
+    publicDescription: product.publicDescription,
+    rentalPricePerDay: product.rentalPricePerDay ? String(product.rentalPricePerDay) : '',
+    lateFeeRule: product.lateFeeRule,
+    depositAmount: product.depositAmount ? String(product.depositAmount) : '',
+    imageUrls: product.imageUrls ?? [],
+    publicVisible: product.publicVisible,
+    variants: [], // Editing happens at product level, variants are managed separately in cards
   }
 }
 
-function normalizeStockDraft(draft: StockDraft): NormalizedStockDraft {
+function normalizeProductDraft(draft: ProductDraft): ProductDraft {
   return {
-    sku: draft.sku.trim(),
-    serialNumber: draft.serialNumber.trim(),
+    ...draft,
+    baseSku: draft.baseSku.trim(),
     productName: draft.productName.trim(),
     brand: draft.brand.trim(),
     category: draft.category.trim(),
-    size: draft.size.trim(),
     primaryColor: draft.primaryColor.trim(),
     publicDescription: draft.publicDescription.trim(),
-    setCount: 1,
-    rentalPricePerDay: parseOptionalNumber(draft.rentalPricePerDay) ?? 0,
+    rentalPricePerDay: parseOptionalNumber(draft.rentalPricePerDay) !== undefined ? draft.rentalPricePerDay : '',
     lateFeeRule: draft.lateFeeRule.trim(),
-    depositAmount: parseOptionalNumber(draft.depositAmount) ?? 0,
-    imageUrls: draft.imageUrls,
-    status: (draft.status as StockItemStatus) || 'available',
-    publicVisible: draft.publicVisible,
+    depositAmount: parseOptionalNumber(draft.depositAmount) !== undefined ? draft.depositAmount : '',
+    variants: draft.variants.filter((v) => v.quantity > 0)
   }
 }
 
-function parseOptionalNumber(value: string) {
+function parseOptionalNumber(value: string | number) {
   const parsed = Number(value)
-  return Number.isFinite(parsed) && value.trim() ? parsed : undefined
+  return Number.isFinite(parsed) && String(value).trim() ? parsed : undefined
 }
 
 function readFileAsDataUrl(file: File) {
@@ -571,10 +442,8 @@ function getErrorMessage(error: unknown) {
     const parts = [maybeError.message, maybeError.details, maybeError.hint].filter(
       (part): part is string => typeof part === 'string' && part.trim().length > 0,
     )
-
     if (parts.length > 0) return parts.join('\n')
   }
-
   return 'เกิดข้อผิดพลาด กรุณาลองใหม่'
 }
 

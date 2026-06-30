@@ -9,23 +9,25 @@ type ShopRow = {
   catalog_mobile_hero_image_path: string | null
 }
 
-type StockItemRow = {
-  sku: string
+type ProductRow = {
+  id: string
+  base_sku: string
   product_name: string
   brand: string
   category: string
-  size: string
   primary_color: string
   public_description: string
-  set_count: number
   rental_price_per_day: number
   image_urls: string[]
-  status: string
-  created_at: string
+  stock_items: {
+    id: string
+    size: string
+    status: string
+  }[]
 }
 
 type RentalRow = {
-  stock_item_sku: string
+  stock_item_id: string
 }
 
 const corsHeaders = {
@@ -92,49 +94,56 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'ร้านนี้ยังไม่ได้เปิด public catalog' }, 403)
     }
 
-    const { data: stockRows, error: stockError } = await supabase
-      .from('stock_items')
+    // Load Products + Stock Items (Children)
+    const { data: productRows, error: productError } = await supabase
+      .from('products')
       .select(`
-        sku,
+        id,
+        base_sku,
         product_name,
         brand,
         category,
-        size,
         primary_color,
         public_description,
-        set_count,
         rental_price_per_day,
         image_urls,
-        status,
-        created_at
+        stock_items (
+          id,
+          size,
+          status
+        )
       `)
       .eq('shop_id', shopId)
       .eq('public_visible', true)
-      .eq('status', 'available')
       .order('created_at', { ascending: false })
 
-    if (stockError) throw stockError
+    if (productError) throw productError
 
-    const rows = (stockRows ?? []) as StockItemRow[]
-    const skus = rows.map((row) => row.sku)
-    const bookedSkus = new Set<string>()
+    const rows = (productRows ?? []) as unknown as ProductRow[]
+    
+    // Find rented stock items
+    const allStockIds = rows.flatMap(p => p.stock_items.map(si => si.id))
+    const bookedStockIds = new Set<string>()
 
-    if (skus.length > 0) {
+    if (allStockIds.length > 0) {
+      // Chunking if > 1000 items? usually small enough for simple in filter
       const { data: rentalRows, error: rentalError } = await supabase
         .from('rentals')
-        .select('stock_item_sku')
+        .select('stock_item_id')
         .eq('shop_id', shopId)
-        .in('stock_item_sku', skus)
+        .in('stock_item_id', allStockIds)
         .in('status', ['booked', 'active', 'overdue'])
 
       if (rentalError) throw rentalError
 
       ;((rentalRows ?? []) as RentalRow[]).forEach((rental) => {
-        bookedSkus.add(rental.stock_item_sku)
+        bookedStockIds.add(rental.stock_item_id)
       })
     }
 
+    // Process rows into grouped catalog items
     const items = await Promise.all(rows.map(async (row) => {
+      // Sign URLs for up to 5 images
       const imageUrls = await Promise.all(
         (row.image_urls ?? []).slice(0, 5).map(async (path) => {
           const { data, error } = await supabase.storage
@@ -146,20 +155,43 @@ Deno.serve(async (request) => {
         }),
       )
 
+      // Aggregate sizes
+      const sizeMap = new Map<string, { total: number, available: number }>()
+      
+      row.stock_items.forEach(si => {
+        const size = si.size || 'M'
+        if (!sizeMap.has(size)) {
+          sizeMap.set(size, { total: 0, available: 0 })
+        }
+        
+        const stats = sizeMap.get(size)!
+        stats.total += 1
+        
+        const isRented = bookedStockIds.has(si.id)
+        if (si.status === 'available' && !isRented) {
+          stats.available += 1
+        }
+      })
+
+      const sizeSummary = Array.from(sizeMap.entries())
+        .map(([size, stats]) => ({
+          size,
+          total: stats.total,
+          available: stats.available
+        }))
+        .sort((a, b) => a.size.localeCompare(b.size)) // basic sort
+
       return {
+        id: row.id,
+        baseSku: row.base_sku,
         productName: row.product_name,
         brand: row.brand ?? '',
         category: row.category ?? '',
-        size: row.size ?? '',
         primaryColor: row.primary_color ?? '',
         publicDescription: row.public_description ?? '',
-        setCount: row.set_count ?? 1,
         rentalPricePerDay: Number(row.rental_price_per_day) || 0,
         imageUrls: imageUrls.filter(Boolean),
-        status: 'available',
-        publicVisible: true,
-        availabilityStatus: bookedSkus.has(row.sku) ? 'booked' : 'available',
-        createdAt: row.created_at,
+        sizeSummary,
       }
     }))
 

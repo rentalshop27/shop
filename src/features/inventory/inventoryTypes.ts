@@ -1,25 +1,83 @@
 export type StockItemStatus = 'available' | 'repair' | 'wash'
 
-export type StockItem = {
+// ── Product (Parent) — shared product data ──
+
+export type Product = {
   id: string
-  sku: string
-  serialNumber: string
+  baseSku: string
   productName: string
   brand: string
   category: string
-  size: string
   primaryColor: string
   publicDescription: string
-  setCount: number
   rentalPricePerDay: number
   lateFeeRule: string
   depositAmount: number
   imageUrls: string[]
-  status: StockItemStatus
-  publicVisible?: boolean
+  publicVisible: boolean
   createdAt: string
 }
 
+// ── StockItem (Child) — individual inventory piece ──
+
+export type StockItem = {
+  id: string
+  shopId: string
+  productId: string
+  sku: string
+  size: string
+  status: StockItemStatus
+  createdAt: string
+}
+
+// StockItem enriched with its parent Product data (for UI)
+export type StockItemWithProduct = StockItem & {
+  product: Product
+}
+
+export type ProductWithStockSummary = Product & {
+  stockItems: StockItem[]
+}
+
+// ── FlatStockItem (for backwards compatibility with Rentals/Reports) ──
+
+export type FlatStockItem = StockItem & {
+  productName: string
+  brand: string
+  category: string
+  primaryColor: string
+  rentalPricePerDay: number
+  lateFeeRule: string
+  depositAmount: number
+  imageUrls: string[]
+  publicVisible: boolean
+  serialNumber?: string
+  setCount?: number
+}
+
+// ── Form types ──
+
+export type SizeVariant = {
+  size: string
+  quantity: number
+}
+
+export type ProductDraft = {
+  baseSku: string
+  productName: string
+  brand: string
+  category: string
+  primaryColor: string
+  publicDescription: string
+  rentalPricePerDay: string
+  lateFeeRule: string
+  depositAmount: string
+  imageUrls: string[]
+  publicVisible: boolean
+  variants: SizeVariant[]
+}
+
+// Legacy StockDraft kept for edit-single-child scenarios
 export type StockDraft = {
   sku: string
   serialNumber: string

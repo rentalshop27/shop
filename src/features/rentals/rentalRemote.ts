@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { StockItem } from '../inventory/inventoryTypes'
+import type { FlatStockItem } from '../inventory/inventoryTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 
@@ -8,7 +8,8 @@ type RentalRow = {
   shop_id: string
   order_code: string
   customer_id: string
-  stock_item_sku: string
+  stock_item_id: string
+  stock_item_sku: string | null
   pickup_date: string
   return_date: string
   rental_price: number | string
@@ -24,7 +25,7 @@ export async function loadRentals(
   supabase: SupabaseClient,
   shopId: string,
   customers: Customer[],
-  stockItems: StockItem[],
+  stockItems: FlatStockItem[],
 ): Promise<RentalOrder[]> {
   const { data, error } = await supabase
     .from('rentals')
@@ -67,7 +68,8 @@ function toRentalInsert(shopId: string, rental: RentalOrder) {
     shop_id: shopId,
     order_code: rental.orderCode,
     customer_id: rental.customer.id,
-    stock_item_sku: rental.costume.sku,
+    stock_item_id: rental.costume.id,
+    stock_item_sku: rental.costume.sku, // Kept for legacy fallback
     pickup_date: rental.pickupDate,
     return_date: rental.returnDate,
     rental_price: rental.rentalPrice,
@@ -104,16 +106,20 @@ export async function deleteRemoteRental(
 function mapRentalRow(
   row: RentalRow,
   customers: Customer[],
-  stockItems: StockItem[],
+  stockItems: FlatStockItem[],
 ): RentalOrder {
   const customer = customers.find((item) => item.id === row.customer_id)
-  const costume = stockItems.find((item) => item.sku === row.stock_item_sku)
+  
+  // Try mapping by UUID first (new standard), fallback to SKU for non-migrated legacy data
+  const costume = 
+    stockItems.find((item) => item.id === row.stock_item_id) ??
+    stockItems.find((item) => item.sku === row.stock_item_sku)
 
   if (!customer) {
     throw new Error(`ไม่พบลูกค้าของใบเช่า ${row.order_code}`)
   }
   if (!costume) {
-    throw new Error(`ไม่พบชุด SKU ${row.stock_item_sku} ของใบเช่า ${row.order_code}`)
+    throw new Error(`ไม่พบชุดของใบเช่า ${row.order_code} (ID: ${row.stock_item_id}, SKU: ${row.stock_item_sku})`)
   }
 
   return {

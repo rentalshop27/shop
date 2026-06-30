@@ -18,9 +18,8 @@ import './index.css'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { useInventoryController } from './features/inventory/useInventoryController'
-import { demoRentals, demoStockItemsForRentals } from './features/rentals/rentalSeed'
+import { demoRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
-import type { StockItem } from './features/inventory/inventoryTypes'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
@@ -45,12 +44,16 @@ import {
 } from './features/customers/customerRemote'
 import {
   deleteShopHeroImage,
-  loadStockItems,
+  loadProductsWithStock,
   type ShopSettings,
   updateShopSettings,
   loadShopSettings,
   uploadShopHeroImage,
 } from './features/inventory/stockRemote'
+import type {
+  ProductWithStockSummary,
+  FlatStockItem
+} from './features/inventory/inventoryTypes'
 import type {
   Customer,
   CustomerDocument,
@@ -83,7 +86,7 @@ const emptyDraft: CustomerDraft = {
 
 type ViewKey = 'dashboard' | 'inventory' | 'catalog' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
 
-const demoStockItems: StockItem[] = demoStockItemsForRentals
+const demoProducts: ProductWithStockSummary[] = [] // Or load from seed if needed
 const DEMO_SHOP_ID = 'shop_demo'
 const DEFAULT_BRANDS = ['Precious', 'Chanel', 'Dior', 'Gucci']
 const DEFAULT_CATEGORIES = ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
@@ -300,8 +303,8 @@ function PrivateApp() {
   }
 
   const [customers, setCustomers] = useState<Customer[]>(hasSupabaseConfig ? [] : demoCustomers)
-  const [stockItems, setStockItems] = useState<StockItem[]>(() =>
-    getLocalArray('precious_stock_items', demoStockItems)
+  const [products, setProducts] = useState<ProductWithStockSummary[]>(() =>
+    getLocalArray('precious_products', demoProducts)
   )
   const [selectedCustomerId, setSelectedCustomerId] = useState(hasSupabaseConfig ? '' : demoCustomers[0]?.id ?? '')
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
@@ -421,8 +424,25 @@ function PrivateApp() {
 
   useEffect(() => {
     if (hasSupabaseConfig) return
-    localStorage.setItem('precious_stock_items', JSON.stringify(stockItems))
-  }, [stockItems])
+    localStorage.setItem('precious_products', JSON.stringify(products))
+  }, [products])
+
+  const flatStockItems = useMemo(() => {
+    return products.flatMap(p => 
+      p.stockItems.map(si => ({
+        ...si,
+        productName: p.productName,
+        brand: p.brand,
+        category: p.category,
+        primaryColor: p.primaryColor,
+        rentalPricePerDay: p.rentalPricePerDay,
+        lateFeeRule: p.lateFeeRule,
+        depositAmount: p.depositAmount,
+        imageUrls: p.imageUrls,
+        publicVisible: p.publicVisible,
+      } as FlatStockItem))
+    )
+  }, [products])
 
   async function saveShopSettings(nextSettings: ShopSettings) {
     if (supabase && isAuthenticated && shopId) {
@@ -907,8 +927,22 @@ function PrivateApp() {
         availableShops.map(async (shop) => {
           try {
             const customers = await loadCustomers(client, shop.id)
-            const stockItems = await loadStockItems(client, shop.id)
-            const rentals = await loadRentals(client, shop.id, customers, stockItems)
+            const products = await loadProductsWithStock(client, shop.id)
+            const tempFlatStock = products.flatMap(p => 
+              p.stockItems.map(si => ({
+                ...si,
+                productName: p.productName,
+                brand: p.brand,
+                category: p.category,
+                primaryColor: p.primaryColor,
+                rentalPricePerDay: p.rentalPricePerDay,
+                lateFeeRule: p.lateFeeRule,
+                depositAmount: p.depositAmount,
+                imageUrls: p.imageUrls,
+                publicVisible: p.publicVisible,
+              } as FlatStockItem))
+            )
+            const rentals = await loadRentals(client, shop.id, customers, tempFlatStock)
             return {
               shop,
               status: 'ready' as const,
@@ -947,7 +981,7 @@ function PrivateApp() {
     setIsShopDataLoading(true)
     setRemoteError('')
     setCustomers([])
-    setStockItems([])
+    setProducts([])
     setRentals([])
     setAuditLogs([])
     setSelectedCustomerId('')
@@ -977,19 +1011,37 @@ function PrivateApp() {
 
     Promise.all([
       loadCustomers(client, shopId),
-      loadStockItems(client, shopId),
+      loadProductsWithStock(client, shopId),
       loadShopSettings(client, shopId),
       loadAuditLogs(client, shopId),
     ])
-      .then(async ([loadedCustomers, loadedStock, settings, loadedAuditLogs]) => {
+      .then(async ([loadedCustomers, loadedProducts, settings, loadedAuditLogs]) => {
         if (cancelled) return
 
         setCustomers(loadedCustomers)
-        setStockItems(loadedStock)
+        setProducts(loadedProducts)
+        if (settings) {
+          setPublicCatalogEnabled(settings.publicCatalogEnabled)
+        }
         setAuditLogs(loadedAuditLogs)
         setSelectedCustomerId(loadedCustomers[0]?.id ?? '')
 
-        const loadedRentals = await loadRentals(client, shopId, loadedCustomers, loadedStock)
+        const tempFlatStock = loadedProducts.flatMap(p => 
+          p.stockItems.map(si => ({
+            ...si,
+            productName: p.productName,
+            brand: p.brand,
+            category: p.category,
+            primaryColor: p.primaryColor,
+            rentalPricePerDay: p.rentalPricePerDay,
+            lateFeeRule: p.lateFeeRule,
+            depositAmount: p.depositAmount,
+            imageUrls: p.imageUrls,
+            publicVisible: p.publicVisible,
+          } as FlatStockItem))
+        )
+
+        const loadedRentals = await loadRentals(client, shopId, loadedCustomers, tempFlatStock)
         if (cancelled) return
 
         setRentals(loadedRentals)
@@ -1022,8 +1074,8 @@ function PrivateApp() {
   }
 
   const { pageProps: inventoryPageProps } = useInventoryController({
-    stockItems,
-    setStockItems,
+    products,
+    setProducts,
     rentals,
     brands,
     categories,
@@ -1629,7 +1681,7 @@ function PrivateApp() {
             <LazyRentalsPage
               rentals={rentals}
               customers={customers}
-              stockItems={stockItems}
+              stockItems={flatStockItems}
               onCreateRentals={handleCreateRentals}
               onUpdateRentalStatus={handleUpdateRentalStatus}
               onDeleteRental={handleDeleteRental}
@@ -1659,7 +1711,29 @@ function PrivateApp() {
 
           {activeTab === 'catalog' && (
             <LazyCustomerCatalogPage
-              items={stockItems}
+              items={products.map(p => ({
+                id: p.id,
+                baseSku: p.baseSku,
+                productName: p.productName,
+                brand: p.brand,
+                category: p.category,
+                primaryColor: p.primaryColor,
+                publicDescription: p.publicDescription,
+                rentalPricePerDay: p.rentalPricePerDay,
+                imageUrls: p.imageUrls,
+                publicVisible: p.publicVisible,
+                createdAt: p.createdAt,
+                sizeSummary: Object.values(
+                  p.stockItems.reduce((acc, si) => {
+                    if (!acc[si.size]) acc[si.size] = { size: si.size, total: 0, available: 0 }
+                    acc[si.size].total += 1
+                    if (si.status === 'available' && !rentals.some(r => r.costume.sku === si.sku && ['booked', 'active'].includes(r.status))) {
+                      acc[si.size].available += 1
+                    }
+                    return acc
+                  }, {} as Record<string, { size: string, total: number, available: number }>)
+                )
+              }))}
               rentals={rentals}
               shopName={currentShop?.name}
               publicUrl={publicCatalogEnabled ? getPublicCatalogUrl(window.location.origin, currentShop) : undefined}
@@ -1756,7 +1830,7 @@ function PrivateApp() {
           {activeTab === 'reports' && (
             <LazyReportsPage
               rentals={rentals}
-              stockItems={stockItems}
+              stockItems={flatStockItems}
               supabase={supabase}
               shopId={shopId}
               shopName={currentShop?.name}

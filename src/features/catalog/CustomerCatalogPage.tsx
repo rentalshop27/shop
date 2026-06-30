@@ -4,21 +4,24 @@ import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 
-export type CatalogDisplayItem = Pick<
-  StockItem,
-  | 'productName'
-  | 'brand'
-  | 'category'
-  | 'size'
-  | 'primaryColor'
-  | 'publicDescription'
-  | 'setCount'
-  | 'rentalPricePerDay'
-  | 'imageUrls'
-  | 'status'
-  | 'publicVisible'
-  | 'createdAt'
-> & {
+export type CatalogDisplayItem = {
+  id?: string
+  baseSku?: string
+  productName: string
+  brand: string
+  category: string
+  primaryColor: string
+  publicDescription: string
+  rentalPricePerDay: number
+  imageUrls: string[]
+  publicVisible?: boolean
+  createdAt?: string
+  sizeSummary?: { size: string; total: number; available: number }[]
+  
+  // Legacy fields (from StockItem structure)
+  size?: string
+  status?: string
+  setCount?: number
   availabilityStatus?: 'available' | 'booked'
 }
 
@@ -46,7 +49,7 @@ type CustomerCatalogPageProps = {
 
 export function CustomerCatalogPage({
   items,
-  rentals,
+  rentals, // For legacy items that don't have availabilityStatus pre-computed
   shopName,
   subtitle = 'เลือกดูชุดให้เช่าผ่านเว็บไซต์สำหรับลูกค้า',
   publicUrl,
@@ -75,17 +78,31 @@ export function CustomerCatalogPage({
   const today = getTodayString()
   const heroTitle = getCatalogHeroTitle(shopName)
 
+  // Filter out non-visible or broken legacy items
   const customerReadyItems = useMemo(() => {
     return items.filter((item) => {
-      const primaryStatus = getCatalogStatus(item, rentals, today)
-      return item.publicVisible && primaryStatus !== 'repair' && primaryStatus !== 'wash'
+      if (item.publicVisible === false) return false
+      // For legacy flat items, check if status is available or rented/booked
+      if (item.status && (item.status === 'repair' || item.status === 'wash')) return false
+      return true
     })
-  }, [items, rentals, today])
+  }, [items])
 
   const brands = useCatalogOptions(customerReadyItems, 'brand')
   const categories = useCatalogOptions(customerReadyItems, 'category')
   const colors = useCatalogOptions(customerReadyItems, 'primaryColor')
-  const sizes = useCatalogOptions(customerReadyItems, 'size')
+  
+  // Custom hook for sizes since sizes can be in .size or .sizeSummary
+  const sizes = useMemo(() => {
+    const sizeSet = new Set<string>()
+    customerReadyItems.forEach((item) => {
+      if (item.size) sizeSet.add(item.size)
+      if (item.sizeSummary) {
+        item.sizeSummary.forEach(s => sizeSet.add(s.size))
+      }
+    })
+    return Array.from(sizeSet).sort((a, b) => a.localeCompare(b, 'th'))
+  }, [customerReadyItems])
 
   const availabilityCounts = useMemo(() => {
     return customerReadyItems.reduce(
@@ -104,16 +121,23 @@ export function CustomerCatalogPage({
 
     let result = customerReadyItems.filter((item) => {
       const availability = getCatalogAvailability(item, rentals, today)
+      
       const matchesBrand = brandFilter === 'all' || item.brand === brandFilter
       const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter
       const matchesColor = colorFilter === 'all' || item.primaryColor === colorFilter
-      const matchesSize = sizeFilter === 'all' || item.size === sizeFilter
+      
+      let itemSizes: string[] = []
+      if (item.sizeSummary) itemSizes = item.sizeSummary.map(s => s.size)
+      else if (item.size) itemSizes = [item.size]
+      
+      const matchesSize = sizeFilter === 'all' || itemSizes.includes(sizeFilter)
       const matchesAvailability = availabilityFilter === 'all' || availability === availabilityFilter
+      
       const searchable = [
         item.productName,
         item.brand,
         item.category,
-        item.size,
+        ...itemSizes,
         item.primaryColor,
         item.publicDescription,
       ]
@@ -178,7 +202,6 @@ export function CustomerCatalogPage({
     document.body.style.overflow = ''
   }
 
-  // Category quick-filter tabs
   const categoryTabs: Array<{ label: string; value: string }> = [
     { label: 'ทั้งหมด', value: 'all' },
     ...categories.map((c) => ({ label: c, value: c })),
@@ -218,7 +241,6 @@ export function CustomerCatalogPage({
 
   return (
     <div className="prc-page">
-      {/* ── NAVBAR ── */}
       <nav className="prc-nav">
         <div className="prc-nav-inner">
           <div className="prc-nav-left">
@@ -307,7 +329,6 @@ export function CustomerCatalogPage({
         </section>
       )}
 
-      {/* ── HERO BANNER ── */}
       <section className={`prc-hero${hasHeroBackground ? ' prc-hero--custom-bg' : ''}`} style={heroBackgroundStyle}>
         <div className="prc-hero-content">
           <p className="prc-hero-eyebrow">ชุดให้เช่า</p>
@@ -334,7 +355,6 @@ export function CustomerCatalogPage({
         </div>
       </section>
 
-      {/* ── FILTER ROW ── */}
       <section className="prc-filter-section" aria-label="ตัวกรองชุด">
         <div className="prc-filter-inner">
           <div className="prc-filter-grid">
@@ -384,7 +404,6 @@ export function CustomerCatalogPage({
         </div>
       </section>
 
-      {/* ── CATEGORY TABS ── */}
       {categoryTabs.length > 1 && (
         <div className="prc-category-tabs">
           <div className="prc-category-tabs-inner">
@@ -402,7 +421,6 @@ export function CustomerCatalogPage({
         </div>
       )}
 
-      {/* ── RESULTS BAR ── */}
       <div className="prc-results-bar">
         <span className="prc-results-count">
           พบทั้งหมด <strong>{filteredItems.length}</strong> ชุด
@@ -443,7 +461,6 @@ export function CustomerCatalogPage({
         </div>
       </div>
 
-      {/* ── PRODUCT GRID ── */}
       <section
         className={`prc-grid ${viewMode === 'list' ? 'prc-grid--list' : ''}`}
         aria-label="รายการชุดสำหรับลูกค้า"
@@ -452,6 +469,13 @@ export function CustomerCatalogPage({
           const availability = getCatalogAvailability(item, rentals, today)
           const itemKey = `${item.productName}-${item.createdAt}-${index}`
           const inWishlist = wishlist.has(item.productName)
+          
+          let sizeDisplay = ''
+          if (item.sizeSummary) {
+            sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
+          } else if (item.size) {
+            sizeDisplay = item.size
+          }
 
           return (
             <article className="prc-card" key={itemKey}>
@@ -481,7 +505,7 @@ export function CustomerCatalogPage({
                 <div className="prc-card-footer">
                   <div className="prc-card-price-block">
                     <span className="prc-card-price">{formatBaht(item.rentalPricePerDay)}</span>
-                    {item.size && <span className="prc-card-size">ไซซ์ {item.size}</span>}
+                    {sizeDisplay && <span className="prc-card-size">ไซซ์ {sizeDisplay}</span>}
                   </div>
                   <div className="prc-card-actions">
                     <button
@@ -512,7 +536,6 @@ export function CustomerCatalogPage({
         )}
       </section>
 
-      {/* ── NOTICE: NO ONLINE BOOKING ── */}
       <div className="prc-notice">
         <p>📞 สนใจเช่าชุด กรุณาติดต่อร้านโดยตรง ยังไม่รองรับการจองออนไลน์ในขณะนี้</p>
       </div>
@@ -525,7 +548,6 @@ export function CustomerCatalogPage({
               <X size={20} />
             </button>
             <div className="prc-modal-body">
-              {/* Image column */}
               <div className="prc-modal-images">
                 <div className="prc-modal-main-image">
                   {selectedItem.imageUrls.length > 0 ? (
@@ -570,7 +592,6 @@ export function CustomerCatalogPage({
                 )}
               </div>
 
-              {/* Info column */}
               <div className="prc-modal-info">
                 <p className="prc-modal-brand">{selectedItem.brand?.toUpperCase() || 'PRECIOUS'}</p>
                 <h2 className="prc-modal-title">{selectedItem.productName}</h2>
@@ -586,12 +607,26 @@ export function CustomerCatalogPage({
                 </div>
 
                 <div className="prc-modal-specs">
-                  {selectedItem.size && (
-                    <div className="prc-modal-spec">
-                      <span className="prc-modal-spec-label">ไซซ์</span>
-                      <span className="prc-modal-spec-value">{selectedItem.size}</span>
+                  {selectedItem.sizeSummary ? (
+                    <div className="prc-modal-spec prc-modal-spec-full">
+                      <span className="prc-modal-spec-label">ไซซ์ที่มีในคลัง</span>
+                      <div className="prc-modal-size-badges">
+                        {selectedItem.sizeSummary.map(s => (
+                          <span key={s.size} className={`prc-size-badge ${s.available > 0 ? 'available' : 'unavailable'}`}>
+                            {s.size} {s.available > 0 ? `(${s.available} ว่าง)` : '(ไม่ว่าง)'}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                  ) : (
+                    selectedItem.size && (
+                      <div className="prc-modal-spec">
+                        <span className="prc-modal-spec-label">ไซซ์</span>
+                        <span className="prc-modal-spec-value">{selectedItem.size}</span>
+                      </div>
+                    )
                   )}
+                  
                   {selectedItem.primaryColor && (
                     <div className="prc-modal-spec">
                       <span className="prc-modal-spec-label">สี</span>
@@ -604,9 +639,9 @@ export function CustomerCatalogPage({
                       <span className="prc-modal-spec-value">{selectedItem.category}</span>
                     </div>
                   )}
-                  {selectedItem.setCount > 1 && (
+                  {selectedItem.setCount && selectedItem.setCount > 1 && (
                     <div className="prc-modal-spec">
-                      <span className="prc-modal-spec-label">จำนวนชุด</span>
+                      <span className="prc-modal-spec-label">จำนวนชุดรวม</span>
                       <span className="prc-modal-spec-value">{selectedItem.setCount} ชุด</span>
                     </div>
                   )}
@@ -630,19 +665,53 @@ export function CustomerCatalogPage({
           </div>
         </div>
       )}
+      
+      <style>{`
+        .prc-modal-spec-full {
+          width: 100%;
+          grid-column: 1 / -1;
+        }
+        .prc-modal-size-badges {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+        }
+        .prc-size-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          border-radius: 4px;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+        .prc-size-badge.available {
+          background: rgba(74, 222, 128, 0.1);
+          color: #166534;
+          border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+        .prc-size-badge.unavailable {
+          background: rgba(107, 114, 128, 0.1);
+          color: #4b5563;
+          border: 1px solid rgba(107, 114, 128, 0.2);
+        }
+        
+        [data-theme='dark'] .prc-size-badge.available {
+          background: rgba(74, 222, 128, 0.15);
+          color: #86efac;
+        }
+        [data-theme='dark'] .prc-size-badge.unavailable {
+          background: rgba(107, 114, 128, 0.15);
+          color: #9ca3af;
+        }
+      `}</style>
     </div>
   )
 }
 
-// ── Helpers ──
-
 function getCatalogHeroTitle(shopName?: string) {
   const normalizedName = shopName?.trim()
-
-  if (!normalizedName) {
-    return 'Precious Rental'
-  }
-
+  if (!normalizedName) return 'Precious Rental'
   return /rental$/i.test(normalizedName) ? normalizedName : `${normalizedName} Rental`
 }
 
@@ -659,12 +728,17 @@ function useCatalogOptions(items: CatalogDisplayItem[], key: keyof CatalogDispla
 }
 
 function getCatalogAvailability(item: CatalogDisplayItem, rentals: RentalOrder[], today: string): CatalogAvailabilityStatus {
-  return getCatalogStatus(item, rentals, today) === 'available' ? 'available' : 'unavailable'
-}
-
-function getCatalogStatus(item: CatalogDisplayItem, rentals: RentalOrder[], today: string) {
-  if (item.availabilityStatus) return item.availabilityStatus
-  return getInventoryDisplayStatus(item as StockItem, rentals, today).primaryStatus
+  // If it's a new grouped product with sizeSummary
+  if (item.sizeSummary) {
+    const totalAvailable = item.sizeSummary.reduce((sum, s) => sum + s.available, 0)
+    return totalAvailable > 0 ? 'available' : 'unavailable'
+  }
+  
+  // If it's a legacy flat item
+  if (item.availabilityStatus) {
+    return item.availabilityStatus === 'available' ? 'available' : 'unavailable'
+  }
+  return getInventoryDisplayStatus(item as unknown as StockItem, rentals, today).primaryStatus === 'available' ? 'available' : 'unavailable'
 }
 
 function getTodayString() {

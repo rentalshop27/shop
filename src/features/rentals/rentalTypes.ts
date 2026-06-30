@@ -1,5 +1,5 @@
 import type { Customer } from '../customers/customerTypes'
-import type { StockItem } from '../inventory/inventoryTypes'
+import type { FlatStockItem } from '../inventory/inventoryTypes'
 
 export type RentalStatus = 'booked' | 'active' | 'returned' | 'overdue'
 
@@ -7,7 +7,7 @@ export type RentalOrder = {
   id: string
   orderCode: string        // e.g., PR-ORD-101
   customer: Customer
-  costume: StockItem
+  costume: FlatStockItem
   pickupDate: string       // YYYY-MM-DD
   returnDate: string       // YYYY-MM-DD
   rentalPrice: number      // Price paid for rental
