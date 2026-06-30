@@ -100,6 +100,7 @@ export async function createProductWithVariants(supabase: SupabaseClient, shopId
   }
 
   const { error: rpcError } = await supabase.rpc('create_product_with_variants', {
+    p_shop_id: shopId,
     p_product: payload,
     p_variants: draft.variants
   })
