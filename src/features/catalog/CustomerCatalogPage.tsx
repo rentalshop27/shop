@@ -1,4 +1,4 @@
-import { type ChangeEvent, useMemo, useState } from 'react'
+import { type CSSProperties, type ChangeEvent, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ExternalLink, Heart, ImagePlus, LayoutGrid, LayoutList, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
@@ -34,9 +34,13 @@ type CustomerCatalogPageProps = {
   subtitle?: string
   publicUrl?: string
   heroBackgroundUrl?: string | null
+  mobileHeroBackgroundUrl?: string | null
   onUploadHeroBackground?: (file: File) => void | Promise<void>
+  onUploadMobileHeroBackground?: (file: File) => void | Promise<void>
   onRemoveHeroBackground?: () => void | Promise<void>
+  onRemoveMobileHeroBackground?: () => void | Promise<void>
   isUploadingHeroBackground?: boolean
+  isUploadingMobileHeroBackground?: boolean
   onBackToInventory?: () => void
 }
 
@@ -47,9 +51,13 @@ export function CustomerCatalogPage({
   subtitle = 'เลือกดูชุดให้เช่าผ่านเว็บไซต์สำหรับลูกค้า',
   publicUrl,
   heroBackgroundUrl,
+  mobileHeroBackgroundUrl,
   onUploadHeroBackground,
+  onUploadMobileHeroBackground,
   onRemoveHeroBackground,
+  onRemoveMobileHeroBackground,
   isUploadingHeroBackground = false,
+  isUploadingMobileHeroBackground = false,
   onBackToInventory,
 }: CustomerCatalogPageProps) {
   const [query, setQuery] = useState('')
@@ -176,13 +184,22 @@ export function CustomerCatalogPage({
     ...categories.map((c) => ({ label: c, value: c })),
   ]
 
-  const canEditHeroBackground = Boolean(onUploadHeroBackground || onRemoveHeroBackground)
-  const heroBackgroundStyle = heroBackgroundUrl
+  const canEditHeroBackground = Boolean(
+    onUploadHeroBackground ||
+    onUploadMobileHeroBackground ||
+    onRemoveHeroBackground ||
+    onRemoveMobileHeroBackground,
+  )
+  const hasHeroBackground = Boolean(heroBackgroundUrl || mobileHeroBackgroundUrl)
+  const effectiveHeroBackgroundUrl = heroBackgroundUrl ?? mobileHeroBackgroundUrl
+  const effectiveMobileHeroBackgroundUrl = mobileHeroBackgroundUrl ?? heroBackgroundUrl
+  const heroBackgroundStyle = effectiveHeroBackgroundUrl
     ? {
-        backgroundImage: `linear-gradient(135deg, rgba(245, 237, 224, 0.8) 0%, rgba(250, 246, 240, 0.84) 50%, rgba(240, 232, 216, 0.88) 100%), url("${heroBackgroundUrl}")`,
+        '--prc-hero-bg-image': `url("${effectiveHeroBackgroundUrl}")`,
+        '--prc-hero-mobile-bg-image': `url("${effectiveMobileHeroBackgroundUrl}")`,
         backgroundPosition: 'center',
         backgroundSize: 'cover',
-      }
+      } as CSSProperties
     : undefined
 
   async function handleHeroBackgroundChange(event: ChangeEvent<HTMLInputElement>) {
@@ -190,6 +207,13 @@ export function CustomerCatalogPage({
     event.target.value = ''
     if (!file || !onUploadHeroBackground) return
     await onUploadHeroBackground(file)
+  }
+
+  async function handleMobileHeroBackgroundChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !onUploadMobileHeroBackground) return
+    await onUploadMobileHeroBackground(file)
   }
 
   return (
@@ -230,19 +254,33 @@ export function CustomerCatalogPage({
             <p className="prc-hero-editor-note">ใช้จริงขั้นต่ำ: 1600 x 600 px</p>
             <p className="prc-hero-editor-note">ถ้าอยากเผื่อจอใหญ่/Retina: 1920 x 720 px</p>
             <p className="prc-hero-editor-note">Safe area สำหรับข้อความชื่อร้าน: วางเนื้อหาสำคัญไว้ฝั่งซ้าย และเผื่อขอบซ้าย-ขวาอย่างน้อย 60px บน desktop</p>
-            <p className="prc-hero-editor-note">ถ้าจะทำเวอร์ชันมือถือแยก: 1080 x 720 px</p>
+            <p className="prc-hero-editor-note">รูปมือถือแยก: 1080 x 720 px ใช้แสดงบนหน้าจอมือถือ</p>
           </div>
           <div className="prc-hero-editor-actions">
-            <label className="prc-hero-editor-upload">
-              <ImagePlus size={16} />
-              {isUploadingHeroBackground ? 'กำลังอัปโหลด...' : 'อัปโหลดรูป BG'}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={handleHeroBackgroundChange}
-                disabled={isUploadingHeroBackground}
-              />
-            </label>
+            {onUploadHeroBackground && (
+              <label className="prc-hero-editor-upload">
+                <ImagePlus size={16} />
+                {isUploadingHeroBackground ? 'กำลังอัปโหลด...' : 'อัปโหลดรูป Desktop BG'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleHeroBackgroundChange}
+                  disabled={isUploadingHeroBackground}
+                />
+              </label>
+            )}
+            {onUploadMobileHeroBackground && (
+              <label className="prc-hero-editor-upload">
+                <ImagePlus size={16} />
+                {isUploadingMobileHeroBackground ? 'กำลังอัปโหลด...' : 'อัปโหลดรูป Mobile BG'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleMobileHeroBackgroundChange}
+                  disabled={isUploadingMobileHeroBackground}
+                />
+              </label>
+            )}
             {heroBackgroundUrl && onRemoveHeroBackground && (
               <button
                 className="prc-hero-editor-remove"
@@ -251,7 +289,18 @@ export function CustomerCatalogPage({
                 disabled={isUploadingHeroBackground}
               >
                 <Trash2 size={16} />
-                ลบรูป
+                ลบรูป Desktop
+              </button>
+            )}
+            {mobileHeroBackgroundUrl && onRemoveMobileHeroBackground && (
+              <button
+                className="prc-hero-editor-remove"
+                type="button"
+                onClick={() => void onRemoveMobileHeroBackground()}
+                disabled={isUploadingMobileHeroBackground}
+              >
+                <Trash2 size={16} />
+                ลบรูป Mobile
               </button>
             )}
           </div>
@@ -259,7 +308,7 @@ export function CustomerCatalogPage({
       )}
 
       {/* ── HERO BANNER ── */}
-      <section className={`prc-hero${heroBackgroundUrl ? ' prc-hero--custom-bg' : ''}`} style={heroBackgroundStyle}>
+      <section className={`prc-hero${hasHeroBackground ? ' prc-hero--custom-bg' : ''}`} style={heroBackgroundStyle}>
         <div className="prc-hero-content">
           <p className="prc-hero-eyebrow">ชุดให้เช่า</p>
           <h1 className="prc-hero-title">{heroTitle}</h1>

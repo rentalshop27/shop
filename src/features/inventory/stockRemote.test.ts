@@ -69,6 +69,7 @@ describe('stock remote', () => {
         colors: ['ดำ'],
         public_catalog_enabled: true,
         catalog_hero_image_path: 'shop_1/catalog/hero.png',
+        catalog_mobile_hero_image_path: 'shop_1/catalog/mobile-hero.png',
       },
       error: null,
     }))
@@ -88,16 +89,18 @@ describe('stock remote', () => {
     const settings = await loadShopSettings(supabase, 'shop_1')
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
-    expect(select).toHaveBeenCalledWith('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path')
+    expect(select).toHaveBeenCalledWith('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path, catalog_mobile_hero_image_path')
     expect(filters).toEqual([['id', 'shop_1']])
     expect(maybeSingle).toHaveBeenCalled()
     expect(createSignedUrl).toHaveBeenCalledWith('shop_1/catalog/hero.png', 60 * 15)
+    expect(createSignedUrl).toHaveBeenCalledWith('shop_1/catalog/mobile-hero.png', 60 * 15)
     expect(settings).toEqual({
       brands: ['Precious'],
       categories: ['ชุดราตรี'],
       colors: ['ดำ'],
       publicCatalogEnabled: true,
       catalogHeroImageUrl: 'https://example.com/hero-signed',
+      catalogMobileHeroImageUrl: 'https://example.com/hero-signed',
     })
   })
 
@@ -122,6 +125,7 @@ describe('stock remote', () => {
       colors: ['ดำ'],
       publicCatalogEnabled: false,
       catalogHeroImageUrl: 'https://example.supabase.co/storage/v1/object/sign/shop-assets/shop_1/catalog/hero.png?token=abc',
+      catalogMobileHeroImageUrl: 'https://example.supabase.co/storage/v1/object/sign/shop-assets/shop_1/catalog/mobile-hero.png?token=abc',
     })
 
     expect(supabase.from).toHaveBeenCalledWith('shops')
@@ -132,6 +136,7 @@ describe('stock remote', () => {
       colors: ['ดำ'],
       public_catalog_enabled: false,
       catalog_hero_image_path: 'shop_1/catalog/hero.png',
+      catalog_mobile_hero_image_path: 'shop_1/catalog/mobile-hero.png',
     })
   })
 

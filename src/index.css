@@ -6083,8 +6083,14 @@ select {
   position: relative;
 }
 
+.prc-hero--custom-bg {
+  background-image: var(--prc-hero-bg-image);
+  background-position: center;
+  background-size: cover;
+}
+
 .prc-hero--custom-bg::after {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent);
+  background: none;
   content: '';
   inset: 0;
   pointer-events: none;
@@ -6099,6 +6105,10 @@ select {
   position: absolute;
 }
 
+.prc-hero--custom-bg::before {
+  background: none;
+}
+
 .prc-hero-content {
   display: flex;
   flex-direction: column;
@@ -6106,6 +6116,14 @@ select {
   justify-content: center;
   padding: 48px 40px 48px 60px;
   position: relative;
+}
+
+.prc-hero--custom-bg .prc-hero-content {
+  background: linear-gradient(90deg, rgba(250, 246, 240, 0.74) 0%, rgba(250, 246, 240, 0.48) 72%, transparent 100%);
+}
+
+.prc-hero--custom-bg .prc-hero-image-col {
+  display: none;
 }
 
 .prc-hero-eyebrow {
@@ -7005,6 +7023,10 @@ select {
 }
 
 @media (max-width: 768px) {
+  .prc-hero--custom-bg {
+    background-image: var(--prc-hero-mobile-bg-image, var(--prc-hero-bg-image));
+  }
+
   .prc-nav-inner,
   .prc-hero-editor,
   .prc-hero-content,

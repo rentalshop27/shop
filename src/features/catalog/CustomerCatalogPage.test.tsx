@@ -86,11 +86,33 @@ describe('CustomerCatalogPage filters', () => {
         items={catalogItems}
         rentals={[]}
         onUploadHeroBackground={() => undefined}
+        onUploadMobileHeroBackground={() => undefined}
       />,
     )
 
     expect(screen.getByText('รูปพื้นหลังส่วนชื่อร้าน')).toBeInTheDocument()
     expect(screen.getByText('ใช้จริงขั้นต่ำ: 1600 x 600 px')).toBeInTheDocument()
-    expect(screen.getByText('อัปโหลดรูป BG')).toBeInTheDocument()
+    expect(screen.getByText('รูปมือถือแยก: 1080 x 720 px ใช้แสดงบนหน้าจอมือถือ')).toBeInTheDocument()
+    expect(screen.getByText('อัปโหลดรูป Desktop BG')).toBeInTheDocument()
+    expect(screen.getByText('อัปโหลดรูป Mobile BG')).toBeInTheDocument()
+  })
+
+  it('renders custom hero backgrounds through desktop and mobile CSS variables without an inline wash overlay', () => {
+    const { container } = render(
+      <CustomerCatalogPage
+        items={catalogItems}
+        rentals={[]}
+        heroBackgroundUrl="https://example.com/hero.webp"
+        mobileHeroBackgroundUrl="https://example.com/mobile-hero.webp"
+      />,
+    )
+
+    const hero = container.querySelector('.prc-hero')
+
+    expect(hero).not.toBeNull()
+    if (!hero) return
+    expect(hero).toHaveStyle('--prc-hero-bg-image: url("https://example.com/hero.webp")')
+    expect(hero).toHaveStyle('--prc-hero-mobile-bg-image: url("https://example.com/mobile-hero.webp")')
+    expect(hero.getAttribute('style')).not.toContain('linear-gradient')
   })
 })

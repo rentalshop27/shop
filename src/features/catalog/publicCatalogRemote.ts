@@ -7,6 +7,7 @@ export type PublicCatalogResponse = {
     name: string
     publicCatalogSlug?: string | null
     catalogHeroImageUrl?: string | null
+    catalogMobileHeroImageUrl?: string | null
   }
   items: CatalogDisplayItem[]
 }

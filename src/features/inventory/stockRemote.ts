@@ -34,6 +34,7 @@ export type ShopSettings = {
   colors: string[]
   publicCatalogEnabled: boolean
   catalogHeroImageUrl: string | null
+  catalogMobileHeroImageUrl: string | null
 }
 
 const SHOP_HERO_BUCKET = 'shop-assets'
@@ -442,6 +443,9 @@ export async function updateShopSettings(
   const catalogHeroImagePath = settings.catalogHeroImageUrl
     ? getPathFromUrl(settings.catalogHeroImageUrl, SHOP_HERO_BUCKET) ?? settings.catalogHeroImageUrl
     : null
+  const catalogMobileHeroImagePath = settings.catalogMobileHeroImageUrl
+    ? getPathFromUrl(settings.catalogMobileHeroImageUrl, SHOP_HERO_BUCKET) ?? settings.catalogMobileHeroImageUrl
+    : null
 
   const { error } = await supabase
     .from('shops')
@@ -451,6 +455,7 @@ export async function updateShopSettings(
       colors: settings.colors,
       public_catalog_enabled: settings.publicCatalogEnabled,
       catalog_hero_image_path: catalogHeroImagePath,
+      catalog_mobile_hero_image_path: catalogMobileHeroImagePath,
       updated_at: new Date().toISOString()
     })
     .eq('id', shopId)
@@ -464,7 +469,7 @@ export async function loadShopSettings(
 ): Promise<ShopSettings | null> {
   const { data, error } = await supabase
     .from('shops')
-    .select('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path')
+    .select('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path, catalog_mobile_hero_image_path')
     .eq('id', shopId)
     .maybeSingle()
 
@@ -474,6 +479,9 @@ export async function loadShopSettings(
   const catalogHeroImageUrl = data.catalog_hero_image_path
     ? await createSignedStorageUrl(supabase, SHOP_HERO_BUCKET, data.catalog_hero_image_path, 60 * 15)
     : null
+  const catalogMobileHeroImageUrl = data.catalog_mobile_hero_image_path
+    ? await createSignedStorageUrl(supabase, SHOP_HERO_BUCKET, data.catalog_mobile_hero_image_path, 60 * 15)
+    : null
 
   return {
     brands: data.brands,
@@ -481,6 +489,7 @@ export async function loadShopSettings(
     colors: data.colors,
     publicCatalogEnabled: Boolean(data.public_catalog_enabled),
     catalogHeroImageUrl,
+    catalogMobileHeroImageUrl,
   }
 }
 
@@ -489,10 +498,11 @@ export async function uploadShopHeroImage(
   shopId: string,
   file: File,
   previousImageUrl?: string | null,
+  variant: 'desktop' | 'mobile' = 'desktop',
 ): Promise<string> {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
   const safeExt = ext.replace(/[^a-z0-9]/g, '') || 'jpg'
-  const storagePath = `${shopId}/catalog/${crypto.randomUUID()}.${safeExt}`
+  const storagePath = `${shopId}/catalog/${variant}-${crypto.randomUUID()}.${safeExt}`
   const previousPath = previousImageUrl ? getPathFromUrl(previousImageUrl, SHOP_HERO_BUCKET) : null
 
   const { error: uploadError } = await supabase.storage
