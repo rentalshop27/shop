@@ -1,4 +1,5 @@
 import type { RentalOrder, RentalStatus } from './rentalTypes'
+import type { RentalTier } from '../inventory/inventoryTypes'
 
 export const openRentalStatuses: RentalStatus[] = ['booked', 'active', 'overdue']
 
@@ -62,3 +63,44 @@ export function findOpenRentalConflict(
   return undefined
 }
 
+// ── Forward Logic: given rental days → resolve price from tiers ──
+
+/**
+ * Resolves the rental price for a given number of days using:
+ * 1. Exact match — finds a tier where `days === rentalDays`
+ * 2. Ceil fallback — finds the nearest tier where `days > rentalDays` (round up)
+ * 3. Returns null if no tier can cover the requested duration
+ */
+export function resolveRentalPrice(tiers: RentalTier[], rentalDays: number): number | null {
+  if (!tiers || tiers.length === 0) return null
+
+  // 1. Exact match
+  const exact = tiers.find((t) => t.days === rentalDays)
+  if (exact) return exact.price
+
+  // 2. Ceil fallback — nearest tier that covers the duration
+  const higher = tiers
+    .filter((t) => t.days > rentalDays)
+    .sort((a, b) => a.days - b.days)
+  if (higher.length > 0) return higher[0].price
+
+  // 3. No tier covers the duration → caller must handle (manual override)
+  return null
+}
+
+// ── Reverse Logic: given package days → compute return date ──
+
+/**
+ * Calculates the return date by adding packageDays to startDateStr.
+ *
+ * Uses T12:00:00 suffix to avoid UTC midnight → local timezone drift.
+ * Without this, `new Date('2026-07-02')` parses as UTC midnight which
+ * in UTC+7 becomes 2026-07-01T07:00:00 local, causing off-by-one errors.
+ */
+export function calculateReturnDate(startDateStr: string, packageDays: number): string {
+  if (!startDateStr) return ''
+  // Append T12:00:00 (noon) to avoid timezone-induced day shift
+  const startDate = new Date(`${startDateStr}T12:00:00`)
+  startDate.setDate(startDate.getDate() + packageDays)
+  return startDate.toISOString().split('T')[0]
+}

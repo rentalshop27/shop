@@ -24,7 +24,7 @@ const emptyProductDraft: ProductDraft = {
   category: '',
   primaryColor: 'น้ำเงินมิดไนต์',
   publicDescription: '',
-  rentalPricePerDay: '',
+  rentalTiers: [{ days: 1, price: 0 }],
   lateFeeRule: '',
   depositAmount: '',
   imageUrls: [],
@@ -105,7 +105,7 @@ export function useInventoryController({
     products.forEach((product) => {
       sets += 1
       totalItems += product.stockItems.length
-      if (product.rentalPricePerDay > 0) priced += 1
+      if (product.rentalTiers.length > 0) priced += 1
       deposits += product.depositAmount
     })
 
@@ -400,7 +400,7 @@ function toEditableProductDraft(product: ProductWithStockSummary): ProductDraft 
     category: product.category,
     primaryColor: product.primaryColor,
     publicDescription: product.publicDescription,
-    rentalPricePerDay: product.rentalPricePerDay ? String(product.rentalPricePerDay) : '',
+    rentalTiers: product.rentalTiers ?? [],
     lateFeeRule: product.lateFeeRule,
     depositAmount: product.depositAmount ? String(product.depositAmount) : '',
     imageUrls: product.imageUrls ?? [],
@@ -420,7 +420,7 @@ function normalizeProductDraft(draft: ProductDraft): ProductDraft {
     category: draft.category.trim(),
     primaryColor: draft.primaryColor.trim(),
     publicDescription: draft.publicDescription.trim(),
-    rentalPricePerDay: parseOptionalNumber(draft.rentalPricePerDay) !== undefined ? draft.rentalPricePerDay : '',
+    rentalTiers: draft.rentalTiers.filter((t) => t.days > 0),
     lateFeeRule: draft.lateFeeRule.trim(),
     depositAmount: parseOptionalNumber(draft.depositAmount) !== undefined ? draft.depositAmount : '',
     variants: draft.variants.filter((v) => v.quantity > 0)

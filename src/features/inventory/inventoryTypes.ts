@@ -1,5 +1,12 @@
 export type StockItemStatus = 'available' | 'repair' | 'wash'
 
+// ── RentalTier — one pricing package ──
+
+export type RentalTier = {
+  days: number;   // duration, e.g. 1, 3, 5, 7
+  price: number;  // total price for that package, e.g. 1000, 1500
+}
+
 // ── Product (Parent) — shared product data ──
 
 export type Product = {
@@ -10,7 +17,7 @@ export type Product = {
   category: string
   primaryColor: string
   publicDescription: string
-  rentalPricePerDay: number
+  rentalTiers: RentalTier[]     // replaces rentalPricePerDay
   lateFeeRule: string
   depositAmount: number
   imageUrls: string[]
@@ -48,7 +55,7 @@ export type FlatStockItem = StockItem & {
   brand: string
   category: string
   primaryColor: string
-  rentalPricePerDay: number
+  rentalTiers: RentalTier[]     // replaces rentalPricePerDay
   lateFeeRule: string
   depositAmount: number
   imageUrls: string[]
@@ -73,7 +80,7 @@ export type ProductDraft = {
   category: string
   primaryColor: string
   publicDescription: string
-  rentalPricePerDay: string
+  rentalTiers: RentalTier[]     // replaces rentalPricePerDay: string
   lateFeeRule: string
   depositAmount: string
   imageUrls: string[]

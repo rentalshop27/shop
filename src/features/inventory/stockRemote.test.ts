@@ -24,7 +24,7 @@ describe('stockRemote', () => {
         category: 'Evening',
         primary_color: 'Red',
         public_description: '',
-        rental_price_per_day: 2200,
+        rental_tiers: [{days: 1, price: 2200}],
         late_fee_rule: '',
         deposit_amount: 5000,
         image_urls: [
@@ -109,7 +109,7 @@ describe('stockRemote', () => {
         category: 'Evening',
         primaryColor: 'Red',
         publicDescription: '',
-        rentalPricePerDay: '2200',
+        rentalTiers: [{days: 1, price: 2200}],
         lateFeeRule: '',
         depositAmount: '5000',
         imageUrls: [
@@ -171,7 +171,7 @@ describe('stockRemote', () => {
       category: 'Evening',
       primaryColor: 'Red',
       publicDescription: '',
-      rentalPricePerDay: '2200',
+      rentalTiers: [{days: 1, price: 2200}],
       lateFeeRule: '',
       depositAmount: '5000',
       imageUrls: [

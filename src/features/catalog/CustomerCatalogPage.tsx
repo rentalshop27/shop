@@ -15,7 +15,7 @@ export type CatalogDisplayItem = {
   category: string
   primaryColor: string
   publicDescription: string
-  rentalPricePerDay: number
+  rentalTiers: { days: number; price: number }[]
   imageUrls: string[]
   publicVisible?: boolean
   isFeatured?: boolean
@@ -207,9 +207,17 @@ export function CustomerCatalogPage({
     })
 
     if (sortKey === 'price_asc') {
-      result = [...result].sort((a, b) => a.rentalPricePerDay - b.rentalPricePerDay)
+      result = [...result].sort((a, b) => {
+        const minA = a.rentalTiers?.length > 0 ? Math.min(...a.rentalTiers.map(t => t.price)) : 0
+        const minB = b.rentalTiers?.length > 0 ? Math.min(...b.rentalTiers.map(t => t.price)) : 0
+        return minA - minB
+      })
     } else if (sortKey === 'price_desc') {
-      result = [...result].sort((a, b) => b.rentalPricePerDay - a.rentalPricePerDay)
+      result = [...result].sort((a, b) => {
+        const minA = a.rentalTiers?.length > 0 ? Math.min(...a.rentalTiers.map(t => t.price)) : 0
+        const minB = b.rentalTiers?.length > 0 ? Math.min(...b.rentalTiers.map(t => t.price)) : 0
+        return minB - minA
+      })
     } else if (sortKey === 'newest') {
       result = [...result].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
     } else {
@@ -705,7 +713,7 @@ export function CustomerCatalogPage({
                 </div>
 
                 <div className="prc-modal-price">
-                  <span className="prc-modal-price-value">{formatBaht(selectedItem.rentalPricePerDay)}</span>
+                  <span className="prc-modal-price-value">{formatTierRange(selectedItem.rentalTiers)}</span>
                 </div>
 
                 <div className="prc-modal-specs">
@@ -849,11 +857,17 @@ function getTodayString() {
 }
 
 function formatBaht(value: number) {
-  return new Intl.NumberFormat('th-TH', {
-    style: 'currency',
-    currency: 'THB',
-    maximumFractionDigits: 0,
-  }).format(value)
+  return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
+}
+
+function formatTierRange(tiers?: { price: number }[]) {
+  if (!tiers || tiers.length === 0) return '-'
+  if (tiers.length === 1) return formatBaht(tiers[0].price)
+  const prices = tiers.map(t => t.price)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  if (min === max) return formatBaht(min)
+  return `${formatBaht(min)} – ${formatBaht(max)}`
 }
 
 function CatalogCardBase({
@@ -923,7 +937,7 @@ function CatalogCardBase({
         <h2 className="prc-card-name">{item.productName}</h2>
         <div className="prc-card-footer">
           <div className="prc-card-price-block">
-            <span className="prc-card-price">{formatBaht(item.rentalPricePerDay)}</span>
+            <span className="prc-card-price">{formatTierRange(item.rentalTiers)}</span>
             {sizeDisplay && <span className="prc-card-size">ไซซ์ {sizeDisplay}</span>}
           </div>
           <div className="prc-card-actions">

@@ -233,7 +233,7 @@ export function InventoryPage({
                     )}
                   </div>
                   <span>{uniqueSizes}</span>
-                  <span>{formatBaht(product.rentalPricePerDay)}</span>
+                  <span>{formatTierRange(product.rentalTiers)}</span>
                   <div className="stock-action-group">
                     <button
                       className={`inline-link-button stock-visibility-button ${product.publicVisible ? 'active' : ''}`}
@@ -279,7 +279,7 @@ export function InventoryPage({
                     <div className="stock-card-pricing" style={{ marginBottom: '16px' }}>
                       <div className="stock-card-price-item">
                         <span className="stock-card-price-label">ค่าเช่า</span>
-                        <strong className="stock-card-price-value gold">{formatBaht(product.rentalPricePerDay)}</strong>
+                        <strong className="stock-card-price-value gold" style={{ fontSize: '0.95rem' }}>{formatTierRange(product.rentalTiers)}</strong>
                       </div>
                       <div className="stock-card-price-item">
                         <span className="stock-card-price-label">ประกัน</span>
@@ -493,16 +493,73 @@ export function InventoryPage({
                   </select>
                 </label>
               </div>
-              
-              <div className="form-grid pricing-grid" style={{ marginTop: '16px' }}>
-                <CurrencyField label="ค่าเช่า (ต่อชุด/ต่อวัน)" value={draft.rentalPricePerDay} onChange={(value) => onDraftChange('rentalPricePerDay', value)} />
-                <CurrencyField label="เงินประกัน (มัดจำ)" value={draft.depositAmount} onChange={(value) => onDraftChange('depositAmount', value)} />
-                <InventoryTextField
-                  label="เกณฑ์ค่าปรับล่าช้า"
-                  value={draft.lateFeeRule}
-                  onChange={(value) => onDraftChange('lateFeeRule', value)}
-                  placeholder="เช่น 300 บาท/วัน หลังครบกำหนด"
-                />
+              <div style={{ marginTop: '24px', background: 'rgba(218, 165, 32, 0.05)', borderColor: 'rgba(218, 165, 32, 0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(218, 165, 32, 0.2)' }}>
+                <div className="section-title-row" style={{ marginBottom: '16px' }}>
+                  <h3 style={{ color: 'var(--text-gold)', margin: 0 }}>💰 กำหนดแพ็กเกจราคาเช่า</h3>
+                  <span style={{ fontSize: '0.85rem' }}>กำหนดราคาแยกตามจำนวนวัน</span>
+                </div>
+                <div className="tier-builder" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '12px', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '0 8px', fontWeight: 600 }}>
+                    <span>ระยะเวลา (วัน)</span>
+                    <span>ราคารวม (บาท)</span>
+                    <span style={{ textAlign: 'center' }}>ลบ</span>
+                  </div>
+                  {draft.rentalTiers.map((tier, index) => (
+                    <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '12px', alignItems: 'center', background: 'var(--surface-elevated)', padding: '8px', borderRadius: '8px' }}>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={tier.days || ''} 
+                        onChange={(e) => {
+                          const newTiers = [...draft.rentalTiers]
+                          newTiers[index].days = parseInt(e.target.value) || 0
+                          onDraftChange('rentalTiers', newTiers)
+                        }}
+                        placeholder="วัน"
+                        style={{ padding: '8px', borderRadius: '6px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      />
+                      <div className="currency-input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                        <span className="currency-prefix" style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }}>฿</span>
+                        <input 
+                          type="number" 
+                          inputMode="numeric" 
+                          min="0"
+                          value={tier.price || ''} 
+                          onChange={(e) => {
+                            const newTiers = [...draft.rentalTiers]
+                            newTiers[index].price = parseInt(e.target.value) || 0
+                            onDraftChange('rentalTiers', newTiers)
+                          }}
+                          placeholder="0"
+                          style={{ padding: '8px 8px 8px 28px', borderRadius: '6px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)', width: '100%' }}
+                        />
+                      </div>
+                      <button type="button" onClick={() => {
+                        const newTiers = draft.rentalTiers.filter((_, i) => i !== index)
+                        onDraftChange('rentalTiers', newTiers)
+                      }} style={{ background: 'none', border: 'none', color: 'var(--danger-glow)', cursor: 'pointer', display: 'flex', justifyContent: 'center' }}>
+                        <X size={20} />
+                      </button>
+                    </div>
+                  ))}
+                  <button 
+                    type="button" 
+                    onClick={() => onDraftChange('rentalTiers', [...draft.rentalTiers, { days: 1, price: 0 }])}
+                    style={{ marginTop: '8px', padding: '10px', width: '100%', background: 'none', border: '1px dashed rgba(218, 165, 32, 0.4)', borderRadius: '8px', color: 'var(--text-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+                  >
+                    <PlusCircle size={18} /> เพิ่มแพ็กเกจวันใหม่
+                  </button>
+                </div>
+
+                <div className="form-grid pricing-grid" style={{ marginTop: '24px' }}>
+                  <CurrencyField label="เงินประกัน (มัดจำ)" value={draft.depositAmount} onChange={(value) => onDraftChange('depositAmount', value)} />
+                  <InventoryTextField
+                    label="เกณฑ์ค่าปรับล่าช้า"
+                    value={draft.lateFeeRule}
+                    onChange={(value) => onDraftChange('lateFeeRule', value)}
+                    placeholder="เช่น 300 บาท/วัน หลังครบกำหนด"
+                  />
+                </div>
               </div>
 
               <label className="checkbox-field inventory-public-toggle" style={{ marginTop: '16px' }}>
@@ -698,4 +755,14 @@ function formatBaht(amount: string | number) {
   const num = Number(amount)
   if (!num) return '-'
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num)
+}
+
+function formatTierRange(tiers: { price: number }[]) {
+  if (!tiers || tiers.length === 0) return '-'
+  if (tiers.length === 1) return formatBaht(tiers[0].price)
+  const prices = tiers.map(t => t.price)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  if (min === max) return formatBaht(min)
+  return `${formatBaht(min)} – ${formatBaht(max)}`
 }

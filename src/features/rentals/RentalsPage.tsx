@@ -12,8 +12,16 @@ import {
 import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
-import { findOpenRentalConflict } from './rentalRules'
+import { findOpenRentalConflict, resolveRentalPrice, calculateReturnDate } from './rentalRules'
 import { canCreateRentalForCustomer } from '../customers/customerRules'
+
+function tiersAreCompatible(costumes: FlatStockItem[]): boolean {
+  if (costumes.length <= 1) return true
+  const refDays = costumes[0].rentalTiers.map(t => t.days).sort().join(',')
+  return costumes.every(c =>
+    c.rentalTiers.map(t => t.days).sort().join(',') === refDays
+  )
+}
 
 interface RentalsPageProps {
   rentals: RentalOrder[]
@@ -39,6 +47,22 @@ const getTodayString = () => {
   const month = String(today.getMonth() + 1).padStart(2, '0')
   const day = String(today.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function formatBaht(amount: string | number) {
+  const num = Number(amount)
+  if (!num) return '-'
+  return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num)
+}
+
+function formatTierRange(tiers: { price: number }[]) {
+  if (!tiers || tiers.length === 0) return '-'
+  if (tiers.length === 1) return formatBaht(tiers[0].price)
+  const prices = tiers.map(t => t.price)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  if (min === max) return formatBaht(min)
+  return `${formatBaht(min)} – ${formatBaht(max)}`
 }
 
 export function RentalsPage({
@@ -92,6 +116,9 @@ export function RentalsPage({
   const [costumeSearch, setCostumeSearch] = useState('')
   const [selectedCostumes, setSelectedCostumes] = useState<FlatStockItem[]>([])
   const [showCostumeDropdown, setShowCostumeDropdown] = useState(false)
+
+  const [selectedTierIndex, setSelectedTierIndex] = useState<number | 'custom' | null>(null)
+  const [basePriceFromTier, setBasePriceFromTier] = useState<number>(0)
 
   const [pickupDate, setPickupDate] = useState(getTodayString())
   const [returnDate, setReturnDate] = useState('')
@@ -190,20 +217,55 @@ export function RentalsPage({
 
   // Sync pricing when costumes are selected
   useEffect(() => {
-    if (selectedCostumes.length > 0) {
-      const totalRentalPrice = selectedCostumes.reduce((sum, item) => sum + item.rentalPricePerDay, 0)
-      const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
-      setRentalPrice(totalRentalPrice.toString())
-      setDepositAmount(totalDeposit.toString())
-      setDiscountAmount('0')
-      setCollectedAmount((totalRentalPrice + totalDeposit).toString())
-    } else {
+    if (selectedCostumes.length === 0) {
+      setSelectedTierIndex(null)
+      setBasePriceFromTier(0)
       setRentalPrice('')
       setDepositAmount('')
       setDiscountAmount('0')
       setCollectedAmount('')
+      return
     }
+    
+    if (!tiersAreCompatible(selectedCostumes)) {
+      setSelectedTierIndex('custom')
+    } else {
+      // If valid index but out of bounds, reset
+      if (typeof selectedTierIndex === 'number') {
+         if (!selectedCostumes[0].rentalTiers[selectedTierIndex]) {
+           setSelectedTierIndex(null)
+         }
+      }
+    }
+    
+    const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
+    setDepositAmount(totalDeposit.toString())
   }, [selectedCostumes])
+
+  useEffect(() => {
+    if (selectedCostumes.length === 0) return
+    
+    if (typeof selectedTierIndex === 'number') {
+      const tier = selectedCostumes[0]?.rentalTiers[selectedTierIndex]
+      if (tier) {
+        if (pickupDate) {
+          setReturnDate(calculateReturnDate(pickupDate, tier.days))
+        }
+        
+        let totalBasePrice = 0
+        for (const costume of selectedCostumes) {
+          totalBasePrice += costume.rentalTiers[selectedTierIndex]?.price || 0
+        }
+        
+        setBasePriceFromTier(totalBasePrice)
+        setRentalPrice(totalBasePrice.toString())
+        
+        const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
+        setDiscountAmount('0')
+        setCollectedAmount((totalBasePrice + totalDeposit).toString())
+      }
+    }
+  }, [selectedTierIndex, pickupDate, selectedCostumes])
 
   const parseMoneyInput = (value: string) => {
     return parseFloat(value) || 0
@@ -434,12 +496,22 @@ export function RentalsPage({
     const collected = parseFloat(collectedAmount)
     const collectedTotal = Number.isFinite(collected) ? collected : price + deposit
 
-    const priceShares = splitAmountByWeights(price, selectedCostumes.map((item) => item.rentalPricePerDay))
-    const depositShares = splitAmountByWeights(deposit, selectedCostumes.map((item) => item.depositAmount))
-    const collectedShares = splitAmountByWeights(
-      collectedTotal,
-      selectedCostumes.map((item) => item.rentalPricePerDay + item.depositAmount)
+    const pickup = new Date(`${pickupDate}T12:00:00`)
+    const ret = new Date(`${returnDate}T12:00:00`)
+    const diffTime = Math.abs(ret.getTime() - pickup.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const rentalDays = diffDays > 0 ? diffDays : 1
+
+    const priceWeights = selectedCostumes.map((item) => 
+      resolveRentalPrice(item.rentalTiers, rentalDays) ?? 1
     )
+    const priceShares = splitAmountByWeights(price, priceWeights)
+    
+    const depositWeights = selectedCostumes.map((item) => item.depositAmount || 1)
+    const depositShares = splitAmountByWeights(deposit, depositWeights)
+    
+    const collectedWeights = selectedCostumes.map((item, i) => priceWeights[i] + (item.depositAmount || 0))
+    const collectedShares = splitAmountByWeights(collectedTotal, collectedWeights)
 
     const drafts = selectedCostumes.map((item, index) => {
       return {
@@ -1044,7 +1116,7 @@ export function RentalsPage({
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(223, 183, 80, 0.05)'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
-                            <strong>{item.productName}</strong> ({item.sku}) - ไซส์: {item.size} | ค่าเช่า: {formatBaht(item.rentalPricePerDay)}
+                            <strong>{item.productName}</strong> ({item.sku}) - ไซส์: {item.size} | ค่าเช่า: {formatTierRange(item.rentalTiers)}
                           </button>
                         </li>
                       ))}
@@ -1084,7 +1156,7 @@ export function RentalsPage({
                         <div>
                           <strong>{item.productName}</strong> ({item.sku})
                           <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px' }}>
-                            สี: {item.primaryColor} | ไซส์: {item.size} | ค่าเช่า: {formatBaht(item.rentalPricePerDay)}
+                            สี: {item.primaryColor} | ไซส์: {item.size} | ค่าเช่า: {formatTierRange(item.rentalTiers)}
                           </div>
                         </div>
                         <button
@@ -1115,6 +1187,65 @@ export function RentalsPage({
                   </div>
                 )}
               </div>
+              
+              {/* PACKAGE CHOICE CHIPS */}
+              {selectedCostumes.length > 0 && (
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <label className="field" style={{ marginBottom: '12px' }}>
+                    <span>เลือกแพ็กเกจระยะเวลาเช่า<b style={{ color: 'red' }}> *</b></span>
+                  </label>
+                  {!tiersAreCompatible(selectedCostumes) ? (
+                    <div style={{ color: 'var(--warning-color)', fontSize: '13px', background: 'rgba(218, 165, 32, 0.1)', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      ⚠️ ชุดที่เลือกมีแพ็กเกจวันไม่ตรงกัน — กรุณากำหนดวันเองครับ
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {selectedCostumes[0]?.rentalTiers.map((tier, index) => {
+                        const isSelected = selectedTierIndex === index
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setSelectedTierIndex(index)}
+                            style={{
+                              padding: '8px 16px',
+                              borderRadius: '20px',
+                              border: `1px solid ${isSelected ? 'var(--text-gold)' : 'var(--border-color)'}`,
+                              background: isSelected ? 'rgba(218, 165, 32, 0.1)' : 'var(--surface-sunken)',
+                              color: isSelected ? 'var(--text-gold)' : '#fff',
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {isSelected ? '✓ ' : '○ '}แพ็กเกจ {tier.days} วัน : {formatBaht(tier.price)}
+                          </button>
+                        )
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTierIndex('custom')}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          border: `1px solid ${selectedTierIndex === 'custom' ? 'var(--text-gold)' : 'var(--border-color)'}`,
+                          background: selectedTierIndex === 'custom' ? 'rgba(218, 165, 32, 0.1)' : 'var(--surface-sunken)',
+                          color: selectedTierIndex === 'custom' ? 'var(--text-gold)' : '#fff',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {selectedTierIndex === 'custom' ? '✓ ' : '○ '}กำหนดวันเอง (Custom)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* RENTAL PERIOD DATES */}
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -1132,6 +1263,8 @@ export function RentalsPage({
                     type="date"
                     value={returnDate}
                     onChange={(e) => setReturnDate(e.target.value)}
+                    readOnly={typeof selectedTierIndex === 'number'}
+                    style={typeof selectedTierIndex === 'number' ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
                   />
                 </label>
               </div>
@@ -1139,9 +1272,19 @@ export function RentalsPage({
               {/* FINANCIAL SETTINGS */}
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <h3 style={{ fontSize: '14px', color: 'var(--text-gold)', margin: '0 0 12px' }}>สรุปข้อมูลการเงิน</h3>
-                <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                   <label className="field">
-                    <span>ราคาเช่าต่อครั้ง</span>
+                    <span>ราคาตามแพ็กเกจ (Base)</span>
+                    <input
+                      type="text"
+                      value={formatBaht(basePriceFromTier)}
+                      readOnly
+                      style={{ backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' }}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>ราคาปรับแต่ง (Override)</span>
                     <input
                       type="number"
                       value={rentalPrice}
@@ -1152,6 +1295,9 @@ export function RentalsPage({
                       }}
                     />
                   </label>
+                </div>
+
+                <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <label className="field">
                     <span>ค่ามัดจำ / ประกัน</span>
                     <input
@@ -1164,9 +1310,6 @@ export function RentalsPage({
                       }}
                     />
                   </label>
-                </div>
-
-                <div style={{ marginTop: '16px' }}>
                   <label className="field">
                     <span>ส่วนลด</span>
                     <input
