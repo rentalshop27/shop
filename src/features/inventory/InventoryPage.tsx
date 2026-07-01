@@ -243,7 +243,7 @@ export function InventoryPage({
             {products.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
           </div>
         ) : (
-          <div className="stock-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
+          <div className="stock-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
             {products.map((product) => {
               return (
                 <div className="stock-card" key={product.id} style={{ display: 'flex', flexDirection: 'column' }}>
