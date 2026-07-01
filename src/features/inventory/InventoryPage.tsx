@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes } from 'react'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import {
   Archive,
   BadgeCheck,
@@ -19,6 +19,8 @@ import {
   Trash2,
   X,
   PlusCircle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { getInventoryDisplayStatus } from './inventoryStatus'
 import { StockManagementDrawer } from './StockManagementDrawer'
@@ -114,6 +116,17 @@ export function InventoryPage({
     localStorage.setItem('inventoryViewMode', mode)
   }
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const ITEMS_PER_PAGE = 12
+
+  // Reset to first page when products change (e.g. searching/filtering)
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [products])
+
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE)
+  const currentProducts = products.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
   const [selectedProductForDrawerId, setSelectedProductForDrawerId] = useState<string | null>(null)
   const activeDrawerProduct = selectedProductForDrawerId 
     ? products.find(p => p.id === selectedProductForDrawerId) || null 
@@ -194,7 +207,7 @@ export function InventoryPage({
               <span>ราคาเช่า</span>
               <span>จัดการชุดหลัก</span>
             </div>
-            {products.map((product) => {
+            {currentProducts.map((product) => {
               const uniqueSizes = Array.from(new Set(product.stockItems.map(s => s.size))).join(', ') || '-'
               return (
                 <div className="stock-row" key={product.id} role="row">
@@ -240,11 +253,11 @@ export function InventoryPage({
                 </div>
               )
             })}
-            {products.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+            {currentProducts.length === 0 && <div className="empty-state">ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
           </div>
         ) : (
           <div className="stock-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {products.map((product) => {
+            {currentProducts.map((product) => {
               return (
                 <div className="stock-card" key={product.id} style={{ display: 'flex', flexDirection: 'column' }}>
                   <div className="stock-card-image">
@@ -354,7 +367,33 @@ export function InventoryPage({
                 </div>
               )
             })}
-            {products.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+            {currentProducts.length === 0 && <div className="empty-state" style={{ gridColumn: '1 / -1' }}>ยังไม่มีรายการที่ตรงกับคำค้นหา</div>}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '32px' }}>
+            <button 
+              className="secondary-button" 
+              type="button" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              style={{ padding: '8px 12px' }}
+            >
+              <ChevronLeft size={16} /> ย้อนกลับ
+            </button>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              หน้า {currentPage} จาก {totalPages}
+            </span>
+            <button 
+              className="secondary-button" 
+              type="button" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              style={{ padding: '8px 12px' }}
+            >
+              ถัดไป <ChevronRight size={16} />
+            </button>
           </div>
         )}
       </section>
