@@ -91,9 +91,17 @@ export function CustomerCatalogPage({
   const [orderedItemIds, setOrderedItemIds] = useState<string[]>([])
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
 
-  // Sync orderedItemIds when items change (e.g. initial load)
+  // Sync orderedItemIds when items change (e.g. initial load, after save)
   useEffect(() => {
-    setOrderedItemIds(items.map(item => item.id!).filter(Boolean))
+    // Sort items by is_featured DESC, display_order ASC for edit mode ordering
+    const sorted = [...items]
+      .filter(i => i.id)
+      .sort((a, b) => {
+        if (a.isFeatured !== b.isFeatured) return a.isFeatured ? -1 : 1
+        if ((a.displayOrder ?? 0) !== (b.displayOrder ?? 0)) return (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+        return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+      })
+    setOrderedItemIds(sorted.map(item => item.id!))
     setHasOrderChanged(false)
   }, [items])
 
@@ -512,27 +520,28 @@ export function CustomerCatalogPage({
         </div>
       </div>
 
+      {isAdminMode && (
+        <div className="prc-admin-toolbar">
+          <button 
+            className={`prc-edit-mode-btn ${isEditModeActive ? 'active' : ''}`}
+            onClick={() => setIsEditModeActive(!isEditModeActive)}
+          >
+            <Pencil size={16} />
+            {isEditModeActive ? 'ปิดโหมดจัดเรียง' : 'โหมดจัดเรียง (Edit Mode)'}
+          </button>
+          {isEditModeActive && hasOrderChanged && (
+            <button className="prc-save-order-btn" onClick={handleSaveOrder}>
+              <Save size={16} />
+              บันทึกลำดับใหม่
+            </button>
+          )}
+        </div>
+      )}
+
       <section
         className={`prc-grid ${viewMode === 'list' ? 'prc-grid--list' : ''}`}
         aria-label="รายการชุดสำหรับลูกค้า"
       >
-        {isAdminMode && (
-          <div className="prc-admin-toolbar">
-            <button 
-              className={`prc-edit-mode-btn ${isEditModeActive ? 'active' : ''}`}
-              onClick={() => setIsEditModeActive(!isEditModeActive)}
-            >
-              <Pencil size={16} />
-              {isEditModeActive ? 'ปิดโหมดจัดเรียง' : 'โหมดจัดเรียง (Edit Mode)'}
-            </button>
-            {isEditModeActive && hasOrderChanged && (
-              <button className="prc-save-order-btn" onClick={handleSaveOrder}>
-                <Save size={16} />
-                บันทึกลำดับใหม่
-              </button>
-            )}
-          </div>
-        )}
 
         {isEditModeActive ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

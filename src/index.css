@@ -6424,6 +6424,176 @@ select {
   color: var(--prc-gold-dark);
 }
 
+/* ── ADMIN EDIT MODE TOOLBAR ── */
+.prc-admin-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: 8px 40px;
+}
+
+.prc-edit-mode-btn {
+  align-items: center;
+  background: var(--prc-cream);
+  border: 1.5px solid var(--prc-border);
+  border-radius: 8px;
+  color: var(--prc-text);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 8px 16px;
+  transition: all 0.2s;
+}
+
+.prc-edit-mode-btn:hover {
+  border-color: var(--prc-gold);
+  color: var(--prc-gold);
+}
+
+.prc-edit-mode-btn.active {
+  background: var(--prc-gold);
+  border-color: var(--prc-gold);
+  color: #fff;
+}
+
+.prc-save-order-btn {
+  align-items: center;
+  background: #2d6a4f;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 8px 16px;
+  transition: background 0.2s;
+}
+
+.prc-save-order-btn:hover {
+  background: #1b4332;
+}
+
+/* ── EDIT MODE CARD OVERLAY ── */
+.prc-edit-overlay {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+  border-radius: var(--prc-radius) var(--prc-radius) 0 0;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  left: 0;
+  padding: 12px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+}
+
+.prc-edit-drag-handle {
+  align-items: center;
+  background: rgba(255,255,255,0.9);
+  border-radius: 6px;
+  color: #555;
+  cursor: grab;
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+  padding: 6px 10px;
+}
+
+.prc-edit-drag-handle:active {
+  cursor: grabbing;
+}
+
+.prc-edit-pin-btn {
+  align-items: center;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+  padding: 6px 10px;
+  transition: all 0.2s;
+}
+
+.prc-edit-pin-btn:hover {
+  background: #fff;
+  color: var(--prc-gold);
+}
+
+.prc-edit-pin-btn.pinned {
+  background: var(--prc-gold);
+  color: #fff;
+}
+
+/* ── PINNED BADGE ── */
+.prc-card-pinned-badge {
+  align-items: center;
+  background: var(--prc-gold);
+  border-radius: 4px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+}
+
+/* ── RECOMMENDED SECTION ── */
+.prc-recommended-section {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+
+.prc-recommended-title {
+  color: var(--prc-text);
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.prc-recommended-carousel {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scroll-snap-type: x mandatory;
+}
+
+.prc-recommended-carousel .prc-card {
+  flex: 0 0 240px;
+  scroll-snap-align: start;
+}
+
+.prc-recommended-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.prc-recommended-carousel::-webkit-scrollbar-thumb {
+  background: var(--prc-border);
+  border-radius: 3px;
+}
+
+.prc-all-items-title {
+  color: var(--prc-text-muted);
+  font-size: 15px;
+  font-weight: 600;
+  grid-column: 1 / -1;
+  margin: 8px 0 4px;
+}
+
 /* ── PRODUCT GRID ── */
 .prc-grid {
   display: grid;
