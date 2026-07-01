@@ -29,7 +29,13 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
     rentalPricePerDay: Number(row.rental_price_per_day) || 0,
     lateFeeRule: row.late_fee_rule ?? '',
     depositAmount: Number(row.deposit_amount) || 0,
-    imageUrls: row.image_urls ?? [],
+    imageUrls: (row.image_urls ?? []).map((url: string) => {
+      if (url.includes('/storage/v1/object/public/costumes/')) {
+        const path = url.split('/storage/v1/object/public/costumes/')[1]
+        return supabase.storage.from('costumes').getPublicUrl(path).data.publicUrl
+      }
+      return url
+    }),
     publicVisible: row.public_visible,
     createdAt: row.created_at,
     stockItems: []
