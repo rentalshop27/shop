@@ -218,8 +218,8 @@ export function CustomerCatalogPage({
   const effectiveMobileHeroBackgroundUrl = mobileHeroBackgroundUrl ?? heroBackgroundUrl
   const heroBackgroundStyle = effectiveHeroBackgroundUrl
     ? {
-        '--prc-hero-bg-image': `url("${effectiveHeroBackgroundUrl}")`,
-        '--prc-hero-mobile-bg-image': `url("${effectiveMobileHeroBackgroundUrl}")`,
+        '--prc-hero-bg-image': `url('${effectiveHeroBackgroundUrl}')`,
+        '--prc-hero-mobile-bg-image': `url('${effectiveMobileHeroBackgroundUrl}')`,
         backgroundPosition: 'center',
         backgroundSize: 'cover',
       } as CSSProperties
