@@ -7106,3 +7106,170 @@ select {
     width: 100%;
   }
 }
+
+/* ========================================================================= */
+/* STOCK MANAGEMENT SIDE DRAWER                                              */
+/* ========================================================================= */
+.drawer-backdrop {
+  align-items: stretch;
+  background: rgba(3, 7, 18, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  inset: 0;
+  justify-content: flex-end;
+  position: fixed;
+  z-index: 1000;
+  opacity: 0;
+  animation: backdropFadeIn 0.25s ease-out forwards;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.drawer-panel {
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 100%);
+  height: 100vh;
+  transform: translateX(100%);
+  animation: drawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.drawer-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.drawer-header h2 {
+  color: var(--text-bright);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.drawer-header .subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.drawer-body {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Drawer UI Elements */
+.drawer-search-box {
+  align-items: center;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+}
+
+.drawer-search-box input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  flex-grow: 1;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.drawer-search-box input::placeholder {
+  color: var(--text-muted);
+}
+
+.drawer-size-group {
+  margin-bottom: 24px;
+}
+
+.drawer-size-group-header {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.drawer-item-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  transition: background 0.2s;
+}
+
+.drawer-item-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.drawer-item-sku {
+  color: var(--text-gold);
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.drawer-item-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+/* Updated Summary Card Elements */
+.stock-card-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.size-badges-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.size-summary-badge {
+  background: rgba(218, 165, 32, 0.1);
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 6px;
+  color: var(--text-gold);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.status-summary-text {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.status-summary-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}

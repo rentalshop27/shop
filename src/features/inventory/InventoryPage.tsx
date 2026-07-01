@@ -22,6 +22,7 @@ import {
   PackagePlus,
 } from 'lucide-react'
 import { getInventoryDisplayStatus } from './inventoryStatus'
+import { StockManagementDrawer } from './StockManagementDrawer'
 import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 
@@ -113,6 +114,11 @@ export function InventoryPage({
     setViewMode(mode)
     localStorage.setItem('inventoryViewMode', mode)
   }
+
+  const [selectedProductForDrawerId, setSelectedProductForDrawerId] = useState<string | null>(null)
+  const activeDrawerProduct = selectedProductForDrawerId 
+    ? products.find(p => p.id === selectedProductForDrawerId) || null 
+    : null
 
   const today = (() => {
     const date = new Date()
@@ -269,62 +275,82 @@ export function InventoryPage({
                       </div>
                     </div>
 
-                    <div className="stock-card-variants" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>รายการตัวชุดย่อย</span>
-                        <VariantAdder
-                          sizes={SIZES}
-                          onAdd={(size, quantity) => onAddStock(product.id, size, quantity)}
-                        />
+                    <div className="stock-card-summary">
+                      <div className="size-badges-container">
+                        {(() => {
+                          const sizeCounts = product.stockItems.reduce((acc, si) => {
+                            acc[si.size] = (acc[si.size] || 0) + 1
+                            return acc
+                          }, {} as Record<string, number>)
+                          
+                          const sortedSizes = Object.keys(sizeCounts).sort((a, b) => {
+                            const indexA = SIZES.indexOf(a)
+                            const indexB = SIZES.indexOf(b)
+                            if (indexA === -1 && indexB === -1) return a.localeCompare(b)
+                            if (indexA === -1) return 1
+                            if (indexB === -1) return -1
+                            return indexA - indexB
+                          })
+                          
+                          if (sortedSizes.length === 0) {
+                            return <span className="status-summary-text">ยังไม่มีสินค้าในสต็อก</span>
+                          }
+                          
+                          return sortedSizes.map(size => (
+                            <span key={size} className="size-summary-badge">
+                              ไซส์ {size}: {sizeCounts[size]} ตัว
+                            </span>
+                          ))
+                        })()}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {product.stockItems.map(si => {
-                          const { primaryStatus } = getInventoryDisplayStatus(si, rentals, today)
-                          // const nextBookedRental = null
-                          return (
-                            <div key={si.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px' }}>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-gold)' }}>{si.sku}</span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <select 
-                                  value={si.status} 
-                                  onChange={(e) => onUpdateStatus(product.id, si.id, e.target.value as StockItemStatus)}
-                                  style={{ fontSize: '0.75rem', padding: '2px 4px', borderRadius: '4px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }}
-                                >
-                                  <option value="available">ว่าง</option>
-                                  <option value="repair">ซ่อม</option>
-                                  <option value="wash">ซัก</option>
-                                </select>
-                                {primaryStatus === 'rented' && <span className="status-pill warning" style={{ zoom: 0.8 }}>ถูกเช่า</span>}
-                                {primaryStatus === 'booked' && <span className="status-pill success" style={{ zoom: 0.8 }}>มีคิวจอง</span>}
-                                <button type="button" onClick={() => onDeleteVariant(product.id, si.id)} style={{ background: 'none', border: 'none', color: 'var(--danger-glow)', cursor: 'pointer', padding: '2px' }}>
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                        {product.stockItems.length === 0 && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>ยังไม่มีตัวชุดย่อยในคลัง</span>}
+                      
+                      <div className="status-summary-text">
+                        {(() => {
+                          if (product.stockItems.length === 0) return null
+                          
+                          const statusCounts = product.stockItems.reduce((acc, si) => {
+                            const { primaryStatus } = getInventoryDisplayStatus(si, rentals, today)
+                            acc[primaryStatus] = (acc[primaryStatus] || 0) + 1
+                            return acc
+                          }, {} as Record<string, number>)
+                          
+                          const parts = []
+                          if (statusCounts.available) parts.push(`ว่าง ${statusCounts.available}`)
+                          if (statusCounts.booked) parts.push(`มีคิวจอง ${statusCounts.booked}`)
+                          if (statusCounts.rented) parts.push(`ถูกเช่า ${statusCounts.rented}`)
+                          if (statusCounts.repair) parts.push(`ซ่อม ${statusCounts.repair}`)
+                          if (statusCounts.wash) parts.push(`ซัก ${statusCounts.wash}`)
+                          
+                          return <span><strong>สถานะรวม:</strong> {parts.join(' | ')}</span>
+                        })()}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="stock-card-actions" style={{ marginTop: 'auto', background: 'rgba(0,0,0,0.2)', padding: '12px' }}>
+                  <div className="stock-card-actions" style={{ marginTop: 'auto', background: 'rgba(0,0,0,0.2)', padding: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      className="primary-button compact"
+                      type="button"
+                      onClick={() => setSelectedProductForDrawerId(product.id)}
+                      style={{ flexGrow: 1, padding: '8px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                    >
+                      ⚙️ จัดการชุดย่อย
+                    </button>
                     <button
                       className={`stock-card-visibility-toggle ${product.publicVisible ? 'active' : ''}`}
                       type="button"
                       onClick={() => onTogglePublicVisibility(product.id, !product.publicVisible)}
+                      style={{ padding: '8px 10px', fontSize: '0.85rem', minWidth: '40px', flex: 'none', justifyContent: 'center' }}
+                      title={product.publicVisible ? 'ซ่อนจากเว็บ' : 'โชว์หน้าเว็บ'}
                     >
                       {product.publicVisible ? <Eye size={15} /> : <EyeOff size={15} />}
-                      <span>{product.publicVisible ? 'ซ่อนจากเว็บ' : 'โชว์หน้าเว็บ'}</span>
                     </button>
-                    <div className="stock-card-action-buttons">
-                      <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไขชุดหลัก">
-                        <Pencil size={15} />
-                      </button>
-                      <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุดหลัก">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไขชุดหลัก" style={{ flex: 'none' }}>
+                      <Pencil size={15} />
+                    </button>
+                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุดหลัก" style={{ flex: 'none' }}>
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </div>
               )
@@ -577,36 +603,19 @@ export function InventoryPage({
           </section>
         </div>
       )}
+
+      {activeDrawerProduct && (
+        <StockManagementDrawer
+          product={activeDrawerProduct}
+          rentals={rentals}
+          today={today}
+          onClose={() => setSelectedProductForDrawerId(null)}
+          onAddStock={onAddStock}
+          onDeleteVariant={onDeleteVariant}
+          onUpdateStatus={onUpdateStatus}
+        />
+      )}
     </>
-  )
-}
-
-function VariantAdder({ sizes, onAdd }: { sizes: string[], onAdd: (size: string, quantity: number) => void }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [size, setSize] = useState('S')
-  const [qty, setQty] = useState(1)
-
-  if (!isOpen) {
-    return (
-      <button 
-        type="button" 
-        onClick={() => setIsOpen(true)} 
-        style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', padding: '4px 8px', background: 'rgba(218, 165, 32, 0.1)', color: 'var(--text-gold)', border: '1px solid rgba(218, 165, 32, 0.2)', borderRadius: '4px', cursor: 'pointer' }}
-      >
-        <PackagePlus size={14} /> เติมสต๊อก
-      </button>
-    )
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-      <select value={size} onChange={e => setSize(e.target.value)} style={{ padding: '2px', fontSize: '0.75rem', borderRadius: '4px' }}>
-        {sizes.map(sz => <option key={sz} value={sz}>{sz}</option>)}
-      </select>
-      <input type="number" min="1" value={qty} onChange={e => setQty(parseInt(e.target.value) || 1)} style={{ width: '40px', padding: '2px', fontSize: '0.75rem', borderRadius: '4px' }} />
-      <button type="button" onClick={() => { onAdd(size, qty); setIsOpen(false) }} style={{ padding: '2px 8px', fontSize: '0.75rem', background: 'var(--primary-glow)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>เติม</button>
-      <button type="button" onClick={() => setIsOpen(false)} style={{ padding: '2px', fontSize: '0.75rem', background: 'none', color: 'var(--text-muted)', border: 'none', cursor: 'pointer' }}><X size={14} /></button>
-    </div>
   )
 }
 
