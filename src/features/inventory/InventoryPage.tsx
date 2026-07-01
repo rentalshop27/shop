@@ -19,7 +19,6 @@ import {
   Trash2,
   X,
   PlusCircle,
-  PackagePlus,
 } from 'lucide-react'
 import { getInventoryDisplayStatus } from './inventoryStatus'
 import { StockManagementDrawer } from './StockManagementDrawer'
