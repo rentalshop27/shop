@@ -9,6 +9,7 @@ export type StockManagementDrawerProps = {
   product: ProductWithStockSummary
   rentals: RentalOrder[]
   today: string
+  isSaving: boolean
   onClose: () => void
   onAddStock: (productId: string, size: string, quantity: number) => void
   onDeleteVariant: (productId: string, stockId: string) => void
@@ -21,6 +22,7 @@ export function StockManagementDrawer({
   product,
   rentals,
   today,
+  isSaving,
   onClose,
   onAddStock,
   onDeleteVariant,
@@ -99,6 +101,7 @@ export function StockManagementDrawer({
             <select 
               value={addSize} 
               onChange={e => setAddSize(e.target.value)} 
+              disabled={isSaving}
               style={{ padding: '8px 12px', borderRadius: '6px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)', flexGrow: 1 }}
             >
               {SIZES.map(sz => <option key={sz} value={sz}>{sz}</option>)}
@@ -108,11 +111,13 @@ export function StockManagementDrawer({
               min="1" 
               value={addQty} 
               onChange={e => setAddQty(parseInt(e.target.value) || 1)} 
+              disabled={isSaving}
               style={{ width: '70px', padding: '8px 12px', borderRadius: '6px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }} 
             />
             <button 
               type="button" 
               onClick={handleAddStock} 
+              disabled={isSaving}
               className="primary-button compact" 
               style={{ padding: '8px 16px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
             >
@@ -149,6 +154,7 @@ export function StockManagementDrawer({
                         <select 
                           value={si.status} 
                           onChange={(e) => onUpdateStatus(product.id, si.id, e.target.value as StockItemStatus)}
+                          disabled={isSaving}
                           style={{ fontSize: '0.8rem', padding: '4px 8px', borderRadius: '4px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }}
                         >
                           <option value="available">ว่าง</option>
@@ -160,6 +166,7 @@ export function StockManagementDrawer({
                         <button 
                           type="button" 
                           onClick={() => onDeleteVariant(product.id, si.id)} 
+                          disabled={isSaving}
                           style={{ background: 'none', border: 'none', color: 'var(--danger-glow)', cursor: 'pointer', padding: '4px', marginLeft: '4px' }}
                           title="ลบตัวชุดนี้"
                         >

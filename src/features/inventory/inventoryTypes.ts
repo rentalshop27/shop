@@ -15,6 +15,8 @@ export type Product = {
   depositAmount: number
   imageUrls: string[]
   publicVisible: boolean
+  isFeatured: boolean
+  displayOrder: number
   createdAt: string
 }
 
@@ -51,6 +53,8 @@ export type FlatStockItem = StockItem & {
   depositAmount: number
   imageUrls: string[]
   publicVisible: boolean
+  isFeatured: boolean
+  displayOrder: number
   serialNumber?: string
   setCount?: number
 }
@@ -74,6 +78,8 @@ export type ProductDraft = {
   depositAmount: string
   imageUrls: string[]
   publicVisible: boolean
+  isFeatured: boolean
+  displayOrder: number
   variants: SizeVariant[]
 }
 

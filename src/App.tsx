@@ -49,6 +49,8 @@ import {
   updateShopSettings,
   loadShopSettings,
   uploadShopHeroImage,
+  updateRemoteProductFeatured,
+  bulkUpdateRemoteDisplayOrder,
 } from './features/inventory/stockRemote'
 import type {
   ProductWithStockSummary,
@@ -548,6 +550,40 @@ function PrivateApp() {
       setPublicCatalogEnabled(!enabled)
       console.error('Failed to save public catalog setting:', err)
       window.alert('บันทึกการตั้งค่า public catalog ล้มเหลว: ' + getErrorMessage(err))
+    }
+  }
+
+  const handleToggleFeatured = async (productId: string, isFeatured: boolean) => {
+    if (!currentShop || !supabase) return
+    try {
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, isFeatured } : p))
+      await updateRemoteProductFeatured(supabase, currentShop.id, productId, isFeatured)
+    } catch (err: any) {
+      console.error(err)
+      alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะปักหมุด')
+      // revert on error (simplified)
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, isFeatured: !isFeatured } : p))
+    }
+  }
+
+  const handleSaveDisplayOrder = async (orderedIds: string[]) => {
+    if (!currentShop || !supabase) return
+    try {
+      const updates = orderedIds.map((id, index) => ({ id, displayOrder: index }))
+      // Optimistic update
+      setProducts(prev => {
+        const orderMap = new Map(updates.map(u => [u.id, u.displayOrder]))
+        return [...prev].map(p => ({
+          ...p,
+          displayOrder: orderMap.has(p.id) ? orderMap.get(p.id)! : p.displayOrder
+        }))
+      })
+      await bulkUpdateRemoteDisplayOrder(supabase, updates)
+      alert('บันทึกลำดับชุดสำเร็จ')
+    } catch (err: any) {
+      console.error(err)
+      alert('เกิดข้อผิดพลาดในการบันทึกลำดับชุด')
+      // Ideal: reload products from server on error
     }
   }
 
@@ -1722,6 +1758,8 @@ function PrivateApp() {
                 rentalPricePerDay: p.rentalPricePerDay,
                 imageUrls: p.imageUrls,
                 publicVisible: p.publicVisible,
+                isFeatured: p.isFeatured,
+                displayOrder: p.displayOrder,
                 createdAt: p.createdAt,
                 sizeSummary: Object.values(
                   p.stockItems.reduce((acc, si) => {
@@ -1746,6 +1784,9 @@ function PrivateApp() {
               isUploadingHeroBackground={isCatalogHeroUploading}
               isUploadingMobileHeroBackground={isCatalogMobileHeroUploading}
               onBackToInventory={() => setActiveTab('inventory')}
+              isAdminMode={true}
+              onToggleFeatured={handleToggleFeatured}
+              onSaveOrder={handleSaveDisplayOrder}
             />
           )}
 

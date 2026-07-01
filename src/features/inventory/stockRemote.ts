@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ProductWithStockSummary, StockItemStatus, ProductDraft } from './inventoryTypes'
 
+const COSTUMES_BUCKET = 'costumes'
+const COSTUMES_PUBLIC_PATH = `/storage/v1/object/public/${COSTUMES_BUCKET}/`
+
 export async function loadProductsWithStock(supabase: SupabaseClient, shopId: string): Promise<ProductWithStockSummary[]> {
   const { data: productsData, error: productsError } = await supabase
     .from('products')
@@ -29,14 +32,10 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
     rentalPricePerDay: Number(row.rental_price_per_day) || 0,
     lateFeeRule: row.late_fee_rule ?? '',
     depositAmount: Number(row.deposit_amount) || 0,
-    imageUrls: (row.image_urls ?? []).map((url: string) => {
-      if (url.includes('/storage/v1/object/public/costumes/')) {
-        const path = url.split('/storage/v1/object/public/costumes/')[1]
-        return supabase.storage.from('costumes').getPublicUrl(path).data.publicUrl
-      }
-      return url
-    }),
+    imageUrls: (row.image_urls ?? []).map((imageRef: string) => toPublicCostumeUrl(supabase, imageRef)),
     publicVisible: row.public_visible,
+    isFeatured: row.is_featured,
+    displayOrder: row.display_order,
     createdAt: row.created_at,
     stockItems: []
   }))
@@ -61,28 +60,65 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
   return products
 }
 
-async function uploadProductImages(supabase: SupabaseClient, shopId: string, productId: string, dataUrls: string[]) {
+function toPublicCostumeUrl(supabase: SupabaseClient, imageRef: string) {
+  const storagePath = extractCostumeStoragePath(imageRef)
+  if (!storagePath) return imageRef
+  return supabase.storage.from(COSTUMES_BUCKET).getPublicUrl(storagePath).data.publicUrl
+}
+
+function extractCostumeStoragePath(imageRef: string | null | undefined) {
+  if (!imageRef) return null
+  if (!imageRef.includes('://') && !imageRef.startsWith('data:')) return imageRef
+  const publicPathIndex = imageRef.indexOf(COSTUMES_PUBLIC_PATH)
+  if (publicPathIndex === -1) return null
+  return imageRef.slice(publicPathIndex + COSTUMES_PUBLIC_PATH.length)
+}
+
+async function cleanupUploadedProductImagePaths(supabase: SupabaseClient, storagePaths: string[]) {
+  if (storagePaths.length === 0) return
+
+  const { error } = await supabase.storage.from(COSTUMES_BUCKET).remove(storagePaths)
+  if (error) {
+    console.warn('Failed to delete product images after upload error:', storagePaths, error)
+  }
+}
+
+async function cleanupDeletedProductImagePaths(supabase: SupabaseClient, storagePaths: string[]) {
+  if (storagePaths.length === 0) return
+
+  const { error } = await supabase.storage.from(COSTUMES_BUCKET).remove(storagePaths)
+  if (error) {
+    console.warn('Failed to delete product images after metadata update:', storagePaths, error)
+  }
+}
+
+async function uploadProductImages(supabase: SupabaseClient, shopId: string, productId: string, imageRefs: string[]) {
   const uploadedPaths: string[] = []
-  const paths = await Promise.all(
-    dataUrls.map(async (url, index) => {
-      if (!url.startsWith('data:')) return url
-      try {
-        const res = await fetch(url)
-        const blob = await res.blob()
-        const ext = blob.type === 'image/jpeg' ? 'jpg' : blob.type === 'image/webp' ? 'webp' : 'png'
-        const filename = `${productId}-${index}-${Date.now()}.${ext}`
-        const storagePath = `${shopId}/${filename}`
-        const { error } = await supabase.storage.from('costumes').upload(storagePath, blob, { upsert: false })
-        if (error) throw error
-        uploadedPaths.push(storagePath)
-        const { data } = supabase.storage.from('costumes').getPublicUrl(storagePath)
-        return data.publicUrl
-      } catch (e) {
-        console.error('Upload failed', e)
-        return url
+  const paths: string[] = []
+
+  try {
+    for (const [index, imageRef] of imageRefs.entries()) {
+      if (!imageRef.startsWith('data:')) {
+        paths.push(extractCostumeStoragePath(imageRef) ?? imageRef)
+        continue
       }
-    })
-  )
+
+      const response = await fetch(imageRef)
+      const blob = await response.blob()
+      const ext = blob.type === 'image/jpeg' ? 'jpg' : blob.type === 'image/webp' ? 'webp' : 'png'
+      const filename = `${productId}-${index}-${Date.now()}.${ext}`
+      const storagePath = `${shopId}/${filename}`
+      const { error } = await supabase.storage.from(COSTUMES_BUCKET).upload(storagePath, blob, { upsert: false })
+      if (error) throw error
+
+      uploadedPaths.push(storagePath)
+      paths.push(storagePath)
+    }
+  } catch (error) {
+    await cleanupUploadedProductImagePaths(supabase, uploadedPaths)
+    throw error
+  }
+
   return { paths, uploadedPaths }
 }
 
@@ -102,7 +138,9 @@ export async function createProductWithVariants(supabase: SupabaseClient, shopId
     late_fee_rule: draft.lateFeeRule,
     deposit_amount: Number(draft.depositAmount) || 0,
     image_urls: paths,
-    public_visible: draft.publicVisible
+    public_visible: draft.publicVisible,
+    is_featured: draft.isFeatured,
+    display_order: draft.displayOrder
   }
 
   const { error: rpcError } = await supabase.rpc('create_product_with_variants', {
@@ -112,9 +150,7 @@ export async function createProductWithVariants(supabase: SupabaseClient, shopId
   })
   
   if (rpcError) {
-    if (uploadedPaths.length > 0) {
-      await supabase.storage.from('costumes').remove(uploadedPaths)
-    }
+    await cleanupUploadedProductImagePaths(supabase, uploadedPaths)
     throw rpcError
   }
 }
@@ -129,8 +165,17 @@ export async function addStockToVariant(supabase: SupabaseClient, shopId: string
   if (error) throw error
 }
 
-export async function updateRemoteProduct(supabase: SupabaseClient, shopId: string, productId: string, draft: Omit<ProductDraft, 'variants' | 'baseSku'>, /* oldImageUrls */) {
+export async function updateRemoteProduct(
+  supabase: SupabaseClient,
+  shopId: string,
+  productId: string,
+  draft: Omit<ProductDraft, 'variants' | 'baseSku'>,
+  oldImageUrls: string[] = [],
+) {
   const { paths, uploadedPaths } = await uploadProductImages(supabase, shopId, productId, draft.imageUrls)
+  const previousPaths = oldImageUrls
+    .map((imageUrl) => extractCostumeStoragePath(imageUrl))
+    .filter((path): path is string => Boolean(path))
   const { error } = await supabase.from('products').update({
     product_name: draft.productName,
     brand: draft.brand,
@@ -142,47 +187,82 @@ export async function updateRemoteProduct(supabase: SupabaseClient, shopId: stri
     deposit_amount: Number(draft.depositAmount) || 0,
     image_urls: paths,
     public_visible: draft.publicVisible,
+    is_featured: draft.isFeatured,
+    display_order: draft.displayOrder,
     updated_at: new Date().toISOString()
-  }).eq('id', productId)
+  }).eq('id', productId).eq('shop_id', shopId)
   if (error) {
-    if (uploadedPaths.length > 0) {
-      await supabase.storage.from('costumes').remove(uploadedPaths)
-    }
+    await cleanupUploadedProductImagePaths(supabase, uploadedPaths)
     throw error
   }
+
+  const nextPathSet = new Set(paths)
+  const deletedPaths = previousPaths.filter((path) => !nextPathSet.has(path))
+  await cleanupDeletedProductImagePaths(supabase, deletedPaths)
 }
 
-export async function deleteRemoteProduct(supabase: SupabaseClient, /* shopId */ _shopId: string, productId: string, /* imageUrls */ _imageUrls?: string[]) {
-  const { error } = await supabase.from('products').delete().eq('id', productId)
+export async function deleteRemoteProduct(supabase: SupabaseClient, shopId: string, productId: string, imageUrls: string[] = []) {
+  const { error } = await supabase.from('products').delete().eq('id', productId).eq('shop_id', shopId)
+  if (error) throw error
+
+  const storagePaths = imageUrls
+    .map((imageUrl) => extractCostumeStoragePath(imageUrl))
+    .filter((path): path is string => Boolean(path))
+  await cleanupDeletedProductImagePaths(supabase, storagePaths)
+}
+
+export async function deleteRemoteStockItem(supabase: SupabaseClient, shopId: string, stockItemId: string) {
+  const { error } = await supabase.from('stock_items').delete().eq('id', stockItemId).eq('shop_id', shopId)
   if (error) throw error
 }
 
-export async function deleteRemoteStockItem(supabase: SupabaseClient, /* shopId */ _shopId: string, stockItemId: string) {
-  const { error } = await supabase.from('stock_items').delete().eq('id', stockItemId)
+export async function updateRemoteProductPublicVisibility(supabase: SupabaseClient, shopId: string, productId: string, visible: boolean) {
+  const { error } = await supabase.from('products').update({ public_visible: visible }).eq('id', productId).eq('shop_id', shopId)
   if (error) throw error
 }
 
-export async function updateRemoteProductPublicVisibility(supabase: SupabaseClient, _shopId: string, productId: string, visible: boolean) {
-  const { error } = await supabase.from('products').update({ public_visible: visible }).eq('id', productId)
+export async function updateRemoteProductFeatured(supabase: SupabaseClient, shopId: string, productId: string, isFeatured: boolean) {
+  const { error } = await supabase.from('products').update({ is_featured: isFeatured }).eq('id', productId).eq('shop_id', shopId)
   if (error) throw error
 }
 
-export async function updateRemoteStockItemStatus(supabase: SupabaseClient, /* shopId */ _shopId: string, stockItemId: string, status: StockItemStatus) {
-  const { error } = await supabase.from('stock_items').update({ status }).eq('id', stockItemId)
+export async function bulkUpdateRemoteDisplayOrder(
+  supabase: SupabaseClient,
+  updates: { id: string; displayOrder: number }[]
+) {
+  const payload = updates.map(u => ({ id: u.id, display_order: u.displayOrder }))
+  const { error } = await supabase.rpc('bulk_update_display_order', { p_updates: payload })
   if (error) throw error
 }
 
-export async function countRemoteRentalsForProduct(supabase: SupabaseClient, _shopId: string, productId: string): Promise<number> {
-  const { data: stockItems } = await supabase.from('stock_items').select('id').eq('product_id', productId)
+export async function updateRemoteStockItemStatus(supabase: SupabaseClient, shopId: string, stockItemId: string, status: StockItemStatus) {
+  const { error } = await supabase.from('stock_items').update({ status }).eq('id', stockItemId).eq('shop_id', shopId)
+  if (error) throw error
+}
+
+export async function countRemoteRentalsForProduct(supabase: SupabaseClient, shopId: string, productId: string): Promise<number> {
+  const { data: stockItems } = await supabase
+    .from('stock_items')
+    .select('id')
+    .eq('product_id', productId)
+    .eq('shop_id', shopId)
   if (!stockItems || stockItems.length === 0) return 0
   const ids = stockItems.map(s => s.id)
-  const { count: rentalCount, error: rError } = await supabase.from('rentals').select('*', { count: 'exact', head: true }).in('stock_item_id', ids)
+  const { count: rentalCount, error: rError } = await supabase
+    .from('rentals')
+    .select('*', { count: 'exact', head: true })
+    .eq('shop_id', shopId)
+    .in('stock_item_id', ids)
   if (rError) throw rError
   return rentalCount || 0
 }
 
-export async function countRemoteRentalsForStockItem(supabase: SupabaseClient, /* shopId */ _shopId: string, stockItemId: string): Promise<number> {
-  const { count, error } = await supabase.from('rentals').select('*', { count: 'exact', head: true }).eq('stock_item_id', stockItemId)
+export async function countRemoteRentalsForStockItem(supabase: SupabaseClient, shopId: string, stockItemId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('rentals')
+    .select('*', { count: 'exact', head: true })
+    .eq('shop_id', shopId)
+    .eq('stock_item_id', stockItemId)
   if (error) throw error
   return count || 0
 }

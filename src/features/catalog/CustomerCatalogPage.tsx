@@ -1,5 +1,8 @@
-import { type CSSProperties, type ChangeEvent, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, ExternalLink, Heart, ImagePlus, LayoutGrid, LayoutList, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { type CSSProperties, type ChangeEvent, useMemo, useState, useEffect } from 'react'
+import { ChevronLeft, ChevronRight, ExternalLink, Heart, ImagePlus, LayoutGrid, LayoutList, Search, SlidersHorizontal, Trash2, X, Pin, GripVertical, Save, Pencil } from 'lucide-react'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
@@ -15,6 +18,8 @@ export type CatalogDisplayItem = {
   rentalPricePerDay: number
   imageUrls: string[]
   publicVisible?: boolean
+  isFeatured?: boolean
+  displayOrder?: number
   createdAt?: string
   sizeSummary?: { size: string; total: number; available: number }[]
   
@@ -45,6 +50,9 @@ type CustomerCatalogPageProps = {
   isUploadingHeroBackground?: boolean
   isUploadingMobileHeroBackground?: boolean
   onBackToInventory?: () => void
+  isAdminMode?: boolean
+  onToggleFeatured?: (id: string, isFeatured: boolean) => void
+  onSaveOrder?: (orderedIds: string[]) => void
 }
 
 export function CustomerCatalogPage({
@@ -62,6 +70,9 @@ export function CustomerCatalogPage({
   isUploadingHeroBackground = false,
   isUploadingMobileHeroBackground = false,
   onBackToInventory,
+  isAdminMode = false,
+  onToggleFeatured,
+  onSaveOrder,
 }: CustomerCatalogPageProps) {
   const [query, setQuery] = useState('')
   const [brandFilter, setBrandFilter] = useState('all')
@@ -74,6 +85,39 @@ export function CustomerCatalogPage({
   const [selectedItem, setSelectedItem] = useState<CatalogDisplayItem | null>(null)
   const [wishlist, setWishlist] = useState<Set<string>>(new Set())
   const [imageIndex, setImageIndex] = useState(0)
+
+  // Edit Mode State
+  const [isEditModeActive, setIsEditModeActive] = useState(false)
+  const [orderedItemIds, setOrderedItemIds] = useState<string[]>([])
+  const [hasOrderChanged, setHasOrderChanged] = useState(false)
+
+  // Sync orderedItemIds when items change (e.g. initial load)
+  useEffect(() => {
+    setOrderedItemIds(items.map(item => item.id!).filter(Boolean))
+    setHasOrderChanged(false)
+  }, [items])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    setOrderedItemIds((items) => {
+      const oldIndex = items.indexOf(active.id as string)
+      const newIndex = items.indexOf(over.id as string)
+      return arrayMove(items, oldIndex, newIndex)
+    })
+    setHasOrderChanged(true)
+  }
+
+  function handleSaveOrder() {
+    if (!onSaveOrder) return
+    onSaveOrder(orderedItemIds)
+    setHasOrderChanged(false)
+  }
 
   const today = getTodayString()
   const heroTitle = getCatalogHeroTitle(shopName)
@@ -160,6 +204,13 @@ export function CustomerCatalogPage({
       result = [...result].sort((a, b) => b.rentalPricePerDay - a.rentalPricePerDay)
     } else if (sortKey === 'newest') {
       result = [...result].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    } else {
+      // recommended
+      result = [...result].sort((a, b) => {
+        if (a.isFeatured !== b.isFeatured) return a.isFeatured ? -1 : 1
+        if ((a.displayOrder ?? 0) !== (b.displayOrder ?? 0)) return (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+        return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+      })
     }
 
     return result
@@ -465,62 +516,104 @@ export function CustomerCatalogPage({
         className={`prc-grid ${viewMode === 'list' ? 'prc-grid--list' : ''}`}
         aria-label="รายการชุดสำหรับลูกค้า"
       >
-        {filteredItems.map((item, index) => {
-          const availability = getCatalogAvailability(item, rentals, today)
-          const itemKey = `${item.productName}-${item.createdAt}-${index}`
-          const inWishlist = wishlist.has(item.productName)
-          
-          let sizeDisplay = ''
-          if (item.sizeSummary) {
-            sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
-          } else if (item.size) {
-            sizeDisplay = item.size
-          }
+        {isAdminMode && (
+          <div className="prc-admin-toolbar">
+            <button 
+              className={`prc-edit-mode-btn ${isEditModeActive ? 'active' : ''}`}
+              onClick={() => setIsEditModeActive(!isEditModeActive)}
+            >
+              <Pencil size={16} />
+              {isEditModeActive ? 'ปิดโหมดจัดเรียง' : 'โหมดจัดเรียง (Edit Mode)'}
+            </button>
+            {isEditModeActive && hasOrderChanged && (
+              <button className="prc-save-order-btn" onClick={handleSaveOrder}>
+                <Save size={16} />
+                บันทึกลำดับใหม่
+              </button>
+            )}
+          </div>
+        )}
 
-          return (
-            <article className="prc-card" key={itemKey}>
-              <div className="prc-card-image">
-                {item.imageUrls.length > 0 ? (
-                  <img src={item.imageUrls[0]} alt={item.productName} loading="lazy" />
-                ) : (
-                  <div className="prc-card-placeholder">
-                    <span>PRECIOUS</span>
-                  </div>
-                )}
-                <span className={`prc-badge prc-badge--${availability}`}>
-                  {availability === 'available' ? 'พร้อมให้เช่า' : 'ไม่ว่าง'}
-                </span>
-                <button
-                  className={`prc-wishlist-btn ${inWishlist ? 'prc-wishlist-btn--active' : ''}`}
-                  type="button"
-                  aria-label="เพิ่มในรายการโปรด"
-                  onClick={() => toggleWishlist(item.productName)}
-                >
-                  <Heart size={16} fill={inWishlist ? 'currentColor' : 'none'} />
-                </button>
-              </div>
-              <div className="prc-card-body">
-                <p className="prc-card-brand">{item.brand?.toUpperCase() || 'PRECIOUS'}</p>
-                <h2 className="prc-card-name">{item.productName}</h2>
-                <div className="prc-card-footer">
-                  <div className="prc-card-price-block">
-                    <span className="prc-card-price">{formatBaht(item.rentalPricePerDay)}</span>
-                    {sizeDisplay && <span className="prc-card-size">ไซซ์ {sizeDisplay}</span>}
-                  </div>
-                  <div className="prc-card-actions">
-                    <button
-                      className="prc-detail-btn"
-                      type="button"
-                      onClick={() => openDetail(item)}
-                    >
-                      ดูรายละเอียด
-                    </button>
-                  </div>
+        {isEditModeActive ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={orderedItemIds} strategy={rectSortingStrategy}>
+              {orderedItemIds.map((id) => {
+                const item = filteredItems.find(i => i.id === id)
+                if (!item) return null
+                const availability = getCatalogAvailability(item, rentals, today)
+                let sizeDisplay = ''
+                if (item.sizeSummary) sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
+                else if (item.size) sizeDisplay = item.size
+
+                return (
+                  <SortableCatalogCard
+                    key={item.id}
+                    id={item.id!}
+                    item={item}
+                    availability={availability}
+                    inWishlist={wishlist.has(item.productName)}
+                    sizeDisplay={sizeDisplay}
+                    isEditModeActive={true}
+                    onToggleFeatured={onToggleFeatured}
+                  />
+                )
+              })}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <>
+            {filteredItems.some(i => i.isFeatured) && sortKey === 'recommended' && (
+              <div className="prc-recommended-section">
+                <h2 className="prc-recommended-title">Precious Recommended ✨</h2>
+                <div className="prc-recommended-carousel">
+                  {filteredItems.filter(i => i.isFeatured).map((item, index) => {
+                    const availability = getCatalogAvailability(item, rentals, today)
+                    const itemKey = `rec-${item.productName}-${item.createdAt}-${index}`
+                    let sizeDisplay = ''
+                    if (item.sizeSummary) sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
+                    else if (item.size) sizeDisplay = item.size
+
+                    return (
+                      <CatalogCardBase
+                        key={itemKey}
+                        item={item}
+                        availability={availability}
+                        inWishlist={wishlist.has(item.productName)}
+                        sizeDisplay={sizeDisplay}
+                        onToggleWishlist={() => toggleWishlist(item.productName)}
+                        onOpenDetail={() => openDetail(item)}
+                      />
+                    )
+                  })}
                 </div>
               </div>
-            </article>
-          )
-        })}
+            )}
+            
+            {filteredItems.some(i => i.isFeatured) && sortKey === 'recommended' && (
+              <h2 className="prc-all-items-title">ชุดทั้งหมด</h2>
+            )}
+
+            {filteredItems.map((item, index) => {
+              const availability = getCatalogAvailability(item, rentals, today)
+              const itemKey = `${item.productName}-${item.createdAt}-${index}`
+              let sizeDisplay = ''
+              if (item.sizeSummary) sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
+              else if (item.size) sizeDisplay = item.size
+
+              return (
+                <CatalogCardBase
+                  key={itemKey}
+                  item={item}
+                  availability={availability}
+                  inWishlist={wishlist.has(item.productName)}
+                  sizeDisplay={sizeDisplay}
+                  onToggleWishlist={() => toggleWishlist(item.productName)}
+                  onOpenDetail={() => openDetail(item)}
+                />
+              )
+            })}
+          </>
+        )}
 
         {filteredItems.length === 0 && (
           <div className="prc-empty">
@@ -752,4 +845,116 @@ function formatBaht(value: number) {
     currency: 'THB',
     maximumFractionDigits: 0,
   }).format(value)
+}
+
+function CatalogCardBase({
+  item,
+  availability,
+  inWishlist,
+  sizeDisplay,
+  onToggleWishlist,
+  onOpenDetail,
+  isEditModeActive,
+  onToggleFeatured,
+}: {
+  item: CatalogDisplayItem
+  availability: 'available' | 'unavailable'
+  inWishlist: boolean
+  sizeDisplay: string
+  onToggleWishlist?: () => void
+  onOpenDetail?: () => void
+  isEditModeActive?: boolean
+  onToggleFeatured?: (id: string, isFeatured: boolean) => void
+}) {
+  return (
+    <article className="prc-card">
+      <div className="prc-card-image">
+        {item.imageUrls.length > 0 ? (
+          <img src={item.imageUrls[0]} alt={item.productName} loading="lazy" />
+        ) : (
+          <div className="prc-card-placeholder">
+            <span>PRECIOUS</span>
+          </div>
+        )}
+        <span className={`prc-badge prc-badge--${availability}`}>
+          {availability === 'available' ? 'พร้อมให้เช่า' : 'ไม่ว่าง'}
+        </span>
+        {!isEditModeActive ? (
+          <button
+            className={`prc-wishlist-btn ${inWishlist ? 'prc-wishlist-btn--active' : ''}`}
+            type="button"
+            aria-label="เพิ่มในรายการโปรด"
+            onClick={onToggleWishlist}
+          >
+            <Heart size={16} fill={inWishlist ? 'currentColor' : 'none'} />
+          </button>
+        ) : (
+          <div className="prc-edit-overlay">
+            <div className="prc-edit-drag-handle">
+              <GripVertical size={20} />
+              <span>ลาก</span>
+            </div>
+            <button
+              className={`prc-edit-pin-btn ${item.isFeatured ? 'pinned' : ''}`}
+              onClick={() => onToggleFeatured?.(item.id!, !item.isFeatured)}
+            >
+              <Pin size={20} fill={item.isFeatured ? 'currentColor' : 'none'} />
+              <span>{item.isFeatured ? 'ปักหมุดแล้ว' : 'ปักหมุด'}</span>
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="prc-card-body">
+        {isEditModeActive && item.isFeatured && (
+          <div className="prc-card-pinned-badge">
+            <Pin size={12} fill="currentColor" /> แนะนำ
+          </div>
+        )}
+        <p className="prc-card-brand">{item.brand?.toUpperCase() || 'PRECIOUS'}</p>
+        <h2 className="prc-card-name">{item.productName}</h2>
+        <div className="prc-card-footer">
+          <div className="prc-card-price-block">
+            <span className="prc-card-price">{formatBaht(item.rentalPricePerDay)}</span>
+            {sizeDisplay && <span className="prc-card-size">ไซซ์ {sizeDisplay}</span>}
+          </div>
+          <div className="prc-card-actions">
+            {!isEditModeActive && (
+              <button
+                className="prc-detail-btn"
+                type="button"
+                onClick={onOpenDetail}
+              >
+                ดูรายละเอียด
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function SortableCatalogCard(props: Parameters<typeof CatalogCardBase>[0] & { id: string }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: props.id })
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 1 : 0
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <CatalogCardBase {...props} />
+    </div>
+  )
 }

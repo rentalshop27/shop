@@ -107,12 +107,12 @@ describe('CustomerCatalogPage filters', () => {
       />,
     )
 
-    const hero = container.querySelector('.prc-hero')
+    const hero = container.querySelector('.prc-hero') as HTMLElement | null
 
     expect(hero).not.toBeNull()
     if (!hero) return
-    expect(hero).toHaveStyle('--prc-hero-bg-image: url("https://example.com/hero.webp")')
-    expect(hero).toHaveStyle('--prc-hero-mobile-bg-image: url("https://example.com/mobile-hero.webp")')
+    expect(hero.style.getPropertyValue('--prc-hero-bg-image')).toBe("url('https://example.com/hero.webp')")
+    expect(hero.style.getPropertyValue('--prc-hero-mobile-bg-image')).toBe("url('https://example.com/mobile-hero.webp')")
     expect(hero.getAttribute('style')).not.toContain('linear-gradient')
   })
 })

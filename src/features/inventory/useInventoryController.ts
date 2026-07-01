@@ -29,6 +29,8 @@ const emptyProductDraft: ProductDraft = {
   depositAmount: '',
   imageUrls: [],
   publicVisible: false,
+  isFeatured: false,
+  displayOrder: 0,
   variants: [],
 }
 
@@ -328,11 +330,13 @@ export function useInventoryController({
     try {
       if (supabase && isAuthenticated && shopId) {
         if (editingProductId) {
+          const currentProduct = products.find((product) => product.id === editingProductId)
           await updateRemoteProduct(
             supabase,
             shopId,
             editingProductId,
-            normalizedDraft
+            normalizedDraft,
+            currentProduct?.imageUrls ?? [],
           )
         } else {
           await createProductWithVariants(supabase, shopId, normalizedDraft)
@@ -401,6 +405,8 @@ function toEditableProductDraft(product: ProductWithStockSummary): ProductDraft 
     depositAmount: product.depositAmount ? String(product.depositAmount) : '',
     imageUrls: product.imageUrls ?? [],
     publicVisible: product.publicVisible,
+    isFeatured: product.isFeatured,
+    displayOrder: product.displayOrder,
     variants: [], // Editing happens at product level, variants are managed separately in cards
   }
 }

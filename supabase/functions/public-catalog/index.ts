@@ -19,6 +19,8 @@ type ProductRow = {
   public_description: string
   rental_price_per_day: number
   image_urls: string[]
+  is_featured: boolean
+  display_order: number
   stock_items: {
     id: string
     size: string
@@ -107,6 +109,8 @@ Deno.serve(async (request) => {
         public_description,
         rental_price_per_day,
         image_urls,
+        is_featured,
+        display_order,
         stock_items (
           id,
           size,
@@ -115,6 +119,8 @@ Deno.serve(async (request) => {
       `)
       .eq('shop_id', shopId)
       .eq('public_visible', true)
+      .order('is_featured', { ascending: false })
+      .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
 
     if (productError) throw productError
@@ -168,6 +174,7 @@ Deno.serve(async (request) => {
         stats.total += 1
         
         const isRented = bookedStockIds.has(si.id)
+        // Note: For future soft-delete/archived, add `&& si.status !== 'archived'` here
         if (si.status === 'available' && !isRented) {
           stats.available += 1
         }
@@ -191,6 +198,8 @@ Deno.serve(async (request) => {
         publicDescription: row.public_description ?? '',
         rentalPricePerDay: Number(row.rental_price_per_day) || 0,
         imageUrls: imageUrls.filter(Boolean),
+        isFeatured: row.is_featured,
+        displayOrder: row.display_order,
         sizeSummary,
       }
     }))

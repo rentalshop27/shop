@@ -647,6 +647,7 @@ export function InventoryPage({
           product={activeDrawerProduct}
           rentals={rentals}
           today={today}
+          isSaving={isSaving}
           onClose={() => setSelectedProductForDrawerId(null)}
           onAddStock={onAddStock}
           onDeleteVariant={onDeleteVariant}

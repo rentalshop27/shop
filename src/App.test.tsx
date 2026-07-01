@@ -6,7 +6,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 const {
   loadAccessibleShops,
   loadCustomers,
-  loadStockItems,
+  loadProductsWithStock,
   loadShopSettings,
   loadRentals,
   loadAuditLogs,
@@ -18,13 +18,13 @@ const {
     callback: null as null | ((event: string, session: { user: { id: string; email?: string } } | null) => void),
   }
 
-  return {
-    loadAccessibleShops: vi.fn(),
-    loadCustomers: vi.fn(),
-    loadStockItems: vi.fn(),
-    loadShopSettings: vi.fn(),
-    loadRentals: vi.fn(),
-    loadAuditLogs: vi.fn(),
+    return {
+      loadAccessibleShops: vi.fn(),
+      loadCustomers: vi.fn(),
+      loadProductsWithStock: vi.fn(),
+      loadShopSettings: vi.fn(),
+      loadRentals: vi.fn(),
+      loadAuditLogs: vi.fn(),
     loadPublicCatalog: vi.fn(),
     authStateChange,
     supabase: {
@@ -70,12 +70,15 @@ vi.mock('./features/customers/customerRemote', () => ({
 }))
 
 vi.mock('./features/inventory/stockRemote', () => ({
-  countRemoteRentalsForStockSku: vi.fn(),
-  loadStockItems,
-  createRemoteStockItem: vi.fn(),
-  createRemoteStockItems: vi.fn(),
+  countRemoteRentalsForProduct: vi.fn(),
+  countRemoteRentalsForStockItem: vi.fn(),
+  loadProductsWithStock,
+  createProductWithVariants: vi.fn(),
+  addStockToVariant: vi.fn(),
+  deleteRemoteProduct: vi.fn(),
   deleteRemoteStockItem: vi.fn(),
-  updateRemoteStockItem: vi.fn(),
+  updateRemoteProduct: vi.fn(),
+  updateRemoteProductPublicVisibility: vi.fn(),
   updateRemoteStockItemStatus: vi.fn(),
   updateShopSettings: vi.fn(),
   loadShopSettings,
@@ -113,7 +116,7 @@ describe('App shop selection', () => {
       { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: 'precious-silom' },
     ])
     loadCustomers.mockResolvedValue([])
-    loadStockItems.mockResolvedValue([])
+    loadProductsWithStock.mockResolvedValue([])
     loadShopSettings.mockResolvedValue(null)
     loadRentals.mockResolvedValue([])
     loadAuditLogs.mockResolvedValue([])
@@ -168,8 +171,8 @@ describe('App shop selection', () => {
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_1')
       expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
-      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_1')
-      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadProductsWithStock).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadProductsWithStock).toHaveBeenCalledWith(supabase, 'shop_2')
       expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_1', [], [])
       expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
     })
@@ -187,14 +190,14 @@ describe('App shop selection', () => {
 
     // Clear mocks before clicking to trace shop-mode specific calls
     loadCustomers.mockClear()
-    loadStockItems.mockClear()
+    loadProductsWithStock.mockClear()
     loadRentals.mockClear()
 
     fireEvent.click(enterButton)
 
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
-      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadProductsWithStock).toHaveBeenCalledWith(supabase, 'shop_2')
       expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
     }, { timeout: 5000 })
 
@@ -224,7 +227,7 @@ describe('App shop selection', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'โปรไฟล์' })[0])
 
     loadCustomers.mockClear()
-    loadStockItems.mockClear()
+    loadProductsWithStock.mockClear()
     loadShopSettings.mockClear()
     loadAuditLogs.mockClear()
     loadRentals.mockClear()
@@ -233,7 +236,7 @@ describe('App shop selection', () => {
 
     await waitFor(() => {
       expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
-      expect(loadStockItems).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadProductsWithStock).toHaveBeenCalledWith(supabase, 'shop_2')
       expect(loadShopSettings).toHaveBeenCalledWith(supabase, 'shop_2')
       expect(loadAuditLogs).toHaveBeenCalledWith(supabase, 'shop_2')
       expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
@@ -251,13 +254,13 @@ describe('App shop selection', () => {
     await screen.findByLabelText('ร้านที่กำลังใช้งาน')
 
     fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
-    const search = await screen.findByPlaceholderText(/ค้นหาด้วย SKU/)
+    const search = await screen.findByPlaceholderText(/ค้นหาด้วยรหัสหลัก/)
     fireEvent.change(search, { target: { value: 'emerald' } })
 
     fireEvent.click(screen.getAllByRole('button', { name: 'แดชบอร์ด' })[0])
     fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
 
-    expect((screen.getByPlaceholderText(/ค้นหาด้วย SKU/) as HTMLInputElement).value).toBe('emerald')
+    expect((screen.getByPlaceholderText(/ค้นหาด้วยรหัสหลัก/) as HTMLInputElement).value).toBe('emerald')
   })
 
   it('allows an authenticated user without shop access to retry a failed logout', async () => {
