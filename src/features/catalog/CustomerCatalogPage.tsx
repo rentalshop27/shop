@@ -567,7 +567,6 @@ export function CustomerCatalogPage({
                     key={item.id}
                     id={item.id!}
                     item={item}
-                    availability={availability}
                     inWishlist={wishlist.has(item.productName)}
                     sizeDisplay={sizeDisplay}
                     isEditModeActive={true}
@@ -594,7 +593,6 @@ export function CustomerCatalogPage({
                       <CatalogCardBase
                         key={itemKey}
                         item={item}
-                        availability={availability}
                         inWishlist={wishlist.has(item.productName)}
                         sizeDisplay={sizeDisplay}
                         onToggleWishlist={() => toggleWishlist(item.productName)}
@@ -621,7 +619,6 @@ export function CustomerCatalogPage({
                 <CatalogCardBase
                   key={itemKey}
                   item={item}
-                  availability={availability}
                   inWishlist={wishlist.has(item.productName)}
                   sizeDisplay={sizeDisplay}
                   onToggleWishlist={() => toggleWishlist(item.productName)}
@@ -872,7 +869,6 @@ function formatTierRange(tiers?: { price: number }[]) {
 
 function CatalogCardBase({
   item,
-  availability,
   inWishlist,
   sizeDisplay,
   onToggleWishlist,
@@ -881,7 +877,6 @@ function CatalogCardBase({
   onToggleFeatured,
 }: {
   item: CatalogDisplayItem
-  availability: 'available' | 'unavailable'
   inWishlist: boolean
   sizeDisplay: string
   onToggleWishlist?: () => void
@@ -899,9 +894,11 @@ function CatalogCardBase({
             <span>PRECIOUS</span>
           </div>
         )}
-        <span className={`prc-badge prc-badge--${availability}`}>
-          {availability === 'available' ? 'พร้อมให้เช่า' : 'ไม่ว่าง'}
-        </span>
+        {item.isFeatured && (
+          <span className="prc-badge prc-badge--featured">
+            ✨ แนะนำ
+          </span>
+        )}
         {!isEditModeActive ? (
           <button
             className={`prc-wishlist-btn ${inWishlist ? 'prc-wishlist-btn--active' : ''}`}
@@ -928,11 +925,7 @@ function CatalogCardBase({
         )}
       </div>
       <div className="prc-card-body">
-        {isEditModeActive && item.isFeatured && (
-          <div className="prc-card-pinned-badge">
-            <Pin size={12} fill="currentColor" /> แนะนำ
-          </div>
-        )}
+
         <p className="prc-card-brand">{item.brand?.toUpperCase() || 'PRECIOUS'}</p>
         <h2 className="prc-card-name">{item.productName}</h2>
         <div className="prc-card-footer">

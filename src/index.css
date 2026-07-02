@@ -6538,18 +6538,7 @@ select {
 }
 
 /* ── PINNED BADGE ── */
-.prc-card-pinned-badge {
-  align-items: center;
-  background: var(--prc-gold);
-  border-radius: 4px;
-  color: #fff;
-  display: inline-flex;
-  font-size: 11px;
-  font-weight: 700;
-  gap: 4px;
-  margin-bottom: 6px;
-  padding: 3px 8px;
-}
+
 
 /* ── RECOMMENDED SECTION ── */
 .prc-recommended-section {
@@ -6674,6 +6663,22 @@ select {
   padding: 4px 10px;
   position: absolute;
   top: 10px;
+}
+
+.prc-badge--featured {
+  background: linear-gradient(135deg, #ffffff 0%, #fdfbfb 100%);
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  color: #a67c00;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(4px);
+  padding: 5px 12px;
+  letter-spacing: 0.5px;
+}
+
+[data-theme='dark'] .prc-badge--featured {
+  background: linear-gradient(135deg, #1f1f1f 0%, #141414 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #d4af37;
 }
 
 .prc-badge--available {
