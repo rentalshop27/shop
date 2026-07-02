@@ -557,7 +557,7 @@ export function CustomerCatalogPage({
               {orderedItemIds.map((id) => {
                 const item = filteredItems.find(i => i.id === id)
                 if (!item) return null
-                const availability = getCatalogAvailability(item, rentals, today)
+
                 let sizeDisplay = ''
                 if (item.sizeSummary) sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
                 else if (item.size) sizeDisplay = item.size
@@ -583,7 +583,6 @@ export function CustomerCatalogPage({
                 <h2 className="prc-recommended-title">Precious Recommended ✨</h2>
                 <div className="prc-recommended-carousel">
                   {filteredItems.filter(i => i.isFeatured).map((item, index) => {
-                    const availability = getCatalogAvailability(item, rentals, today)
                     const itemKey = `rec-${item.productName}-${item.createdAt}-${index}`
                     let sizeDisplay = ''
                     if (item.sizeSummary) sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
@@ -609,7 +608,6 @@ export function CustomerCatalogPage({
             )}
 
             {filteredItems.map((item, index) => {
-              const availability = getCatalogAvailability(item, rentals, today)
               const itemKey = `${item.productName}-${item.createdAt}-${index}`
               let sizeDisplay = ''
               if (item.sizeSummary) sizeDisplay = item.sizeSummary.map(s => s.size).join(', ')
