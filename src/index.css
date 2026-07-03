@@ -1255,9 +1255,19 @@ select {
 .file-placeholder {
   display: flex;
   align-items: center;
+  flex-direction: column;
+  gap: 8px;
   justify-content: center;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.01);
+  text-align: center;
+}
+
+.file-placeholder span {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 0 10px;
 }
 
 .document-grid figcaption {
@@ -5785,6 +5795,10 @@ select {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   overflow: hidden;
+}
+
+.document-preview-placeholder {
+  height: 100%;
 }
 
 .document-preview-stage img {

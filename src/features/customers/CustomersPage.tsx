@@ -65,6 +65,8 @@ type CustomersPageProps = {
   isSaving: boolean
   previewCustomer?: Customer
   previewCustomerDocIndex: number
+  previewCustomerDocLoading: boolean
+  previewCustomerDocError: string
   onOpenCreateForm: () => void
   onQueryChange: (value: string) => void
   onStatusFilterChange: (value: StatusFilter) => void
@@ -108,6 +110,8 @@ export function CustomersPage({
   isSaving,
   previewCustomer,
   previewCustomerDocIndex,
+  previewCustomerDocLoading,
+  previewCustomerDocError,
   onOpenCreateForm,
   onQueryChange,
   onStatusFilterChange,
@@ -531,15 +535,20 @@ export function CustomersPage({
             </div>
 
             <div className="document-preview-stage">
-              {previewCustomer.documents[previewCustomerDocIndex]?.previewUrl ? (
+              {previewCustomerDocLoading ? (
+                <div className="file-placeholder document-preview-placeholder">
+                  <FileImage size={48} />
+                  <span>กำลังโหลดรูปตัวอย่าง...</span>
+                </div>
+              ) : previewCustomer.documents[previewCustomerDocIndex]?.previewUrl ? (
                 <img
                   src={previewCustomer.documents[previewCustomerDocIndex].previewUrl}
                   alt={`เอกสารลูกค้า รูปที่ ${previewCustomerDocIndex + 1} ของ ${previewCustomer.fullName}`}
                 />
               ) : (
-                <div className="file-placeholder" style={{ height: '100%' }}>
+                <div className="file-placeholder document-preview-placeholder">
                   <FileImage size={48} />
-                  <span>ไม่มีรูปตัวอย่าง</span>
+                  <span>{previewCustomerDocError || 'ยังไม่มีรูปตัวอย่าง กดรูปย่อเพื่อโหลดอีกครั้ง'}</span>
                 </div>
               )}
             </div>
@@ -560,7 +569,11 @@ export function CustomersPage({
                     type="button"
                     onClick={() => onPreviewCustomerDocument(previewCustomer.id, index)}
                   >
-                    {doc.previewUrl ? (
+                    {previewCustomerDocLoading && index === previewCustomerDocIndex ? (
+                      <div className="file-placeholder" style={{ height: '100%' }}>
+                        <FileImage size={20} />
+                      </div>
+                    ) : doc.previewUrl ? (
                       <img src={doc.previewUrl} alt={`ภาพย่อเอกสารรูปที่ ${index + 1}`} />
                     ) : (
                       <div className="file-placeholder" style={{ height: '100%' }}>
@@ -723,11 +736,8 @@ function CustomerDetail({
             <figure
               key={document.id}
               onClick={() => {
-                if (document.previewUrl || document.storageProvider === 'google_drive') {
-                  onPreviewDocument?.(index)
-                }
+                onPreviewDocument?.(index)
               }}
-              style={document.previewUrl || document.storageProvider === 'google_drive' ? { cursor: 'pointer' } : undefined}
             >
               {document.previewUrl ? (
                 <img
@@ -738,6 +748,7 @@ function CustomerDetail({
               ) : (
                 <div className="file-placeholder">
                   <FileImage />
+                  <span>แตะเพื่อโหลด</span>
                 </div>
               )}
               <figcaption>รูปที่ {document.sortOrder}</figcaption>

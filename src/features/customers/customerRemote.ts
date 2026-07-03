@@ -332,8 +332,9 @@ async function mapDocumentRow(
 export async function loadCustomerDocumentPreview(
   supabase: SupabaseClient,
   document: CustomerDocument,
+  options: { forceRefresh?: boolean } = {},
 ): Promise<CustomerDocument> {
-  if (document.previewUrl) return document
+  if (document.previewUrl && !options.forceRefresh) return document
 
   if (document.storageProvider === 'google_drive') {
     return {

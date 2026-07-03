@@ -318,6 +318,8 @@ function PrivateApp() {
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [previewCustomerDocOwnerId, setPreviewCustomerDocOwnerId] = useState<string | null>(null)
   const [previewCustomerDocIndex, setPreviewCustomerDocIndex] = useState<number>(0)
+  const [previewCustomerDocLoadingKey, setPreviewCustomerDocLoadingKey] = useState<string | null>(null)
+  const [previewCustomerDocError, setPreviewCustomerDocError] = useState('')
   const googleDrivePreviewUrlsRef = useRef(new Set<string>())
   const previewCustomer = useMemo(() => {
     return customers.find((c) => c.id === previewCustomerDocOwnerId)
@@ -1215,23 +1217,26 @@ function PrivateApp() {
     setDeletedDocumentIds([])
   }
 
-  async function loadDocumentPreview(document: CustomerDocument) {
-    if (!supabase || document.previewUrl) return document
+  async function loadDocumentPreview(document: CustomerDocument, forceRefresh = false) {
+    if (!supabase || (document.previewUrl && !forceRefresh)) return document
 
-    const loadedDocument = await loadCustomerDocumentPreview(supabase, document)
+    const loadedDocument = await loadCustomerDocumentPreview(supabase, document, { forceRefresh })
     if (loadedDocument.previewUrl?.startsWith('blob:')) {
       googleDrivePreviewUrlsRef.current.add(loadedDocument.previewUrl)
     }
     return loadedDocument
   }
 
-  async function ensureCustomerDocumentPreview(customerId: string, documentIndex: number) {
+  async function ensureCustomerDocumentPreview(customerId: string, documentIndex: number, forceRefresh = false) {
     const customer = customers.find((entry) => entry.id === customerId)
     const document = customer?.documents[documentIndex]
-    if (!customer || !document || document.previewUrl || !supabase) return
+    if (!customer || !document || !supabase || (document.previewUrl && !forceRefresh)) return
 
+    const loadingKey = `${customerId}:${document.id}`
+    setPreviewCustomerDocLoadingKey(loadingKey)
+    setPreviewCustomerDocError('')
     try {
-      const loadedDocument = await loadDocumentPreview(document)
+      const loadedDocument = await loadDocumentPreview(document, forceRefresh)
       setCustomers((current) => current.map((entry) =>
         entry.id === customerId
           ? {
@@ -1243,7 +1248,9 @@ function PrivateApp() {
           : entry,
       ))
     } catch (error) {
-      window.alert(getErrorMessage(error))
+      setPreviewCustomerDocError(getErrorMessage(error))
+    } finally {
+      setPreviewCustomerDocLoadingKey((current) => current === loadingKey ? null : current)
     }
   }
 
@@ -1812,6 +1819,14 @@ function PrivateApp() {
               isSaving={isSaving}
               previewCustomer={previewCustomer}
               previewCustomerDocIndex={previewCustomerDocIndex}
+              previewCustomerDocLoading={
+                Boolean(
+                  previewCustomer &&
+                  previewCustomer.documents[previewCustomerDocIndex] &&
+                  previewCustomerDocLoadingKey === `${previewCustomer.id}:${previewCustomer.documents[previewCustomerDocIndex].id}`,
+                )
+              }
+              previewCustomerDocError={previewCustomerDocError}
               onOpenCreateForm={() => setIsFormOpen(true)}
               onQueryChange={setQuery}
               onStatusFilterChange={setStatusFilter}
@@ -1827,7 +1842,8 @@ function PrivateApp() {
               onPreviewCustomerDocument={(customerId, index) => {
                 setPreviewCustomerDocOwnerId(customerId)
                 setPreviewCustomerDocIndex(index)
-                void ensureCustomerDocumentPreview(customerId, index)
+                setPreviewCustomerDocError('')
+                void ensureCustomerDocumentPreview(customerId, index, true)
               }}
               onCloseForm={closeCustomerForm}
               onDraftChange={updateDraft}
@@ -1842,7 +1858,10 @@ function PrivateApp() {
               onRemoveDraftDocument={removeDraftDocument}
               onResetForm={resetCustomerForm}
               onSaveCustomer={handleSaveCustomer}
-              onClosePreview={() => setPreviewCustomerDocOwnerId(null)}
+              onClosePreview={() => {
+                setPreviewCustomerDocOwnerId(null)
+                setPreviewCustomerDocError('')
+              }}
             />
           )}
 
