@@ -60,7 +60,7 @@ describe('CustomerCatalogPage filters', () => {
 
     expect(screen.getByText('Pearl Wedding Gown')).toBeInTheDocument()
     expect(screen.queryByText('Ruby Evening Dress')).not.toBeInTheDocument()
-    expect(within(screen.getByLabelText('รายการชุดสำหรับลูกค้า')).getByText('ไม่ว่าง')).toBeInTheDocument()
+    expect(within(screen.getByLabelText('รายการชุดสำหรับลูกค้า')).getByText('฿1,500')).toBeInTheDocument()
   })
 
   it('keeps unavailable items visible when customers choose every status', async () => {

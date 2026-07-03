@@ -17,7 +17,7 @@ type ProductRow = {
   category: string
   primary_color: string
   public_description: string
-  rental_price_per_day: number
+  rental_tiers: { days: number; price: number }[]
   image_urls: string[]
   is_featured: boolean
   display_order: number
@@ -107,7 +107,7 @@ Deno.serve(async (request) => {
         category,
         primary_color,
         public_description,
-        rental_price_per_day,
+        rental_tiers,
         image_urls,
         is_featured,
         display_order,
@@ -196,7 +196,7 @@ Deno.serve(async (request) => {
         category: row.category ?? '',
         primaryColor: row.primary_color ?? '',
         publicDescription: row.public_description ?? '',
-        rentalPricePerDay: Number(row.rental_price_per_day) || 0,
+        rentalTiers: Array.isArray(row.rental_tiers) ? row.rental_tiers : [],
         imageUrls: imageUrls.filter(Boolean),
         isFeatured: row.is_featured,
         displayOrder: row.display_order,

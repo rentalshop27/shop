@@ -238,6 +238,27 @@ describe('stockRemote', () => {
     expect(selectRentals.in).toHaveBeenCalledWith('stock_item_id', ['stock_1'])
   })
 
+  it('throws when product rental counting cannot read scoped stock items', async () => {
+    const stockError = new Error('stock lookup failed')
+    const supabase = {
+      from: vi.fn((table: string) => {
+        if (table !== 'stock_items') throw new Error(`Unexpected table ${table}`)
+
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({ data: null, error: stockError })),
+            })),
+          })),
+        }
+      }),
+    } as unknown as SupabaseClient
+
+    await expect(countRemoteRentalsForProduct(supabase, 'shop_1', 'product_1')).rejects.toThrow(
+      'stock lookup failed',
+    )
+  })
+
   it('scopes product deletion by selected shop id and removes stored image paths afterward', async () => {
     const removedPaths: string[][] = []
     const filters: Array<[string, string]> = []

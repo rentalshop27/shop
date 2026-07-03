@@ -241,11 +241,12 @@ export async function updateRemoteStockItemStatus(supabase: SupabaseClient, shop
 }
 
 export async function countRemoteRentalsForProduct(supabase: SupabaseClient, shopId: string, productId: string): Promise<number> {
-  const { data: stockItems } = await supabase
+  const { data: stockItems, error: stockError } = await supabase
     .from('stock_items')
     .select('id')
     .eq('product_id', productId)
     .eq('shop_id', shopId)
+  if (stockError) throw stockError
   if (!stockItems || stockItems.length === 0) return 0
   const ids = stockItems.map(s => s.id)
   const { count: rentalCount, error: rError } = await supabase

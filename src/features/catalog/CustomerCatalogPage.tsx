@@ -261,13 +261,18 @@ export function CustomerCatalogPage({
   function openDetail(item: CatalogDisplayItem) {
     setSelectedItem(item)
     setImageIndex(0)
-    document.body.style.overflow = 'hidden'
   }
 
   function closeDetail() {
     setSelectedItem(null)
-    document.body.style.overflow = ''
   }
+
+  useEffect(() => {
+    document.body.style.overflow = selectedItem ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [selectedItem])
 
   const categoryTabs: Array<{ label: string; value: string }> = [
     { label: 'ทั้งหมด', value: 'all' },

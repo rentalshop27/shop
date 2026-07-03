@@ -179,6 +179,8 @@ export function useInventoryController({
   }
 
   async function handleDeleteProduct(product: ProductWithStockSummary) {
+    if (isSaving) return
+
     try {
       if (supabase && isAuthenticated && shopId) {
         const rentalsCount = await countRemoteRentalsForProduct(supabase, shopId, product.id)
@@ -214,6 +216,8 @@ export function useInventoryController({
   }
 
   async function handleDeleteVariant(productId: string, stockId: string) {
+    if (isSaving) return
+
     try {
       if (supabase && isAuthenticated && shopId) {
         const rentalsCount = await countRemoteRentalsForStockItem(supabase, shopId, stockId)
@@ -249,6 +253,8 @@ export function useInventoryController({
   }
 
   async function handleAddStock(productId: string, size: string, quantity: number) {
+    if (isSaving) return
+
     setIsSaving(true)
     try {
       if (supabase && isAuthenticated && shopId) {
@@ -257,6 +263,8 @@ export function useInventoryController({
         const reloaded = await loadProductsWithStock(supabase, shopId)
         setProducts(reloaded)
         await onLoadAuditLogs()
+      } else {
+        setProducts((current) => addLocalStockItems(current, productId, size, quantity, shopId))
       }
     } catch (error) {
       window.alert(getErrorMessage(error))
@@ -266,6 +274,9 @@ export function useInventoryController({
   }
 
   async function handleUpdateStatus(productId: string, stockId: string, newStatus: StockItemStatus) {
+    if (isSaving) return
+
+    setIsSaving(true)
     try {
       if (supabase && isAuthenticated && shopId) {
         await updateRemoteStockItemStatus(supabase, shopId, stockId, newStatus)
@@ -283,10 +294,15 @@ export function useInventoryController({
       )
     } catch (error) {
       window.alert(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
     }
   }
 
   async function handleTogglePublicVisibility(productId: string, publicVisible: boolean) {
+    if (isSaving) return
+
+    setIsSaving(true)
     try {
       if (supabase && isAuthenticated && shopId) {
         await updateRemoteProductPublicVisibility(supabase, shopId, productId, publicVisible)
@@ -297,6 +313,8 @@ export function useInventoryController({
       )
     } catch (error) {
       window.alert(getErrorMessage(error))
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -310,6 +328,11 @@ export function useInventoryController({
     }
     if (!normalizedDraft.productName) {
       setFormError('กรุณากรอกชื่อสินค้า')
+      return
+    }
+    const tierValidationError = validateRentalTiers(normalizedDraft.rentalTiers)
+    if (tierValidationError) {
+      setFormError(tierValidationError)
       return
     }
 
@@ -346,6 +369,15 @@ export function useInventoryController({
         const reloaded = await loadProductsWithStock(supabase, shopId)
         setProducts(reloaded)
         await onLoadAuditLogs()
+        closeForm()
+      } else {
+        setProducts((current) =>
+          editingProductId
+            ? current.map((product) =>
+                product.id === editingProductId ? updateLocalProductFromDraft(product, normalizedDraft) : product,
+              )
+            : [createLocalProductFromDraft(normalizedDraft, shopId), ...current],
+        )
         closeForm()
       }
     } catch (error) {
@@ -420,11 +452,155 @@ function normalizeProductDraft(draft: ProductDraft): ProductDraft {
     category: draft.category.trim(),
     primaryColor: draft.primaryColor.trim(),
     publicDescription: draft.publicDescription.trim(),
-    rentalTiers: draft.rentalTiers.filter((t) => t.days > 0),
+    rentalTiers: draft.rentalTiers
+      .map((tier) => ({
+        days: Number(tier.days) || 0,
+        price: Number(tier.price) || 0,
+      }))
+      .filter((tier) => tier.days > 0)
+      .sort((a, b) => a.days - b.days),
     lateFeeRule: draft.lateFeeRule.trim(),
     depositAmount: parseOptionalNumber(draft.depositAmount) !== undefined ? draft.depositAmount : '',
     variants: draft.variants.filter((v) => v.quantity > 0)
   }
+}
+
+function validateRentalTiers(tiers: ProductDraft['rentalTiers']) {
+  if (tiers.length === 0) {
+    return 'กรุณาเพิ่มแพ็กเกจราคาเช่าอย่างน้อย 1 รายการ'
+  }
+
+  const seenDays = new Set<number>()
+  for (const tier of tiers) {
+    if (!Number.isInteger(tier.days) || tier.days <= 0) {
+      return 'จำนวนวันในแพ็กเกจต้องเป็นเลขจำนวนเต็มมากกว่า 0'
+    }
+    if (!Number.isFinite(tier.price) || tier.price <= 0) {
+      return 'ราคาแพ็กเกจต้องมากกว่า 0 บาท'
+    }
+    if (seenDays.has(tier.days)) {
+      return 'ห้ามมีแพ็กเกจจำนวนวันซ้ำกัน'
+    }
+    seenDays.add(tier.days)
+  }
+
+  return ''
+}
+
+function createLocalProductFromDraft(draft: ProductDraft, shopId: string | null): ProductWithStockSummary {
+  const productId = crypto.randomUUID()
+  const createdAt = new Date().toISOString()
+
+  return {
+    id: productId,
+    baseSku: draft.baseSku,
+    productName: draft.productName,
+    brand: draft.brand,
+    category: draft.category,
+    primaryColor: draft.primaryColor,
+    publicDescription: draft.publicDescription,
+    rentalTiers: draft.rentalTiers,
+    lateFeeRule: draft.lateFeeRule,
+    depositAmount: Number(draft.depositAmount) || 0,
+    imageUrls: draft.imageUrls,
+    publicVisible: draft.publicVisible,
+    isFeatured: draft.isFeatured,
+    displayOrder: draft.displayOrder,
+    createdAt,
+    stockItems: draft.variants.flatMap((variant) =>
+      createLocalStockItems({
+        productId,
+        baseSku: draft.baseSku,
+        size: variant.size,
+        quantity: variant.quantity,
+        startIndex: 1,
+        shopId,
+        createdAt,
+      }),
+    ),
+  }
+}
+
+function updateLocalProductFromDraft(
+  product: ProductWithStockSummary,
+  draft: ProductDraft,
+): ProductWithStockSummary {
+  return {
+    ...product,
+    productName: draft.productName,
+    brand: draft.brand,
+    category: draft.category,
+    primaryColor: draft.primaryColor,
+    publicDescription: draft.publicDescription,
+    rentalTiers: draft.rentalTiers,
+    lateFeeRule: draft.lateFeeRule,
+    depositAmount: Number(draft.depositAmount) || 0,
+    imageUrls: draft.imageUrls,
+    publicVisible: draft.publicVisible,
+    isFeatured: draft.isFeatured,
+    displayOrder: draft.displayOrder,
+  }
+}
+
+function addLocalStockItems(
+  products: ProductWithStockSummary[],
+  productId: string,
+  size: string,
+  quantity: number,
+  shopId: string | null,
+) {
+  return products.map((product) => {
+    if (product.id !== productId) return product
+
+    const createdAt = new Date().toISOString()
+    const existingSizeCount = product.stockItems.filter((stockItem) => stockItem.size === size).length
+    const stockItems = createLocalStockItems({
+      productId,
+      baseSku: product.baseSku,
+      size,
+      quantity,
+      startIndex: existingSizeCount + 1,
+      shopId,
+      createdAt,
+    })
+
+    return {
+      ...product,
+      stockItems: [...product.stockItems, ...stockItems],
+    }
+  })
+}
+
+function createLocalStockItems({
+  productId,
+  baseSku,
+  size,
+  quantity,
+  startIndex,
+  shopId,
+  createdAt,
+}: {
+  productId: string
+  baseSku: string
+  size: string
+  quantity: number
+  startIndex: number
+  shopId: string | null
+  createdAt: string
+}) {
+  return Array.from({ length: quantity }, (_, index) => {
+    const sequence = String(startIndex + index).padStart(2, '0')
+
+    return {
+      id: crypto.randomUUID(),
+      shopId: shopId ?? 'local',
+      productId,
+      sku: `${baseSku}-${size}-${sequence}`,
+      size,
+      status: 'available' as StockItemStatus,
+      createdAt,
+    }
+  })
 }
 
 function parseOptionalNumber(value: string | number) {

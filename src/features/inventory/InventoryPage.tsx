@@ -153,7 +153,7 @@ export function InventoryPage({
             <Store size={20} />
             ดูหน้าลูกค้า
           </button>
-          <button className="primary-button" type="button" onClick={onOpenForm}>
+          <button className="primary-button" type="button" onClick={onOpenForm} disabled={isSaving}>
             <Plus size={22} />
             เพิ่มชุดหลัก
           </button>
@@ -239,14 +239,15 @@ export function InventoryPage({
                       className={`inline-link-button stock-visibility-button ${product.publicVisible ? 'active' : ''}`}
                       type="button"
                       onClick={() => onTogglePublicVisibility(product.id, !product.publicVisible)}
+                      disabled={isSaving}
                     >
                       {product.publicVisible ? <Eye size={14} /> : <EyeOff size={14} />}
                       {product.publicVisible ? 'ซ่อนจากเว็บ' : 'โชว์หน้าเว็บ'}
                     </button>
-                    <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไข">
+                    <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไข" disabled={isSaving}>
                       <Pencil size={16} />
                     </button>
-                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุด">
+                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุด" disabled={isSaving}>
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -344,6 +345,7 @@ export function InventoryPage({
                       className="primary-button compact"
                       type="button"
                       onClick={() => setSelectedProductForDrawerId(product.id)}
+                      disabled={isSaving}
                       style={{ flexGrow: 1, padding: '8px 12px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
                     >
                       ⚙️ จัดการชุดย่อย
@@ -352,15 +354,16 @@ export function InventoryPage({
                       className={`stock-card-visibility-toggle ${product.publicVisible ? 'active' : ''}`}
                       type="button"
                       onClick={() => onTogglePublicVisibility(product.id, !product.publicVisible)}
+                      disabled={isSaving}
                       style={{ padding: '8px 10px', fontSize: '0.85rem', minWidth: '40px', flex: 'none', justifyContent: 'center' }}
                       title={product.publicVisible ? 'ซ่อนจากเว็บ' : 'โชว์หน้าเว็บ'}
                     >
                       {product.publicVisible ? <Eye size={15} /> : <EyeOff size={15} />}
                     </button>
-                    <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไขชุดหลัก" style={{ flex: 'none' }}>
+                    <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไขชุดหลัก" disabled={isSaving} style={{ flex: 'none' }}>
                       <Pencil size={15} />
                     </button>
-                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุดหลัก" style={{ flex: 'none' }}>
+                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุดหลัก" disabled={isSaving} style={{ flex: 'none' }}>
                       <Trash2 size={15} />
                     </button>
                   </div>

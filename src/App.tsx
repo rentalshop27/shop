@@ -558,7 +558,7 @@ function PrivateApp() {
     try {
       setProducts(prev => prev.map(p => p.id === productId ? { ...p, isFeatured } : p))
       await updateRemoteProductFeatured(supabase, currentShop.id, productId, isFeatured)
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
       alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะปักหมุด')
       // revert on error (simplified)
@@ -580,7 +580,7 @@ function PrivateApp() {
       })
       await bulkUpdateRemoteDisplayOrder(supabase, updates)
       alert('บันทึกลำดับชุดสำเร็จ')
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
       alert('เกิดข้อผิดพลาดในการบันทึกลำดับชุด')
       // Ideal: reload products from server on error

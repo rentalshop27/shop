@@ -23,6 +23,10 @@ function tiersAreCompatible(costumes: FlatStockItem[]): boolean {
   )
 }
 
+function findTierByDays(costume: FlatStockItem, days: number) {
+  return costume.rentalTiers.find((tier) => tier.days === days)
+}
+
 interface RentalsPageProps {
   rentals: RentalOrder[]
   customers: Customer[]
@@ -117,7 +121,7 @@ export function RentalsPage({
   const [selectedCostumes, setSelectedCostumes] = useState<FlatStockItem[]>([])
   const [showCostumeDropdown, setShowCostumeDropdown] = useState(false)
 
-  const [selectedTierIndex, setSelectedTierIndex] = useState<number | 'custom' | null>(null)
+  const [selectedTierDays, setSelectedTierDays] = useState<number | 'custom' | null>(null)
   const [basePriceFromTier, setBasePriceFromTier] = useState<number>(0)
 
   const [pickupDate, setPickupDate] = useState(getTodayString())
@@ -218,7 +222,7 @@ export function RentalsPage({
   // Sync pricing when costumes are selected
   useEffect(() => {
     if (selectedCostumes.length === 0) {
-      setSelectedTierIndex(null)
+      setSelectedTierDays(null)
       setBasePriceFromTier(0)
       setRentalPrice('')
       setDepositAmount('')
@@ -228,25 +232,25 @@ export function RentalsPage({
     }
     
     if (!tiersAreCompatible(selectedCostumes)) {
-      setSelectedTierIndex('custom')
+      setSelectedTierDays('custom')
     } else {
-      // If valid index but out of bounds, reset
-      if (typeof selectedTierIndex === 'number') {
-         if (!selectedCostumes[0].rentalTiers[selectedTierIndex]) {
-           setSelectedTierIndex(null)
-         }
+      if (typeof selectedTierDays === 'number') {
+        const allCostumesHaveSelectedTier = selectedCostumes.every((costume) => findTierByDays(costume, selectedTierDays))
+        if (!allCostumesHaveSelectedTier) {
+          setSelectedTierDays(null)
+        }
       }
     }
     
     const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
     setDepositAmount(totalDeposit.toString())
-  }, [selectedCostumes])
+  }, [selectedCostumes, selectedTierDays])
 
   useEffect(() => {
     if (selectedCostumes.length === 0) return
     
-    if (typeof selectedTierIndex === 'number') {
-      const tier = selectedCostumes[0]?.rentalTiers[selectedTierIndex]
+    if (typeof selectedTierDays === 'number') {
+      const tier = selectedCostumes[0]?.rentalTiers.find((candidate) => candidate.days === selectedTierDays)
       if (tier) {
         if (pickupDate) {
           setReturnDate(calculateReturnDate(pickupDate, tier.days))
@@ -254,7 +258,7 @@ export function RentalsPage({
         
         let totalBasePrice = 0
         for (const costume of selectedCostumes) {
-          totalBasePrice += costume.rentalTiers[selectedTierIndex]?.price || 0
+          totalBasePrice += findTierByDays(costume, selectedTierDays)?.price || 0
         }
         
         setBasePriceFromTier(totalBasePrice)
@@ -265,7 +269,7 @@ export function RentalsPage({
         setCollectedAmount((totalBasePrice + totalDeposit).toString())
       }
     }
-  }, [selectedTierIndex, pickupDate, selectedCostumes])
+  }, [selectedTierDays, pickupDate, selectedCostumes])
 
   const parseMoneyInput = (value: string) => {
     return parseFloat(value) || 0
@@ -1200,13 +1204,13 @@ export function RentalsPage({
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {selectedCostumes[0]?.rentalTiers.map((tier, index) => {
-                        const isSelected = selectedTierIndex === index
+                      {selectedCostumes[0]?.rentalTiers.map((tier) => {
+                        const isSelected = selectedTierDays === tier.days
                         return (
                           <button
-                            key={index}
+                            key={tier.days}
                             type="button"
-                            onClick={() => setSelectedTierIndex(index)}
+                            onClick={() => setSelectedTierDays(tier.days)}
                             style={{
                               padding: '8px 16px',
                               borderRadius: '20px',
@@ -1226,13 +1230,13 @@ export function RentalsPage({
                       })}
                       <button
                         type="button"
-                        onClick={() => setSelectedTierIndex('custom')}
+                        onClick={() => setSelectedTierDays('custom')}
                         style={{
                           padding: '8px 16px',
                           borderRadius: '20px',
-                          border: `1px solid ${selectedTierIndex === 'custom' ? 'var(--text-gold)' : 'var(--border-color)'}`,
-                          background: selectedTierIndex === 'custom' ? 'rgba(218, 165, 32, 0.1)' : 'var(--surface-sunken)',
-                          color: selectedTierIndex === 'custom' ? 'var(--text-gold)' : '#fff',
+                          border: `1px solid ${selectedTierDays === 'custom' ? 'var(--text-gold)' : 'var(--border-color)'}`,
+                          background: selectedTierDays === 'custom' ? 'rgba(218, 165, 32, 0.1)' : 'var(--surface-sunken)',
+                          color: selectedTierDays === 'custom' ? 'var(--text-gold)' : '#fff',
                           fontSize: '13px',
                           cursor: 'pointer',
                           display: 'flex',
@@ -1240,7 +1244,7 @@ export function RentalsPage({
                           gap: '6px'
                         }}
                       >
-                        {selectedTierIndex === 'custom' ? '✓ ' : '○ '}กำหนดวันเอง (Custom)
+                        {selectedTierDays === 'custom' ? '✓ ' : '○ '}กำหนดวันเอง (Custom)
                       </button>
                     </div>
                   )}
@@ -1263,8 +1267,8 @@ export function RentalsPage({
                     type="date"
                     value={returnDate}
                     onChange={(e) => setReturnDate(e.target.value)}
-                    readOnly={typeof selectedTierIndex === 'number'}
-                    style={typeof selectedTierIndex === 'number' ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
+                    readOnly={typeof selectedTierDays === 'number'}
+                    style={typeof selectedTierDays === 'number' ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
                   />
                 </label>
               </div>
