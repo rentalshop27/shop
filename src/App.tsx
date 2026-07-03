@@ -24,6 +24,8 @@ import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
   loadRentals,
+  updateRemoteRentalStatus,
+  deleteRemoteRental,
 } from './features/rentals/rentalRemote'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
 import { demoCustomers } from './features/customers/customerSeed'
@@ -773,13 +775,13 @@ function PrivateApp() {
     if (ids.length === 0) return
 
     if (supabase && isAuthenticated) {
-      try {
-        const { error } = await supabase
-          .from('rentals')
-          .update({ status, updated_at: new Date().toISOString() })
-          .in('id', ids)
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
 
-        if (error) throw error
+      try {
+        await updateRemoteRentalStatus(supabase, shopId, ids, status)
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
@@ -801,13 +803,13 @@ function PrivateApp() {
     if (ids.length === 0) return
 
     if (supabase && isAuthenticated) {
-      try {
-        const { error } = await supabase
-          .from('rentals')
-          .delete()
-          .in('id', ids)
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
 
-        if (error) throw error
+      try {
+        await deleteRemoteRental(supabase, shopId, ids)
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))

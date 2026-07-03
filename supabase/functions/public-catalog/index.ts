@@ -32,6 +32,8 @@ type RentalRow = {
   stock_item_id: string
 }
 
+const PRODUCT_IMAGES_BUCKET = 'costumes'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -153,7 +155,7 @@ Deno.serve(async (request) => {
       const imageUrls = await Promise.all(
         (row.image_urls ?? []).slice(0, 5).map(async (path) => {
           const { data, error } = await supabase.storage
-            .from('stock-images')
+            .from(PRODUCT_IMAGES_BUCKET)
             .createSignedUrl(path, 60 * 60)
 
           if (error) return ''

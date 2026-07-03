@@ -87,6 +87,8 @@ vi.mock('./features/inventory/stockRemote', () => ({
 vi.mock('./features/rentals/rentalRemote', () => ({
   createRemoteRentals: vi.fn(),
   loadRentals,
+  updateRemoteRentalStatus: vi.fn(),
+  deleteRemoteRental: vi.fn(),
 }))
 
 vi.mock('./features/audit/auditRemote', () => ({

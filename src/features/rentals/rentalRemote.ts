@@ -84,22 +84,33 @@ function toRentalInsert(shopId: string, rental: RentalOrder) {
 
 export async function updateRemoteRentalStatus(
   supabase: SupabaseClient,
-  rentalId: string,
+  shopId: string,
+  rentalIds: string[],
   status: RentalStatus,
 ): Promise<void> {
+  if (rentalIds.length === 0) return
+
   const { error } = await supabase
     .from('rentals')
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', rentalId)
+    .eq('shop_id', shopId)
+    .in('id', rentalIds)
 
   if (error) throw error
 }
 
 export async function deleteRemoteRental(
   supabase: SupabaseClient,
-  rentalId: string,
+  shopId: string,
+  rentalIds: string[],
 ): Promise<void> {
-  const { error } = await supabase.from('rentals').delete().eq('id', rentalId)
+  if (rentalIds.length === 0) return
+
+  const { error } = await supabase
+    .from('rentals')
+    .delete()
+    .eq('shop_id', shopId)
+    .in('id', rentalIds)
   if (error) throw error
 }
 
