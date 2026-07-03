@@ -128,8 +128,8 @@
     "hash": "26440ff715a6031b55d96dbccc3cac5a"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/public-catalog/index.ts": {
-    "mtime": 1783062936.9749608,
-    "hash": "a6f4e928548b3a33aa20aca156b1ddad"
+    "mtime": 1783065025.7896202,
+    "hash": "6a869ace1b223663333ee37795e541ec"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/functions/google-sheets-report-sync/reportSheets.ts": {
     "mtime": 1782216471.341953,
@@ -296,16 +296,16 @@
     "hash": "8f6aede9a1ddc99393d66cf802864bea"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.test.ts": {
-    "mtime": 1783062075.0273006,
-    "hash": "4b38c358d6afaa0237c76f955b3fb7fa"
+    "mtime": 1783064992.174143,
+    "hash": "22c35876a8572f51cd87c87bab73f7c4"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/InventoryPage.tsx": {
     "mtime": 1783062110.7763796,
     "hash": "e3a6c492c07ebaeee764877686042307"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts": {
-    "mtime": 1783062013.7002966,
-    "hash": "9ea65dffd804218f75418c877bb6ffc4"
+    "mtime": 1783065030.7605164,
+    "hash": "cae7d9b56960ec90abe010d8dfbba6cb"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/StockManagementDrawer.tsx": {
     "mtime": 1782924328.7671764,

@@ -33,6 +33,9 @@ type RentalRow = {
 }
 
 const PRODUCT_IMAGES_BUCKET = 'costumes'
+const LEGACY_PRODUCT_IMAGES_BUCKET = 'stock-images'
+const PRODUCT_IMAGE_BUCKETS = [PRODUCT_IMAGES_BUCKET, LEGACY_PRODUCT_IMAGES_BUCKET] as const
+const PRODUCT_IMAGE_SIGNED_URL_TTL_SECONDS = 60 * 60
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +56,28 @@ function jsonResponse(body: unknown, status = 200) {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function extractProductImageRef(imageRef: string | null | undefined) {
+  if (!imageRef) return null
+  if (imageRef.startsWith('data:')) return null
+  if (!imageRef.includes('://')) return { bucket: null, path: imageRef }
+
+  for (const bucket of PRODUCT_IMAGE_BUCKETS) {
+    for (const accessType of ['public', 'sign']) {
+      const marker = `/storage/v1/object/${accessType}/${bucket}/`
+      const markerIndex = imageRef.indexOf(marker)
+      if (markerIndex === -1) continue
+
+      const rawPath = imageRef.slice(markerIndex + marker.length).split('?')[0] ?? ''
+      return {
+        bucket,
+        path: rawPath.split('/').map((segment) => decodeURIComponent(segment)).join('/'),
+      }
+    }
+  }
+
+  return null
 }
 
 Deno.serve(async (request) => {
@@ -153,13 +178,20 @@ Deno.serve(async (request) => {
     const items = await Promise.all(rows.map(async (row) => {
       // Sign URLs for up to 5 images
       const imageUrls = await Promise.all(
-        (row.image_urls ?? []).slice(0, 5).map(async (path) => {
-          const { data, error } = await supabase.storage
-            .from(PRODUCT_IMAGES_BUCKET)
-            .createSignedUrl(path, 60 * 60)
+        (row.image_urls ?? []).slice(0, 5).map(async (imageRef) => {
+          const storageRef = extractProductImageRef(imageRef)
+          if (!storageRef) return imageRef
 
-          if (error) return ''
-          return data.signedUrl
+          const bucketsToTry = storageRef.bucket ? [storageRef.bucket] : PRODUCT_IMAGE_BUCKETS
+          for (const bucket of bucketsToTry) {
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .createSignedUrl(storageRef.path, PRODUCT_IMAGE_SIGNED_URL_TTL_SECONDS)
+
+            if (!error && data?.signedUrl) return data.signedUrl
+          }
+
+          return ''
         }),
       )
 

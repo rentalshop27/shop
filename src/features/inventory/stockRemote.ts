@@ -2,7 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ProductWithStockSummary, StockItemStatus, ProductDraft } from './inventoryTypes'
 
 const COSTUMES_BUCKET = 'costumes'
-const COSTUMES_PUBLIC_PATH = `/storage/v1/object/public/${COSTUMES_BUCKET}/`
+const LEGACY_STOCK_IMAGES_BUCKET = 'stock-images'
+const PRODUCT_IMAGE_BUCKETS = [COSTUMES_BUCKET, LEGACY_STOCK_IMAGES_BUCKET] as const
+const PRODUCT_IMAGE_SIGNED_URL_TTL_SECONDS = 60 * 60
+
+type ProductImageBucket = typeof PRODUCT_IMAGE_BUCKETS[number]
+type ProductImageRef = {
+  bucket: ProductImageBucket | null
+  path: string
+}
 
 export async function loadProductsWithStock(supabase: SupabaseClient, shopId: string): Promise<ProductWithStockSummary[]> {
   const { data: productsData, error: productsError } = await supabase
@@ -21,7 +29,7 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
 
   if (stockError) throw stockError
 
-  const products: ProductWithStockSummary[] = (productsData ?? []).map(row => ({
+  const products: ProductWithStockSummary[] = await Promise.all((productsData ?? []).map(async row => ({
     id: row.id,
     baseSku: row.base_sku,
     productName: row.product_name,
@@ -32,13 +40,13 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
     rentalTiers: Array.isArray(row.rental_tiers) ? row.rental_tiers : [],
     lateFeeRule: row.late_fee_rule ?? '',
     depositAmount: Number(row.deposit_amount) || 0,
-    imageUrls: (row.image_urls ?? []).map((imageRef: string) => toPublicCostumeUrl(supabase, imageRef)),
+    imageUrls: await Promise.all((row.image_urls ?? []).map((imageRef: string) => createProductImageDisplayUrl(supabase, imageRef))),
     publicVisible: row.public_visible,
     isFeatured: row.is_featured,
     displayOrder: row.display_order,
     createdAt: row.created_at,
     stockItems: []
-  }))
+  })))
 
   const productMap = new Map(products.map(p => [p.id, p]))
 
@@ -60,18 +68,42 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
   return products
 }
 
-function toPublicCostumeUrl(supabase: SupabaseClient, imageRef: string) {
-  const storagePath = extractCostumeStoragePath(imageRef)
-  if (!storagePath) return imageRef
-  return supabase.storage.from(COSTUMES_BUCKET).getPublicUrl(storagePath).data.publicUrl
+async function createProductImageDisplayUrl(supabase: SupabaseClient, imageRef: string) {
+  const storageRef = extractProductImageRef(imageRef)
+  if (!storageRef) return imageRef
+
+  const bucketsToTry = storageRef.bucket ? [storageRef.bucket] : PRODUCT_IMAGE_BUCKETS
+  for (const bucket of bucketsToTry) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(storageRef.path, PRODUCT_IMAGE_SIGNED_URL_TTL_SECONDS)
+
+    if (!error && data?.signedUrl) return data.signedUrl
+  }
+
+  return supabase.storage.from(storageRef.bucket ?? COSTUMES_BUCKET).getPublicUrl(storageRef.path).data.publicUrl
 }
 
-function extractCostumeStoragePath(imageRef: string | null | undefined) {
+function extractProductImageRef(imageRef: string | null | undefined): ProductImageRef | null {
   if (!imageRef) return null
-  if (!imageRef.includes('://') && !imageRef.startsWith('data:')) return imageRef
-  const publicPathIndex = imageRef.indexOf(COSTUMES_PUBLIC_PATH)
-  if (publicPathIndex === -1) return null
-  return imageRef.slice(publicPathIndex + COSTUMES_PUBLIC_PATH.length)
+  if (imageRef.startsWith('data:')) return null
+  if (!imageRef.includes('://')) return { bucket: null, path: imageRef }
+
+  for (const bucket of PRODUCT_IMAGE_BUCKETS) {
+    for (const accessType of ['public', 'sign']) {
+      const marker = `/storage/v1/object/${accessType}/${bucket}/`
+      const markerIndex = imageRef.indexOf(marker)
+      if (markerIndex === -1) continue
+
+      const rawPath = imageRef.slice(markerIndex + marker.length).split('?')[0] ?? ''
+      return {
+        bucket,
+        path: rawPath.split('/').map((segment) => decodeURIComponent(segment)).join('/'),
+      }
+    }
+  }
+
+  return null
 }
 
 async function cleanupUploadedProductImagePaths(supabase: SupabaseClient, storagePaths: string[]) {
@@ -83,12 +115,22 @@ async function cleanupUploadedProductImagePaths(supabase: SupabaseClient, storag
   }
 }
 
-async function cleanupDeletedProductImagePaths(supabase: SupabaseClient, storagePaths: string[]) {
-  if (storagePaths.length === 0) return
+async function cleanupDeletedProductImageRefs(supabase: SupabaseClient, imageRefs: string[]) {
+  const pathsByBucket = new Map<ProductImageBucket, string[]>()
 
-  const { error } = await supabase.storage.from(COSTUMES_BUCKET).remove(storagePaths)
-  if (error) {
-    console.warn('Failed to delete product images after metadata update:', storagePaths, error)
+  for (const imageRef of imageRefs) {
+    const storageRef = extractProductImageRef(imageRef)
+    if (!storageRef) continue
+
+    const bucket = storageRef.bucket ?? COSTUMES_BUCKET
+    pathsByBucket.set(bucket, [...(pathsByBucket.get(bucket) ?? []), storageRef.path])
+  }
+
+  for (const [bucket, paths] of pathsByBucket) {
+    const { error } = await supabase.storage.from(bucket).remove(paths)
+    if (error) {
+      console.warn('Failed to delete product images after metadata update:', paths, error)
+    }
   }
 }
 
@@ -99,7 +141,7 @@ async function uploadProductImages(supabase: SupabaseClient, shopId: string, pro
   try {
     for (const [index, imageRef] of imageRefs.entries()) {
       if (!imageRef.startsWith('data:')) {
-        paths.push(extractCostumeStoragePath(imageRef) ?? imageRef)
+        paths.push(extractProductImageRef(imageRef)?.path ?? imageRef)
         continue
       }
 
@@ -174,7 +216,7 @@ export async function updateRemoteProduct(
 ) {
   const { paths, uploadedPaths } = await uploadProductImages(supabase, shopId, productId, draft.imageUrls)
   const previousPaths = oldImageUrls
-    .map((imageUrl) => extractCostumeStoragePath(imageUrl))
+    .map((imageUrl) => extractProductImageRef(imageUrl)?.path)
     .filter((path): path is string => Boolean(path))
   const { error } = await supabase.from('products').update({
     product_name: draft.productName,
@@ -198,17 +240,17 @@ export async function updateRemoteProduct(
 
   const nextPathSet = new Set(paths)
   const deletedPaths = previousPaths.filter((path) => !nextPathSet.has(path))
-  await cleanupDeletedProductImagePaths(supabase, deletedPaths)
+  await cleanupDeletedProductImageRefs(supabase, oldImageUrls.filter((imageUrl) => {
+    const storageRef = extractProductImageRef(imageUrl)
+    return Boolean(storageRef && deletedPaths.includes(storageRef.path))
+  }))
 }
 
 export async function deleteRemoteProduct(supabase: SupabaseClient, shopId: string, productId: string, imageUrls: string[] = []) {
   const { error } = await supabase.from('products').delete().eq('id', productId).eq('shop_id', shopId)
   if (error) throw error
 
-  const storagePaths = imageUrls
-    .map((imageUrl) => extractCostumeStoragePath(imageUrl))
-    .filter((path): path is string => Boolean(path))
-  await cleanupDeletedProductImagePaths(supabase, storagePaths)
+  await cleanupDeletedProductImageRefs(supabase, imageUrls)
 }
 
 export async function deleteRemoteStockItem(supabase: SupabaseClient, shopId: string, stockItemId: string) {

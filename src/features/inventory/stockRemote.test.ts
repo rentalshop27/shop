@@ -13,7 +13,11 @@ describe('stockRemote', () => {
     vi.restoreAllMocks()
   })
 
-  it('converts stored costume image refs into public URLs when loading products', async () => {
+  it('converts stored costume image refs into signed URLs when loading products', async () => {
+    const createSignedUrl = vi.fn(async (path: string) => ({
+      data: { signedUrl: `https://signed.example/costumes/${path}` },
+      error: null,
+    }))
     const getPublicUrl = vi.fn((path: string) => ({ data: { publicUrl: `https://cdn.example/${path}` } }))
     const productsOrder = vi.fn(() => ({
       data: [{
@@ -52,7 +56,7 @@ describe('stockRemote', () => {
     const stockEq = vi.fn(() => ({ order: stockOrder }))
     const supabase = {
       storage: {
-        from: vi.fn(() => ({ getPublicUrl })),
+        from: vi.fn(() => ({ createSignedUrl, getPublicUrl })),
       },
       from: vi.fn((table: string) => {
         if (table === 'products') return { select: vi.fn(() => ({ eq: productsEq })) }
@@ -64,20 +68,71 @@ describe('stockRemote', () => {
     const products = await loadProductsWithStock(supabase, 'shop_1')
 
     expect(products[0].imageUrls).toEqual([
-      'https://cdn.example/shop_1/ruby-front.webp',
-      'https://cdn.example/shop_1/ruby-back.webp',
+      'https://signed.example/costumes/shop_1/ruby-front.webp',
+      'https://signed.example/costumes/shop_1/ruby-back.webp',
     ])
-    expect(getPublicUrl).toHaveBeenNthCalledWith(1, 'shop_1/ruby-front.webp')
-    expect(getPublicUrl).toHaveBeenNthCalledWith(2, 'shop_1/ruby-back.webp')
+    expect(createSignedUrl).toHaveBeenNthCalledWith(1, 'shop_1/ruby-front.webp', 60 * 60)
+    expect(createSignedUrl).toHaveBeenNthCalledWith(2, 'shop_1/ruby-back.webp', 60 * 60)
+    expect(getPublicUrl).not.toHaveBeenCalled()
+  })
+
+  it('falls back to legacy stock image signed URLs for old product image refs', async () => {
+    const createSignedUrlByBucket: Record<string, ReturnType<typeof vi.fn>> = {
+      costumes: vi.fn(async () => ({ data: null, error: new Error('missing in costumes') })),
+      'stock-images': vi.fn(async (path: string) => ({
+        data: { signedUrl: `https://signed.example/stock-images/${path}` },
+        error: null,
+      })),
+    }
+    const productsOrder = vi.fn(() => ({
+      data: [{
+        id: 'product_1',
+        base_sku: 'PR-001',
+        product_name: 'Ruby Dress',
+        brand: 'Precious',
+        category: 'Evening',
+        primary_color: 'Red',
+        public_description: '',
+        rental_tiers: [{days: 1, price: 2200}],
+        late_fee_rule: '',
+        deposit_amount: 5000,
+        image_urls: ['shop_1/legacy-front.webp'],
+        public_visible: true,
+        created_at: '2026-07-01T00:00:00.000Z',
+      }],
+      error: null,
+    }))
+    const stockOrder = vi.fn(() => ({ data: [], error: null }))
+    const productsEq = vi.fn(() => ({ order: productsOrder }))
+    const stockEq = vi.fn(() => ({ order: stockOrder }))
+    const supabase = {
+      storage: {
+        from: vi.fn((bucket: string) => ({
+          createSignedUrl: createSignedUrlByBucket[bucket],
+          getPublicUrl: vi.fn((path: string) => ({ data: { publicUrl: `https://cdn.example/${bucket}/${path}` } })),
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === 'products') return { select: vi.fn(() => ({ eq: productsEq })) }
+        if (table === 'stock_items') return { select: vi.fn(() => ({ eq: stockEq })) }
+        throw new Error(`Unexpected table ${table}`)
+      }),
+    } as unknown as SupabaseClient
+
+    const products = await loadProductsWithStock(supabase, 'shop_1')
+
+    expect(products[0].imageUrls).toEqual(['https://signed.example/stock-images/shop_1/legacy-front.webp'])
+    expect(createSignedUrlByBucket.costumes).toHaveBeenCalledWith('shop_1/legacy-front.webp', 60 * 60)
+    expect(createSignedUrlByBucket['stock-images']).toHaveBeenCalledWith('shop_1/legacy-front.webp', 60 * 60)
   })
 
   it('scopes product updates by shop id and removes deleted costume images after success', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('image', { status: 200, headers: { 'Content-Type': 'image/png' } })))
 
-    const removedPaths: string[][] = []
+    const removedPaths: Array<{ bucket: string, paths: string[] }> = []
     const upload = vi.fn(async () => ({ error: null }))
     const remove = vi.fn(async (paths: string[]) => {
-      removedPaths.push(paths)
+      removedPaths.push({ bucket: 'costumes', paths })
       return { error: null }
     })
     const updatePayloads: Array<{ image_urls: string[] }> = []
@@ -139,7 +194,7 @@ describe('stockRemote', () => {
       ['id', 'product_1'],
       ['shop_id', 'shop_1'],
     ])
-    expect(removedPaths).toEqual([['shop_1/remove.webp']])
+    expect(removedPaths).toEqual([{ bucket: 'costumes', paths: ['shop_1/remove.webp'] }])
   })
 
   it('cleans up partially uploaded images when product creation fails before the rpc', async () => {
