@@ -975,7 +975,7 @@ export function RentalsPage({
         {selectedRental && (
           <div className={`customer-detail-wrapper ${isMobileDetailOpen ? 'mobile-open' : ''}`} onClick={() => setIsMobileDetailOpen(false)}>
             <div className="customer-detail-content" onClick={(e) => e.stopPropagation()}>
-              <aside className="panel detail-panel" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+              <aside className="panel detail-panel rental-detail-panel" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
                 <button className="close-detail-btn" type="button" onClick={() => setIsMobileDetailOpen(false)} aria-label="ปิด" style={{ alignSelf: 'flex-end', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
@@ -1330,9 +1330,6 @@ export function RentalsPage({
                   <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>การจัดส่ง</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
-                      🛵 Grab
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
                       📦 EMS
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
@@ -1349,10 +1346,10 @@ export function RentalsPage({
                       <button
                         className="primary-button"
                         type="button"
-                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'grab' })}
+                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'messenger' })}
                         style={{ width: '100%', fontSize: '12px', background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '8px' }}
                       >
-                        🟢 เรียกไรเดอร์ Grab
+                        🟢 เรียก Messenger
                       </button>
                       <button
                         className="primary-button"

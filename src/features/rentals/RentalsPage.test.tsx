@@ -183,6 +183,30 @@ describe('RentalsPage', () => {
     expect(onUpdateRentalStatus).not.toHaveBeenCalled()
   })
 
+  it('uses Messenger as the quick delivery action instead of Grab', () => {
+    const onUpdateRentalStatus = vi.fn()
+
+    render(
+      <RentalsPage
+        rentals={[makeRental()]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={onUpdateRentalStatus}
+      />
+    )
+
+    expect(screen.queryByText(/Grab/)).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /เรียก Messenger/ }))
+
+    expect(onUpdateRentalStatus).toHaveBeenCalledWith(
+      ['rental_1'],
+      'active',
+      { method: 'messenger' }
+    )
+  })
+
   it('renders customer insights from rental history instead of mock values', () => {
     render(
       <RentalsPage

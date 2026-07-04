@@ -1935,6 +1935,13 @@ select {
 .detail-panel {
   position: relative;
 }
+.rental-detail-panel {
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  position: sticky;
+  top: 24px;
+}
 .close-detail-btn {
   display: none;
 }
@@ -1967,6 +1974,13 @@ select {
   
   .detail-panel {
     align-self: stretch;
+  }
+
+  .rental-detail-panel {
+    max-height: none;
+    overflow: visible;
+    position: relative;
+    top: auto;
   }
 
   .table-row {
