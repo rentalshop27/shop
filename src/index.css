@@ -68,8 +68,13 @@ button {
     margin: 0;
   }
 
+  html,
   body {
     background: #fff !important;
+    height: 6in;
+    margin: 0 !important;
+    overflow: hidden;
+    width: 4in;
   }
 
   body * {
@@ -84,9 +89,14 @@ button {
   .print-tag-wrapper {
     background: #fff;
     display: block !important;
+    height: 6in;
     inset: 0;
-    padding: 12px;
+    overflow: hidden;
+    padding: 0.16in;
+    page-break-after: avoid;
+    page-break-before: avoid;
     position: fixed;
+    width: 4in;
     z-index: 99999;
   }
 
@@ -97,8 +107,11 @@ button {
     font-family: 'Kanit', 'Noto Sans Thai', sans-serif;
     font-size: 13px;
     gap: 10px;
-    min-height: 6in;
-    width: 4in;
+    height: 5.68in;
+    overflow: hidden;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    width: 3.68in;
   }
 
   .print-tag-header {
@@ -128,6 +141,8 @@ button {
   .print-tag-value {
     font-size: 15px;
     font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
   }
 
   .print-tag-measurements,
@@ -169,6 +184,15 @@ button {
   .print-tag-notes-text {
     font-size: 13px;
     line-height: 1.6;
+  }
+
+  .print-tag-costume,
+  .print-tag-customer,
+  .print-tag-measurements,
+  .print-tag-dates,
+  .print-tag-notes {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .print-tag-footer {

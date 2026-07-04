@@ -1,8 +1,114 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
-import { deleteRemoteRental, updateRemoteRentalStatus } from './rentalRemote'
+import type { Customer } from '../customers/customerTypes'
+import type { FlatStockItem } from '../inventory/inventoryTypes'
+import { deleteRemoteRental, loadRentals, updateRemoteRentalStatus } from './rentalRemote'
+
+const customer: Customer = {
+  id: 'customer_1',
+  shopId: 'shop_1',
+  customerCode: 'CUS-001',
+  fullName: 'Somjai',
+  lineAccount: 'somjai-line',
+  phone: '0812345678',
+  phoneNormalized: '0812345678',
+  currentAddress: 'Bangkok',
+  notes: '',
+  profileStatus: 'verified',
+  riskFlag: 'none',
+  documents: [],
+  createdAt: '2026-07-01T00:00:00.000Z',
+  updatedAt: '2026-07-01T00:00:00.000Z',
+}
+
+const stockItem: FlatStockItem = {
+  id: 'stock_1',
+  shopId: 'shop_1',
+  productId: 'product_1',
+  sku: 'SKU-001',
+  size: 'M',
+  status: 'available',
+  createdAt: '2026-07-01T00:00:00.000Z',
+  productName: 'Golden Dress',
+  brand: 'Precious',
+  category: 'Evening',
+  primaryColor: 'Gold',
+  rentalTiers: [{ days: 1, price: 1200 }],
+  lateFeeRule: '100/day',
+  depositAmount: 500,
+  imageUrls: ['https://signed.example/costumes/shop_1/golden-front.webp'],
+  publicVisible: true,
+  isFeatured: false,
+  displayOrder: 0,
+}
+
+function createLoadRentalsClient(rows: unknown[]) {
+  const order = vi.fn(async () => ({ data: rows, error: null }))
+  const eq = vi.fn(() => ({ order }))
+  const select = vi.fn(() => ({ eq }))
+  const from = vi.fn(() => ({ select }))
+
+  return {
+    client: { from } as unknown as SupabaseClient,
+    from,
+    select,
+    eq,
+    order,
+  }
+}
+
+function makeRentalRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'rental_1',
+    shop_id: 'shop_1',
+    order_code: 'PR-ORD-260704-001',
+    customer_id: 'customer_1',
+    stock_item_id: 'stock_1',
+    stock_item_sku: 'SKU-001',
+    pickup_date: '2026-07-04',
+    return_date: '2026-07-05',
+    rental_price: 1200,
+    deposit_amount: 500,
+    collected_amount: 1700,
+    status: 'booked',
+    deposit_status: null,
+    shipping_method: null,
+    tracking_number: null,
+    return_tracking_note: null,
+    shipping_cost: 0,
+    notes: null,
+    created_at: '2026-07-04T00:00:00.000Z',
+    updated_at: '2026-07-04T00:00:00.000Z',
+    ...overrides,
+  }
+}
 
 describe('rentalRemote', () => {
+  it('hydrates rental costumes with image urls from backend-loaded stock items', async () => {
+    const { client, from, eq, order } = createLoadRentalsClient([makeRentalRow()])
+
+    const rentals = await loadRentals(client, 'shop_1', [customer], [stockItem])
+
+    expect(from).toHaveBeenCalledWith('rentals')
+    expect(eq).toHaveBeenCalledWith('shop_id', 'shop_1')
+    expect(order).toHaveBeenCalledWith('created_at', { ascending: false })
+    expect(rentals[0].costume.imageUrls).toEqual(stockItem.imageUrls)
+  })
+
+  it('keeps image urls when hydrating legacy rental rows by stock item sku', async () => {
+    const { client } = createLoadRentalsClient([
+      makeRentalRow({
+        stock_item_id: 'missing_legacy_id',
+        stock_item_sku: 'SKU-001',
+      }),
+    ])
+
+    const rentals = await loadRentals(client, 'shop_1', [customer], [stockItem])
+
+    expect(rentals[0].costume.id).toBe('stock_1')
+    expect(rentals[0].costume.imageUrls).toEqual(stockItem.imageUrls)
+  })
+
   it('scopes rental status updates by shop id and rental ids', async () => {
     const filters: Array<[string, string]> = []
     const updateQuery = {

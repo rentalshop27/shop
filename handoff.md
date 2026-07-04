@@ -51,6 +51,45 @@
 
 ## สิ่งที่ต้องทำต่อไป (Next Steps / TODOs)
 
-- [ ] **Customer Insight Logic:** เปลี่ยน Mockup ในแผงด้านขวาให้เป็นการดึงข้อมูลจริงจากฐานข้อมูล (ประวัติการเช่า, การคืนล่าช้า) และกำหนดสูตรคำนวณระดับลูกค้า 5 ดาว
-- [ ] **Print Tag CSS:** การปรับ CSS `@media print` สำหรับฟังก์ชัน "พิมพ์แท็ก" (ฟังก์ชันที่มีการเพิ่มโค้ดไปในรอบก่อนหน้าแต่ยังต้องจัดหน้ากระดาษ)
-- [ ] **Database / Backend Sync:** ตรวจสอบให้แน่ใจว่า API ของ Backend สามารถส่งข้อมูลรูปภาพ (`imageUrls`) มาได้ถูกต้องในทุกเคสเพื่อให้ Thumbnail ใน Mini-Card แสดงผลได้
+- [x] **Customer Insight Logic / Customer Star Rating:** เปลี่ยน Mockup ในแผงด้านขวาให้เป็นข้อมูลจริงจากประวัติการเช่า และทำสูตรระดับลูกค้า 5 ดาวให้ใช้งานได้จริง
+  - **สถานะล่าสุด:** ทำ v1 แล้วใน `src/features/rentals/customerInsights.ts` และ render จริงใน `src/features/rentals/RentalsPage.tsx`
+  - **ข้อมูลที่ใช้ใน v1 โดยไม่เพิ่ม DB column:**
+    - `Customer.profileStatus`, `Customer.riskFlag`, `Customer.documents`, `Customer.archivedAt`
+    - `RentalOrder.customer.id`, `status`, `pickupDate`, `returnDate`, `depositStatus`, `collectedAmount`, `depositAmount`, `shippingCost`
+  - **งาน v1 ที่ทำแล้ว:**
+    - สร้าง helper ใหม่ `src/features/rentals/customerInsights.ts`
+    - คำนวณ `rentalCount` จาก rental ทั้งหมดของลูกค้าคนเดียวกัน
+    - คำนวณ `completedRentalCount` จาก `status === 'returned'`
+    - คำนวณ `activeOverdueCount` จาก `status === 'overdue'` หรือ `status === 'active' && returnDate < today`
+    - คำนวณ `depositForfeitedCount` จาก `depositStatus === 'forfeited'`
+    - คำนวณ `totalSpent` จาก `collectedAmount - depositAmount`
+    - คำนวณ `starRating` จากสูตรกลางเดียวกัน แล้ว render เป็นดาวจริงแทน mock
+  - **สูตรเริ่มต้นที่เสนอสำหรับ v1:**
+    - เริ่มที่ 5 ดาว
+    - ถ้า `profileStatus !== 'verified'` หัก 1 ดาว
+    - ถ้า `riskFlag === 'has_risk'` หัก 2 ดาว
+    - active/overdue ที่เลยวันคืน หัก 0.5 ต่อครั้ง
+    - deposit forfeited หัก 1 ต่อครั้ง
+    - ลูกค้าที่เช่าครบ 5/10/20 ครั้งอาจบวกคืนบางส่วน แต่คะแนนสุดท้ายต้องไม่เกิน 5 และไม่ต่ำกว่า 1
+  - **ข้อมูลที่ยังขาดถ้าต้องการสูตรแม่นขึ้นใน v2:**
+    - `actual_returned_at` หรือ `returned_at` เพื่อรู้ว่ารายการที่ `status === 'returned'` เคยคืนช้าจริงหรือไม่
+    - `cancelled_at` และ `cancel_reason` เพื่อแยก `cancelled` ปกติออกจาก no-show
+    - field สำหรับ incident/damage หรือ note ที่เป็น structured data ถ้าจะหักดาวจากชุดเสียหาย ไม่ควรเดาจากข้อความ notes
+  - **งาน DB v2 ที่ควรวางแผน:**
+    - เพิ่ม migration ให้ตาราง `rentals` มี `actual_returned_at`, `cancelled_at`, `cancel_reason`
+    - อัปเดต `src/features/rentals/rentalTypes.ts`
+    - อัปเดต `src/features/rentals/rentalRemote.ts` ให้ map/load/save field ใหม่
+    - อัปเดต action คืนชุด/ยกเลิกออเดอร์ใน `src/App.tsx` หรือ handler ที่เกี่ยวข้องให้บันทึก timestamp/เหตุผล
+  - **Acceptance Criteria:**
+    - [x] Customer Insight ในหน้าเช่าไม่มีค่า hard-coded mock เหลืออยู่
+    - [x] ลูกค้าคนเดียวกันในหลายออเดอร์ได้ rental count และ star rating เดียวกัน
+    - [x] มี unit test สำหรับ helper สูตรดาว ครอบคลุม verified customer, risk customer, overdue, deposit forfeited, และลูกค้าใหม่
+    - [x] UI แสดงชื่อ metric ให้ตรงกับข้อเท็จจริง เช่น `ค้างคืนตอนนี้` และ `ยึดมัดจำ` แทนการอ้าง `Late Return` / `No Show`
+- [x] **Print Tag CSS:** ปรับ CSS `@media print` สำหรับฟังก์ชัน "พิมพ์แท็ก" แล้ว
+  - ล็อก `@page` / wrapper / tag เป็นขนาด 4x6 นิ้ว
+  - ซ่อน UI ปกติระหว่าง print และแสดงเฉพาะ `.print-tag-wrapper`
+  - เพิ่ม `print-color-adjust`, overflow guard, และ `break-inside: avoid` ให้ block สำคัญ
+- [x] **Database / Backend Sync:** ตรวจสอบและเพิ่ม regression test แล้วว่า thumbnail ใน Mini-Card ได้ `imageUrls` จากข้อมูล stock/product ที่ backend โหลดไว้
+  - `loadRentals()` hydrate `rental.costume` จาก `stockItems` ด้วย `stock_item_id`
+  - รองรับ legacy fallback ด้วย `stock_item_sku`
+  - Test อยู่ที่ `src/features/rentals/rentalRemote.test.ts`

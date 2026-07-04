@@ -45,6 +45,17 @@ const stockItem: FlatStockItem = {
   displayOrder: 0,
 }
 
+function clickMetric(label: string) {
+  const metric = screen
+    .getAllByText(label)
+    .map((element) => element.closest('.metric-card'))
+    .find(Boolean)
+  if (!metric) {
+    throw new Error(`Metric "${label}" was not rendered`)
+  }
+  fireEvent.click(metric)
+}
+
 function makeRental(overrides: Partial<RentalOrder> = {}): RentalOrder {
   return {
     id: 'rental_1',
@@ -90,6 +101,66 @@ describe('RentalsPage', () => {
     expect(screen.getAllByText(/เลยกำหนดส่ง/)).not.toHaveLength(0)
   })
 
+  it('filters the list to rentals returning today when the return KPI is clicked', () => {
+    render(
+      <RentalsPage
+        rentals={[
+          makeRental({
+            id: 'return_today',
+            orderCode: 'PR-ORD-260704-RET',
+            status: 'active',
+            returnDate: '2026-07-05',
+          }),
+          makeRental({
+            id: 'return_later',
+            orderCode: 'PR-ORD-260704-LTR',
+            status: 'active',
+            returnDate: '2026-07-06',
+          }),
+        ]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    clickMetric('คืนวันนี้')
+
+    expect(screen.getByRole('row', { name: /#260704-RET/ })).toBeTruthy()
+    expect(screen.queryByRole('row', { name: /#260704-LTR/ })).toBeNull()
+  })
+
+  it('includes active rentals past their return date in the overdue-return KPI filter', () => {
+    render(
+      <RentalsPage
+        rentals={[
+          makeRental({
+            id: 'active_overdue',
+            orderCode: 'PR-ORD-260704-OVR',
+            status: 'active',
+            returnDate: '2026-07-04',
+          }),
+          makeRental({
+            id: 'active_current',
+            orderCode: 'PR-ORD-260704-CUR',
+            status: 'active',
+            returnDate: '2026-07-05',
+          }),
+        ]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    clickMetric('เลยกำหนดคืน')
+
+    expect(screen.getByRole('row', { name: /#260704-OVR/ })).toBeTruthy()
+    expect(screen.queryByRole('row', { name: /#260704-CUR/ })).toBeNull()
+  })
+
   it('requires a non-empty Thailand Post tracking number before status update', () => {
     const onUpdateRentalStatus = vi.fn()
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('   ')
@@ -105,10 +176,49 @@ describe('RentalsPage', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /ส่งไปรษณีย์ไทยแล้ว/ }))
+    fireEvent.click(screen.getByRole('button', { name: /ส่งไปรษณีย์ไทย/ }))
 
     expect(promptSpy).toHaveBeenCalledTimes(1)
     expect(alertSpy).toHaveBeenCalledWith('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
     expect(onUpdateRentalStatus).not.toHaveBeenCalled()
+  })
+
+  it('renders customer insights from rental history instead of mock values', () => {
+    render(
+      <RentalsPage
+        rentals={[
+          makeRental({
+            id: 'returned',
+            orderCode: 'PR-ORD-260704-001',
+            status: 'returned',
+            collectedAmount: 1850,
+            depositAmount: 500,
+          }),
+          makeRental({
+            id: 'active_overdue',
+            orderCode: 'PR-ORD-260704-002',
+            status: 'active',
+            returnDate: '2026-07-04',
+            collectedAmount: 1700,
+            depositAmount: 500,
+            depositStatus: 'forfeited',
+          }),
+        ]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('เช่าทั้งหมด')).toBeTruthy()
+    expect(screen.getByText('2 ครั้ง')).toBeTruthy()
+    expect(screen.getByText('คืนครบแล้ว')).toBeTruthy()
+    expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('ยอดสุทธิ')).toBeTruthy()
+    expect(screen.getByText('฿2,550')).toBeTruthy()
+    expect(screen.queryByText('15 ครั้ง')).toBeNull()
+    expect(screen.queryByText('Late Return')).toBeNull()
+    expect(screen.queryByText('No Show')).toBeNull()
   })
 })

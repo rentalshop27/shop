@@ -16,6 +16,7 @@ import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import { findOpenRentalConflict, resolveRentalPrice, calculateReturnDate } from './rentalRules'
 import { canCreateRentalForCustomer } from '../customers/customerRules'
+import { calculateCustomerInsights } from './customerInsights'
 
 function tiersAreCompatible(costumes: FlatStockItem[]): boolean {
   if (costumes.length <= 1) return true
@@ -116,10 +117,11 @@ export function RentalsPage({
       setIsMobileDetailOpen(true)
     }
   }, [externalSelectedRentalId])
-  
+
   // Search & Filter
   const [orderQuery, setOrderQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | RentalStatus>('all')
+  type RentalListFilter = 'all' | RentalStatus | 'created_today' | 'returning_today' | 'overdue_return' | 'overdue_shipping'
+  const [statusFilter, setStatusFilter] = useState<RentalListFilter>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -151,7 +153,7 @@ export function RentalsPage({
   const [collectedAmount, setCollectedAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [formError, setFormError] = useState('')
-  
+
   const [localIsFormOpen, setLocalIsFormOpen] = useState(false)
   const isFormOpen = onFormOpenChange ? (externalIsFormOpen || false) : localIsFormOpen
   const setIsFormOpen = (open: boolean) => {
@@ -205,11 +207,11 @@ export function RentalsPage({
     const query = customerSearch.trim().toLowerCase()
     const activeCustomers = customers.filter((c) => !c.archivedAt)
     const isSelectedMatch = selectedCustomer && query === `${selectedCustomer.fullName} (${selectedCustomer.customerCode})`.toLowerCase()
-    
+
     if (!query || isSelectedMatch) {
       return activeCustomers
     }
-    
+
     return activeCustomers.filter(
       (c) =>
         c.fullName.toLowerCase().includes(query) ||
@@ -220,7 +222,7 @@ export function RentalsPage({
 
   const filteredCostumesSuggestions = useMemo(() => {
     const query = costumeSearch.trim().toLowerCase()
-    
+
     const availableCostumes = stockItems.filter(
       (item) =>
         !selectedCostumes.some((selected) => selected.id === item.id) &&
@@ -230,7 +232,7 @@ export function RentalsPage({
     if (!query) {
       return availableCostumes
     }
-    
+
     return availableCostumes.filter(
       (item) =>
         item.productName.toLowerCase().includes(query) ||
@@ -250,7 +252,7 @@ export function RentalsPage({
       setCollectedAmount('')
       return
     }
-    
+
     if (!tiersAreCompatible(selectedCostumes)) {
       setSelectedTierDays('custom')
     } else {
@@ -261,29 +263,29 @@ export function RentalsPage({
         }
       }
     }
-    
+
     const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
     setDepositAmount(totalDeposit.toString())
   }, [selectedCostumes, selectedTierDays])
 
   useEffect(() => {
     if (selectedCostumes.length === 0) return
-    
+
     if (typeof selectedTierDays === 'number') {
       const tier = selectedCostumes[0]?.rentalTiers.find((candidate) => candidate.days === selectedTierDays)
       if (tier) {
         if (pickupDate) {
           setReturnDate(calculateReturnDate(pickupDate, tier.days))
         }
-        
+
         let totalBasePrice = 0
         for (const costume of selectedCostumes) {
           totalBasePrice += findTierByDays(costume, selectedTierDays)?.price || 0
         }
-        
+
         setBasePriceFromTier(totalBasePrice)
         setRentalPrice(totalBasePrice.toString())
-        
+
         const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
         setDiscountAmount('0')
         setShippingCost('0')
@@ -436,7 +438,8 @@ export function RentalsPage({
     let todayTotal = 0
     let activeTotal = 0
     let returningToday = 0
-    let overdueTotal = 0
+    let overdueReturnTotal = 0
+    let overdueShippingTotal = 0
 
     groupedRentals.forEach(group => {
       // Create at date check
@@ -444,21 +447,32 @@ export function RentalsPage({
         todayTotal++
       }
       if (group.status === 'active') activeTotal++
-      if (group.status === 'overdue') overdueTotal++
+      if (group.status === 'overdue' || (group.status === 'active' && group.returnDate < todayStr)) {
+        overdueReturnTotal++
+      }
       if ((group.status === 'active' || group.status === 'overdue') && group.returnDate === todayStr) {
         returningToday++
       }
+      if (group.status === 'booked' && group.pickupDate < todayStr) {
+        overdueShippingTotal++
+      }
     })
 
-    return { todayTotal, activeTotal, returningToday, overdueTotal }
+    return { todayTotal, activeTotal, returningToday, overdueReturnTotal, overdueShippingTotal }
   }, [groupedRentals, todayStr])
 
   // Filter grouped rentals list
   const filteredGroupedRentals = useMemo(() => {
     const query = orderQuery.trim().toLowerCase()
     return groupedRentals.filter((group) => {
-      const matchesStatus = statusFilter === 'all' || group.status === statusFilter
-      
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'created_today' && Boolean(group.createdAt?.startsWith(todayStr))) ||
+        (statusFilter === 'returning_today' && (group.status === 'active' || group.status === 'overdue') && group.returnDate === todayStr) ||
+        (statusFilter === 'overdue_return' && (group.status === 'overdue' || (group.status === 'active' && group.returnDate < todayStr))) ||
+        (statusFilter === 'overdue_shipping' && group.status === 'booked' && group.pickupDate < todayStr) ||
+        group.status === statusFilter
+
       const costumeSearchable = group.rentals.map((r) => `${r.costume.productName} ${r.costume.sku}`).join(' ')
       const searchable = [
         group.orderCode,
@@ -468,10 +482,10 @@ export function RentalsPage({
       ]
         .join(' ')
         .toLowerCase()
-      
+
       return matchesStatus && (!query || searchable.includes(query))
     })
-  }, [groupedRentals, orderQuery, statusFilter])
+  }, [groupedRentals, orderQuery, statusFilter, todayStr])
 
   // Paginated rentals
   const paginatedRentals = useMemo(() => {
@@ -489,6 +503,11 @@ export function RentalsPage({
     }
     return group ?? filteredGroupedRentals[0] ?? groupedRentals[0]
   }, [groupedRentals, selectedRentalId, filteredGroupedRentals])
+
+  const selectedCustomerInsights = useMemo(() => {
+    if (!selectedRental) return null
+    return calculateCustomerInsights(selectedRental.customer, rentals, todayStr)
+  }, [selectedRental, rentals, todayStr])
 
   // Handle Form Submission (create OR edit)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -614,11 +633,11 @@ export function RentalsPage({
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     const rentalDays = diffDays > 0 ? diffDays : 1
 
-    const priceWeights = selectedCostumes.map((item) => 
+    const priceWeights = selectedCostumes.map((item) =>
       resolveRentalPrice(item.rentalTiers, rentalDays) ?? 1
     )
     const priceShares = splitAmountByWeights(price, priceWeights)
-    
+
     const depositWeights = selectedCostumes.map((item) => item.depositAmount || 1)
     const depositShares = splitAmountByWeights(deposit, depositWeights)
 
@@ -765,10 +784,10 @@ export function RentalsPage({
       </header>
 
       {/* KPI DASHBOARD */}
-      <div className="system-strip" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div 
-          className={`metric-card interactive total ${statusFilter === 'all' ? 'active-filter' : ''}`}
-          onClick={() => { setStatusFilter('all'); setOrderQuery(''); setCurrentPage(1); }}
+      <div className="system-strip" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div
+          className={`metric-card interactive total ${statusFilter === 'created_today' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('created_today'); setOrderQuery(''); setCurrentPage(1); }}
         >
           <div className="metric-icon-wrapper">
             <span style={{ fontSize: '20px' }}>📦</span>
@@ -778,8 +797,8 @@ export function RentalsPage({
             <strong>{stats.todayTotal}</strong>
           </div>
         </div>
-        
-        <div 
+
+        <div
           className={`metric-card interactive verified ${statusFilter === 'active' ? 'active-filter' : ''}`}
           onClick={() => { setStatusFilter('active'); setOrderQuery(''); setCurrentPage(1); }}
         >
@@ -791,10 +810,10 @@ export function RentalsPage({
             <strong>{stats.activeTotal}</strong>
           </div>
         </div>
-        
-        <div 
-          className={`metric-card interactive incomplete ${statusFilter === 'active' && orderQuery === todayStr ? 'active-filter' : ''}`}
-          onClick={() => { setStatusFilter('all'); setOrderQuery(todayStr); setCurrentPage(1); }}
+
+        <div
+          className={`metric-card interactive incomplete ${statusFilter === 'returning_today' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('returning_today'); setOrderQuery(''); setCurrentPage(1); }}
         >
           <div className="metric-icon-wrapper">
             <span style={{ fontSize: '20px' }}>🟠</span>
@@ -804,17 +823,30 @@ export function RentalsPage({
             <strong>{stats.returningToday}</strong>
           </div>
         </div>
-        
-        <div 
-          className={`metric-card interactive risk ${statusFilter === 'overdue' ? 'active-filter' : ''}`}
-          onClick={() => { setStatusFilter('overdue'); setOrderQuery(''); setCurrentPage(1); }}
+
+        <div
+          className={`metric-card interactive risk ${statusFilter === 'overdue_return' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('overdue_return'); setOrderQuery(''); setCurrentPage(1); }}
         >
           <div className="metric-icon-wrapper">
             <span style={{ fontSize: '20px' }}>🔴</span>
           </div>
           <div className="card-content">
-            <span>เลยกำหนด</span>
-            <strong>{stats.overdueTotal}</strong>
+            <span>เลยกำหนดคืน</span>
+            <strong>{stats.overdueReturnTotal}</strong>
+          </div>
+        </div>
+
+        <div
+          className={`metric-card interactive risk ${statusFilter === 'overdue_shipping' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('overdue_shipping'); setOrderQuery(''); setCurrentPage(1); }}
+        >
+          <div className="metric-icon-wrapper">
+            <span style={{ fontSize: '20px' }}>🚨</span>
+          </div>
+          <div className="card-content">
+            <span>เลยกำหนดส่ง</span>
+            <strong>{stats.overdueShippingTotal}</strong>
           </div>
         </div>
       </div>
@@ -828,13 +860,13 @@ export function RentalsPage({
               <Search size={22} />
               <input
                 value={orderQuery}
-                onChange={(e) => { 
+                onChange={(e) => {
                   const val = e.target.value;
-                  setOrderQuery(val); 
-                  setCurrentPage(1); 
-                  
-                  const exactMatch = groupedRentals.find(g => 
-                    g.orderCode.toLowerCase() === val.toLowerCase() || 
+                  setOrderQuery(val);
+                  setCurrentPage(1);
+
+                  const exactMatch = groupedRentals.find(g =>
+                    g.orderCode.toLowerCase() === val.toLowerCase() ||
                     g.orderCode.toLowerCase().replace(/^pr-ord-/, '').replace(/^#/, '') === val.toLowerCase().replace(/^#/, '')
                   );
                   if (exactMatch && val.trim().length >= 3) {
@@ -847,12 +879,16 @@ export function RentalsPage({
             </label>
             <select
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value as 'all' | RentalStatus); setCurrentPage(1); }}
+              onChange={(e) => { setStatusFilter(e.target.value as RentalListFilter); setOrderQuery(''); setCurrentPage(1); }}
             >
               <option value="all">ทุกสถานะ</option>
+              <option value="created_today">สร้างวันนี้</option>
+              <option value="returning_today">คืนวันนี้</option>
               <option value="booked">รอส่งมอบ</option>
               <option value="active">ใช้งานอยู่ (กำลังใช้งาน)</option>
               <option value="returned">คืนแล้ว</option>
+              <option value="overdue_return">เลยกำหนดคืน</option>
+              <option value="overdue_shipping">เลยกำหนดส่ง</option>
               <option value="overdue">เกินกำหนดคืน</option>
               <option value="cancelled">ยกเลิกแล้ว</option>
             </select>
@@ -864,7 +900,7 @@ export function RentalsPage({
               const mainCostume = rental.rentals[0]?.costume;
               const imageUrl = mainCostume?.imageUrls?.find((url) => url.trim().length > 0);
               const shortOrderId = rental.orderCode.replace(/^PR-ORD-/, '#');
-              
+
               return (
               <button
                 className={`panel table-button hybrid-table-row ${rental.orderCode === selectedRental?.orderCode ? 'selected' : ''}`}
@@ -943,7 +979,7 @@ export function RentalsPage({
                 <button className="close-detail-btn" type="button" onClick={() => setIsMobileDetailOpen(false)} aria-label="ปิด" style={{ alignSelf: 'flex-end', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
-                
+
                 {/* Action Bar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1018,26 +1054,36 @@ export function RentalsPage({
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Customer Insight (Mockup) */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px' }}>
+
+                  {/* Customer Insight */}
+                  {selectedCustomerInsights && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px', marginTop: '16px' }}>
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>เช่ามาแล้ว</div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-bright)', fontWeight: 600 }}>15 ครั้ง</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>เช่าทั้งหมด</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-bright)', fontWeight: 600 }}>{selectedCustomerInsights.rentalCount} ครั้ง</div>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Late Return</div>
-                      <div style={{ fontSize: '13px', color: 'var(--warning-color)', fontWeight: 600 }}>1</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>คืนครบแล้ว</div>
+                      <div style={{ fontSize: '13px', color: 'var(--success-color)', fontWeight: 600 }}>{selectedCustomerInsights.completedRentalCount}</div>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No Show</div>
-                      <div style={{ fontSize: '13px', color: 'var(--success-color)', fontWeight: 600 }}>0</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ค้างคืนตอนนี้</div>
+                      <div style={{ fontSize: '13px', color: 'var(--warning-color)', fontWeight: 600 }}>{selectedCustomerInsights.activeOverdueCount}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ยึดมัดจำ</div>
+                      <div style={{ fontSize: '13px', color: selectedCustomerInsights.depositForfeitedCount > 0 ? 'var(--warning-color)' : 'var(--success-color)', fontWeight: 600 }}>{selectedCustomerInsights.depositForfeitedCount}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ยอดสุทธิ</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-bright)', fontWeight: 600 }}>{formatBaht(selectedCustomerInsights.totalSpent)}</div>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
                       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ระดับลูกค้า</div>
-                      <div style={{ fontSize: '13px', color: 'var(--text-gold)', fontWeight: 600 }}>★★★★★</div>
+                      <div aria-label={`ระดับลูกค้า ${selectedCustomerInsights.starRating} จาก 5`} style={{ fontSize: '13px', color: 'var(--text-gold)', fontWeight: 600 }}>{selectedCustomerInsights.starDisplay}</div>
                     </div>
                   </div>
+                  )}
                   {/* Deposit return controls */}
                   {selectedRental.status === 'returned' && selectedRental.rentals.some(r => r.depositAmount > 0) && onUpdateDepositStatus && (
                     <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
@@ -1100,7 +1146,7 @@ export function RentalsPage({
                       <div style={{ fontSize: '14px', color: 'var(--text-bright)', fontWeight: 600 }}>{selectedRental.returnDate}</div>
                     </div>
                   </div>
-                  
+
                   <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
                       <span>ค่าเช่าสุทธิ</span>
@@ -1296,7 +1342,7 @@ export function RentalsPage({
                       🚚 Messenger
                     </div>
                   </div>
-                  
+
                   {/* Delivery Status buttons if booked */}
                   {selectedRental.status === 'booked' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
@@ -1318,6 +1364,8 @@ export function RentalsPage({
                               method: 'thailand_post',
                               trackingNumber: tracking.trim()
                             })
+                          } else {
+                            window.alert('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
                           }
                         }}
                         style={{ width: '100%', fontSize: '12px', background: '#FFC107', borderColor: '#FFC107', color: '#000', padding: '8px' }}
@@ -1428,7 +1476,7 @@ export function RentalsPage({
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
+
               {/* SELECT CUSTOMER AUTOCOMPLETE */}
               <div ref={customerContainerRef} style={{ position: 'relative' }}>
                 <label className="field">
@@ -1534,9 +1582,9 @@ export function RentalsPage({
                     <div>
                       <span style={{ color: 'var(--success-color)', fontWeight: 600 }}>เลือกสำเร็จ:</span> {selectedCustomer.fullName} ({selectedCustomer.customerCode})
                       <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px' }}>
-                        รอบอก: {selectedCustomer.bustIn ? `${selectedCustomer.bustIn}"` : '-'} | 
-                        รอบเอว: {selectedCustomer.waistIn ? `${selectedCustomer.waistIn}"` : '-'} | 
-                        สะโพก: {selectedCustomer.hipIn ? `${selectedCustomer.hipIn}"` : '-'} | 
+                        รอบอก: {selectedCustomer.bustIn ? `${selectedCustomer.bustIn}"` : '-'} |
+                        รอบเอว: {selectedCustomer.waistIn ? `${selectedCustomer.waistIn}"` : '-'} |
+                        สะโพก: {selectedCustomer.hipIn ? `${selectedCustomer.hipIn}"` : '-'} |
                         สูง: {selectedCustomer.heightCm ? `${selectedCustomer.heightCm} cm` : '-'}
                       </div>
                     </div>
@@ -1696,7 +1744,7 @@ export function RentalsPage({
                   </div>
                 )}
               </div>
-              
+
               {/* PACKAGE CHOICE CHIPS */}
 	              {!editingRentalId && selectedCostumes.length > 0 && (
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
@@ -1783,7 +1831,7 @@ export function RentalsPage({
               {/* FINANCIAL SETTINGS */}
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <h3 style={{ fontSize: '14px', color: 'var(--text-gold)', margin: '0 0 12px' }}>สรุปข้อมูลการเงิน</h3>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                   <label className="field">
                     <span>ราคาตามแพ็กเกจ (Base)</span>
@@ -1854,7 +1902,7 @@ export function RentalsPage({
                     />
                   </label>
                 </div>
-                
+
                 <div style={{ marginTop: '16px' }}>
                   <label className="field">
                     <span>ราคารวมเก็บหน้างาน</span>
