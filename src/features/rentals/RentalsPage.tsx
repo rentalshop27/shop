@@ -430,6 +430,29 @@ export function RentalsPage({
     })
   }, [rentals])
 
+
+  const todayStr = getTodayString()
+  const stats = React.useMemo(() => {
+    let todayTotal = 0
+    let activeTotal = 0
+    let returningToday = 0
+    let overdueTotal = 0
+
+    groupedRentals.forEach(group => {
+      // Create at date check
+      if (group.createdAt && group.createdAt.startsWith(todayStr)) {
+        todayTotal++
+      }
+      if (group.status === 'active') activeTotal++
+      if (group.status === 'overdue') overdueTotal++
+      if ((group.status === 'active' || group.status === 'overdue') && group.returnDate === todayStr) {
+        returningToday++
+      }
+    })
+
+    return { todayTotal, activeTotal, returningToday, overdueTotal }
+  }, [groupedRentals, todayStr])
+
   // Filter grouped rentals list
   const filteredGroupedRentals = useMemo(() => {
     const query = orderQuery.trim().toLowerCase()
@@ -741,6 +764,61 @@ export function RentalsPage({
         </button>
       </header>
 
+      {/* KPI DASHBOARD */}
+      <div className="system-strip" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div 
+          className={`metric-card interactive total ${statusFilter === 'all' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('all'); setOrderQuery(''); setCurrentPage(1); }}
+        >
+          <div className="metric-icon-wrapper">
+            <span style={{ fontSize: '20px' }}>📦</span>
+          </div>
+          <div className="card-content">
+            <span>วันนี้</span>
+            <strong>{stats.todayTotal}</strong>
+          </div>
+        </div>
+        
+        <div 
+          className={`metric-card interactive verified ${statusFilter === 'active' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('active'); setOrderQuery(''); setCurrentPage(1); }}
+        >
+          <div className="metric-icon-wrapper">
+            <span style={{ fontSize: '20px' }}>🟢</span>
+          </div>
+          <div className="card-content">
+            <span>กำลังเช่า</span>
+            <strong>{stats.activeTotal}</strong>
+          </div>
+        </div>
+        
+        <div 
+          className={`metric-card interactive incomplete ${statusFilter === 'active' && orderQuery === todayStr ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('all'); setOrderQuery(todayStr); setCurrentPage(1); }}
+        >
+          <div className="metric-icon-wrapper">
+            <span style={{ fontSize: '20px' }}>🟠</span>
+          </div>
+          <div className="card-content">
+            <span>คืนวันนี้</span>
+            <strong>{stats.returningToday}</strong>
+          </div>
+        </div>
+        
+        <div 
+          className={`metric-card interactive risk ${statusFilter === 'overdue' ? 'active-filter' : ''}`}
+          onClick={() => { setStatusFilter('overdue'); setOrderQuery(''); setCurrentPage(1); }}
+        >
+          <div className="metric-icon-wrapper">
+            <span style={{ fontSize: '20px' }}>🔴</span>
+          </div>
+          <div className="card-content">
+            <span>เลยกำหนด</span>
+            <strong>{stats.overdueTotal}</strong>
+          </div>
+        </div>
+      </div>
+
       {/* RENTALS WORKSPACE */}
       <section className="customer-grid">
         {/* Left Side: Orders Table and Filter Bar */}
@@ -750,7 +828,20 @@ export function RentalsPage({
               <Search size={22} />
               <input
                 value={orderQuery}
-                onChange={(e) => { setOrderQuery(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => { 
+                  const val = e.target.value;
+                  setOrderQuery(val); 
+                  setCurrentPage(1); 
+                  
+                  const exactMatch = groupedRentals.find(g => 
+                    g.orderCode.toLowerCase() === val.toLowerCase() || 
+                    g.orderCode.toLowerCase().replace(/^pr-ord-/, '').replace(/^#/, '') === val.toLowerCase().replace(/^#/, '')
+                  );
+                  if (exactMatch && val.trim().length >= 3) {
+                    setSelectedRentalId(exactMatch.orderCode);
+                    setIsMobileDetailOpen(true);
+                  }
+                }}
                 placeholder="ค้นหาด้วยรหัสออเดอร์ ชื่อลูกค้า หรือรหัสชุด..."
               />
             </label>
@@ -767,19 +858,16 @@ export function RentalsPage({
             </select>
           </div>
 
-          <div className="customer-table" role="table" aria-label="รายการออเดอร์เช่าชุด">
-            <div className="table-row table-head rental-table-row" role="row">
-              <span>รหัสออเดอร์</span>
-              <span>ลูกค้า</span>
-              <span>ช่วงเช่า</span>
-              <span>ยอดเก็บจริง</span>
-              <span>สถานะ</span>
-              <span></span>
-            </div>
-
-            {paginatedRentals.map((rental) => (
+          <div className="customer-table" style={{ background: 'transparent', border: 'none' }} role="table" aria-label="รายการออเดอร์เช่าชุด">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {paginatedRentals.map((rental) => {
+              const mainCostume = rental.rentals[0]?.costume;
+              const imageUrl = mainCostume?.imageUrls?.find((url) => url.trim().length > 0);
+              const shortOrderId = rental.orderCode.replace(/^PR-ORD-/, '#');
+              
+              return (
               <button
-                className={`table-row table-button rental-table-row ${rental.orderCode === selectedRental?.orderCode ? 'selected' : ''}`}
+                className={`panel table-button hybrid-table-row ${rental.orderCode === selectedRental?.orderCode ? 'selected' : ''}`}
                 key={rental.orderCode}
                 role="row"
                 type="button"
@@ -787,41 +875,37 @@ export function RentalsPage({
                   setSelectedRentalId(rental.orderCode)
                   setIsMobileDetailOpen(true)
                 }}
+                style={{ display: 'grid', textAlign: 'left' }}
               >
-                <strong>{rental.orderCode}</strong>
-                <span>
-                  {rental.customer.fullName}
-                  <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
-                    {rental.customer.lineAccount ? `LINE: ${rental.customer.lineAccount}` : rental.customer.customerCode}
-                  </small>
-                  {rental.rentals.some(r => r.trackingNumber) && (
-                    <small style={{ display: 'block', color: 'var(--text-gold)', fontSize: '10px', marginTop: '2px' }}>
-                      📦 {rental.rentals.find(r => r.trackingNumber)?.trackingNumber}
-                    </small>
-                  )}
-                </span>
-                <span style={{ fontSize: '13px' }}>
-                  {formatDateRange(rental.pickupDate, rental.returnDate)}
-                </span>
-                <span>
-                  {formatBaht(rental.collectedAmount)}
-                  {getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.shippingCost ?? 0, rental.collectedAmount) > 0 ? (
-                    <small style={{ display: 'block', color: 'var(--success-color)', fontSize: '11px' }}>
-                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.shippingCost ?? 0, rental.collectedAmount))}
-                    </small>
+                {/* Thumbnail */}
+                <div className="mini-card-thumbnail">
+                  {imageUrl ? (
+                    <img src={imageUrl} alt={mainCostume?.productName} />
                   ) : (
-                    <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
-                      มัดจำ: {formatBaht(rental.depositAmount)}
-                    </small>
+                    <div className="mini-card-placeholder"><Shirt size={16}/></div>
                   )}
-                </span>
-                {getStatusBadge(rental.status, rental.pickupDate)}
+                </div>
+                {/* Details */}
+                <div className="mini-card-content">
+                  <div className="mini-card-top">
+                    <strong className="order-id">{shortOrderId}</strong>
+                    <span className="dress-name">{mainCostume?.productName}</span>
+                  </div>
+                  <div className="mini-card-mid">
+                    <span className="customer-name">{rental.customer.fullName}</span>
+                    <span className="rental-dates">{formatDateRange(rental.pickupDate, rental.returnDate)}</span>
+                  </div>
+                  <div className="mini-card-bottom">
+                    {getStatusBadge(rental.status, rental.pickupDate)}
+                    <strong className="total-amount">{formatBaht(rental.collectedAmount)}</strong>
+                  </div>
+                </div>
                 <ChevronRight size={18} className="arrow-icon" />
               </button>
-            ))}
-
+            )})}
+            </div>
             {paginatedRentals.length === 0 && (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '12px', marginTop: '8px' }}>
                 ไม่มีรายการเช่าชุดในระบบ
               </div>
             )}
@@ -855,60 +939,307 @@ export function RentalsPage({
         {selectedRental && (
           <div className={`customer-detail-wrapper ${isMobileDetailOpen ? 'mobile-open' : ''}`} onClick={() => setIsMobileDetailOpen(false)}>
             <div className="customer-detail-content" onClick={(e) => e.stopPropagation()}>
-              <aside className="panel detail-panel" style={{ width: '100%' }}>
-                <button className="close-detail-btn" type="button" onClick={() => setIsMobileDetailOpen(false)} aria-label="ปิด">
+              <aside className="panel detail-panel" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '24px' }}>
+                <button className="close-detail-btn" type="button" onClick={() => setIsMobileDetailOpen(false)} aria-label="ปิด" style={{ alignSelf: 'flex-end', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={20} />
                 </button>
-                {/* Top action bar: Print + Edit (status-aware) */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  {/* Print tag button — always visible */}
-                  <button
-                    type="button"
-                    title="พิมพ์ใบแท็กชุด"
-                    onClick={() => window.print()}
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
-                      padding: '6px 10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-                  >
-                    <Printer size={14} /> พิมพ์แท็ก
-                  </button>
-
+                
+                {/* Action Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {getStatusBadge(selectedRental.status, selectedRental.pickupDate)}
+                    <strong style={{ color: 'var(--text-bright)', fontSize: '18px' }}>
+                      {selectedRental.orderCode.replace(/^PR-ORD-/, '#')}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* Primary Actions based on status */}
+                    {selectedRental.status === 'booked' && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
+                        style={{ background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '6px 12px', minHeight: '32px', fontSize: '13px' }}
+                      >
+                        รับชุด
+                      </button>
+                    )}
+                    {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
+                        style={{ background: '#007BFF', borderColor: '#007BFF', color: '#fff', padding: '6px 12px', minHeight: '32px', fontSize: '13px' }}
+                      >
+                        คืนชุด
+                      </button>
+                    )}
+                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+                    <button
+                      type="button"
+                      title="พิมพ์ใบแท็กชุด"
+                      onClick={() => window.print()}
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '6px 10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <Printer size={14} /> พิมพ์แท็ก
+                    </button>
+                  </div>
                 </div>
 
-                <div className="profile-card-top">
-                  <div className="profile-card-info">
-                    <div className="profile-avatar">
-                      {selectedRental.customer.fullName.slice(0, 2).toLowerCase()}
-                    </div>
-                    <div className="profile-meta">
-                      <h2>รายละเอียดโปรไฟล์ลูกค้า</h2>
-                      <p>
-                        <strong>{selectedRental.customer.fullName}</strong> ({selectedRental.customer.phone})
-                      </p>
-                      <p>LINE: {selectedRental.customer.lineAccount || '-'}</p>
-                    </div>
-                  </div>
-                  {getStatusBadge(selectedRental.status, selectedRental.pickupDate)}
-                </div>
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
 
-                {/* Measurements Grid */}
-                <section className="detail-section" style={{ marginTop: '20px' }}>
-                  <div className="section-title-row">
-                    <h3 style={{ fontSize: '15px', color: '#fff', margin: 0 }}>ขนาดสัดส่วน</h3>
+                {/* ข้อมูลลูกค้า (Customer Info) */}
+                <section className="detail-section">
+                  <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>ข้อมูลลูกค้า</h3>
+                  <div className="profile-card-top" style={{ padding: 0, background: 'transparent', border: 'none' }}>
+                    <div className="profile-card-info" style={{ width: '100%' }}>
+                      <div className="profile-avatar">
+                        {selectedRental.customer.fullName.slice(0, 2).toLowerCase()}
+                      </div>
+                      <div className="profile-meta" style={{ flex: 1 }}>
+                        <p>
+                          <strong style={{ fontSize: '16px' }}>{selectedRental.customer.fullName}</strong>
+                        </p>
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '4px' }}>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>📞 {selectedRental.customer.phone}</span>
+                          <span style={{ color: '#00B900', fontSize: '13px' }}>💬 {selectedRental.customer.lineAccount || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="measurement-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginTop: '10px' }}>
+                  
+                  {/* Customer Insight (Mockup) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>เช่ามาแล้ว</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-bright)', fontWeight: 600 }}>15 ครั้ง</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Late Return</div>
+                      <div style={{ fontSize: '13px', color: 'var(--warning-color)', fontWeight: 600 }}>1</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No Show</div>
+                      <div style={{ fontSize: '13px', color: 'var(--success-color)', fontWeight: 600 }}>0</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ระดับลูกค้า</div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-gold)', fontWeight: 600 }}>★★★★★</div>
+                    </div>
+                  </div>
+                  {/* Deposit return controls */}
+                  {selectedRental.status === 'returned' && selectedRental.rentals.some(r => r.depositAmount > 0) && onUpdateDepositStatus && (
+                    <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
+                        💰 จัดการเงินมัดจำ
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('ยืนยันว่าคืนเงินมัดจำให้ลูกค้าแล้ว?')) {
+                              onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'returned')
+                            }
+                          }}
+                          style={{
+                            padding: '8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.4)',
+                            background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success-color)',
+                            cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                          }}
+                        >
+                          💸 คืนมัดจำแล้ว
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('ยืนยันการยึดมัดจำ?')) {
+                              onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'forfeited')
+                            }
+                          }}
+                          style={{
+                            padding: '8px', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.4)',
+                            background: 'rgba(249, 115, 22, 0.08)', color: '#f97316',
+                            cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                          }}
+                        >
+                          ⚠️ ยึดมัดจำ
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
+
+                {/* ข้อมูลการเช่า (Rental Info) & Payment */}
+                <section className="detail-section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ fontSize: '15px', color: '#fff', margin: 0 }}>ข้อมูลการเช่า</h3>
+                    {selectedRental.collectedAmount > 0 && selectedRental.collectedAmount >= (selectedRental.rentalPrice + selectedRental.depositAmount + (selectedRental.shippingCost ?? 0) - (getDiscountAmount(selectedRental.rentalPrice, selectedRental.depositAmount, selectedRental.shippingCost ?? 0, selectedRental.collectedAmount) || 0)) && (
+                      <div className="payment-badge-green">💰 ชำระครบแล้ว 100%</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-input)', padding: '12px', borderRadius: '8px' }}>
+                    <div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>วันที่รับชุด</div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-bright)', fontWeight: 600 }}>{selectedRental.pickupDate}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>วันที่คืนชุด</div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-bright)', fontWeight: 600 }}>{selectedRental.returnDate}</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <span>ค่าเช่าสุทธิ</span>
+                      <span>{formatBaht(selectedRental.rentalPrice)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <span>มัดจำประกันชุด</span>
+                      <span>{formatBaht(selectedRental.depositAmount)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)' }}>
+                      <span>ค่าจัดส่ง</span>
+                      <span>{formatBaht(selectedRental.shippingCost ?? 0)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: 'var(--text-gold)', fontWeight: 700, marginTop: '4px', paddingTop: '4px', borderTop: '1px dashed var(--border-color)' }}>
+                      <span>ยอดเก็บสุทธิ</span>
+                      <span>{formatBaht(selectedRental.collectedAmount)}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
+
+                {/* Timeline */}
+                <section className="detail-section">
+                  <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>Timeline ออเดอร์</h3>
+                  <div className="vertical-timeline">
+                    <div className={`timeline-item active`}>
+                      <div className="timeline-icon">●</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">สร้างออเดอร์ & ชำระมัดจำ</div>
+                        <div className="timeline-date">{selectedRental.createdAt.split('T')[0]}</div>
+                      </div>
+                    </div>
+                    <div className={`timeline-item ${selectedRental.status === 'active' || selectedRental.status === 'returned' || selectedRental.status === 'overdue' ? 'active' : ''}`}>
+                      <div className="timeline-icon">{selectedRental.status === 'active' || selectedRental.status === 'returned' || selectedRental.status === 'overdue' ? '●' : '○'}</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">รับชุด</div>
+                        <div className="timeline-date">{selectedRental.pickupDate}</div>
+                      </div>
+                    </div>
+                    <div className={`timeline-item ${selectedRental.status === 'returned' ? 'active' : ''}`}>
+                      <div className="timeline-icon">{selectedRental.status === 'returned' ? '●' : '○'}</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">คืนชุด (ตรวจสภาพ)</div>
+                        <div className="timeline-date">{selectedRental.returnDate}</div>
+                      </div>
+                    </div>
+                    <div className={`timeline-item ${selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? 'active' : ''}`}>
+                      <div className="timeline-icon">{selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? '●' : '○'}</div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">ซัก & ปิดงาน (เคลียร์มัดจำ)</div>
+                        <div className="timeline-date">-</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
+
+                {/* ชุดที่เช่า (Rented Dress) */}
+                <section className="detail-section">
+                  <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>ชุดที่เช่า</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {selectedRental.rentals.map((r) => {
+                      const costumeImageUrl = r.costume.imageUrls.find((url) => url.trim().length > 0)
+                      return (
+                        <div
+                          key={r.id}
+                          style={{
+                            display: 'flex',
+                            gap: '16px',
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            padding: '12px',
+                            alignItems: 'center'
+                          }}
+                        >
+                          {costumeImageUrl ? (
+                            <img
+                              src={costumeImageUrl}
+                              alt={r.costume.productName}
+                              style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '50px',
+                                height: '50px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--border-color)',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Shirt size={16} />
+                            </div>
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                              {r.costume.productName}
+                            </h4>
+                            <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                              {r.costume.sku} | ไซส์: {r.costume.size} | สี: <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: r.costume.primaryColor }}></span>{r.costume.primaryColor}</span>
+                            </p>
+                          </div>
+                          {onEditRentalFields && (r.status === 'booked' || r.status === 'overdue' || r.status === 'active') && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(r, r.status === 'active' ? 'limited' : 'full')}
+                              style={{
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                padding: '6px 10px',
+                                fontSize: '12px'
+                              }}
+                            >
+                              <Pencil size={14} /> แก้ไข
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
+
+                {/* ขนาดตัว (Measurements) */}
+                <section className="detail-section">
+                  <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>ขนาดตัว (ลูกค้า)</h3>
+                  <div className="measurement-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                     <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>รอบอก</span>
                       <strong style={{ fontSize: '16px', color: '#fff' }}>
@@ -936,367 +1267,102 @@ export function RentalsPage({
                   </div>
                 </section>
 
-                {/* Costume Detail Items */}
-                <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-                  <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการออเดอร์และวงจรสินค้า</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {selectedRental.rentals.map((r) => {
-                      const costumeImageUrl = r.costume.imageUrls.find((url) => url.trim().length > 0)
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
 
-                      return (
-                        <div
-                          key={r.id}
-                          style={{
-                            display: 'flex',
-                            gap: '16px',
-                            background: 'var(--bg-input)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            alignItems: 'center'
-                          }}
-                        >
-                        {costumeImageUrl ? (
-                          <img
-                            src={costumeImageUrl}
-                            alt={r.costume.productName}
-                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
-                          />
-                        ) : (
-                          <div
-                            aria-label="ยังไม่มีรูปสินค้า"
-                            style={{
-                              width: '60px',
-                              height: '60px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--border-color)',
-                              background: 'rgba(255, 255, 255, 0.02)',
-                              color: 'var(--text-muted)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              flexShrink: 0,
-                              fontSize: '10px',
-                              textAlign: 'center',
-                              lineHeight: 1.2
-                            }}
-                          >
-                            <Shirt size={16} />
-                            <span>ไม่มีรูป</span>
-                          </div>
-                        )}
-                        <div style={{ flex: 1 }}>
-                          <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#fff' }}>
-                            {r.costume.productName}
-                          </h4>
-                          <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                            รหัส: {r.costume.sku} | <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#4169e1' }}></span>
-                              {r.costume.primaryColor}
-                            </span>
-                          </p>
-                          {(r.trackingNumber || r.returnTrackingNote) && (
-                            <div style={{ marginTop: '6px', display: 'grid', gap: '4px' }}>
-                              {r.trackingNumber && (
-                                <small style={{ color: 'var(--text-gold)', fontSize: '11px' }}>
-                                  พัสดุขาไป: {r.trackingNumber}
-                                </small>
-                              )}
-                              {r.returnTrackingNote && (
-                                <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                                  ข้อมูลรับคืน: {r.returnTrackingNote}
-                                </small>
-                              )}
-                            </div>
-                          )}
-                          <div style={{ marginTop: '6px' }}>
-                            {getStatusBadge(r.status, r.pickupDate)}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
-                            {formatBaht(r.collectedAmount)}
-                          </strong>
-                          {getDiscountAmount(r.rentalPrice, r.depositAmount, r.shippingCost ?? 0, r.collectedAmount) > 0 && (
-                            <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
-                              ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.shippingCost ?? 0, r.collectedAmount))}
-                            </small>
-                          )}
-                          {r.depositAmount > 0 && (
-                            <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                              ประกัน: {formatBaht(r.depositAmount)}
-                            </small>
-                          )}
-                          {onEditRentalFields && (r.status === 'booked' || r.status === 'overdue') && (
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(r, 'full')}
-                              style={{
-                                marginTop: '8px',
-                                background: 'rgba(218, 165, 32, 0.1)',
-                                border: '1px solid rgba(218, 165, 32, 0.3)',
-                                borderRadius: '8px',
-                                color: 'var(--text-gold)',
-                                cursor: 'pointer',
-                                padding: '6px 10px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '12px',
-                                fontWeight: 600
-                              }}
-                            >
-                              <Pencil size={14} /> แก้ไข
-                            </button>
-                          )}
-                          {onEditRentalFields && r.status === 'active' && (
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(r, 'limited')}
-                              style={{
-                                marginTop: '8px',
-                                background: 'rgba(59, 130, 246, 0.1)',
-                                border: '1px solid rgba(59, 130, 246, 0.3)',
-                                borderRadius: '8px',
-                                color: '#93c5fd',
-                                cursor: 'pointer',
-                                padding: '6px 10px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '12px',
-                                fontWeight: 600
-                              }}
-                            >
-                              <Pencil size={14} /> แก้ไขจำกัด
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      )
-                    })}
+                {/* หมายเหตุ (Notes) */}
+                <section className="detail-section">
+                  <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>หมายเหตุ</h3>
+                  <div style={{ background: 'var(--bg-input)', border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '12px', fontSize: '13px', color: selectedRental.notes ? '#fff' : 'var(--text-muted)' }}>
+                    {selectedRental.notes || 'ไม่มีหมายเหตุ'}
                   </div>
                 </section>
 
-                {/* Lifecycle Controls */}
-                <section className="detail-section controls-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-                  <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>การควบคุมและจัดส่ง</h3>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {selectedRental.status === 'booked' && (
-                      <>
-                        <button
-                          className="primary-button"
-                          type="button"
-                          onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'grab' })}
-                          style={{ width: '100%', fontSize: '13px', background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '10px 8px' }}
-                        >
-                          🟢 🛵 เรียกไรเดอร์สำเร็จ (Grab)
-                        </button>
-                        <button
-                          className="primary-button"
-                          type="button"
-                          onClick={() => {
-                            const tracking = window.prompt('กรุณากรอกเลขพัสดุ (Tracking Number):')
-                            const normalizedTracking = tracking?.trim()
-                            if (tracking === null) {
-                              return
-                            }
-                            if (!normalizedTracking) {
-                              window.alert('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
-                              return
-                            }
-                            updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', {
-                              method: 'thailand_post',
-                              trackingNumber: normalizedTracking
-                            })
-                          }}
-                          style={{ width: '100%', fontSize: '13px', background: '#FFC107', borderColor: '#FFC107', color: '#000', padding: '10px 8px' }}
-                        >
-                          🟡 📦 ส่งไปรษณีย์ไทยแล้ว
-                        </button>
-                      </>
-                    )}
-                    {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
-                      <>
-                        <button
-                          className="primary-button"
-                          type="button"
-                          onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
-                          style={{ width: '100%', fontSize: '13px', background: '#007BFF', borderColor: '#007BFF', color: '#fff', padding: '10px 8px' }}
-                        >
-                          🔵 ↩️ ไรเดอร์ส่งชุดคืนถึงร้านแล้ว
-                        </button>
-                        <button
-                          className="primary-button"
-                          type="button"
-                          onClick={() => {
-                            const note = window.prompt('กรุณากรอกเลขพัสดุขากลับ หรือหมายเหตุการรับคืน (ถ้ามี):')
-                            const normalizedNote = note?.trim()
-                            if (note === null) {
-                              return
-                            }
-                            updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned', {
-                              returnTrackingNote: normalizedNote || undefined
-                            })
-                          }}
-                          style={{ width: '100%', fontSize: '13px', background: '#FD7E14', borderColor: '#FD7E14', color: '#fff', padding: '10px 8px' }}
-                        >
-                          🟠 🔍 เช็คเลขพัสดุขากลับ
-                        </button>
-                      </>
-                    )}
-                    {selectedRental.status === 'returned' && (
-                      <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--success-color)', background: 'var(--success-bg)', borderRadius: '8px', padding: '12px', fontWeight: 600 }}>
-                        ออเดอร์นี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
-                      </div>
-                    )}
-                    {selectedRental.status === 'cancelled' && (
-                      <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', fontWeight: 600, border: '1px solid var(--border-color)' }}>
-                        ❌ ออเดอร์นี้ถูกยกเลิกแล้ว — ชุดกลับมาว่างในปฏิทินแล้ว
-                      </div>
-                    )}
-                  </div>
+                <hr style={{ border: 0, borderTop: '1px solid var(--border-color)', margin: 0 }} />
 
-                  {/* ─── Deposit Return Lifecycle (returned orders only) ─── */}
-                  {selectedRental.status === 'returned' && selectedRental.rentals.some(r => r.depositAmount > 0) && onUpdateDepositStatus && (
-                    <div style={{ marginTop: '16px', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 600 }}>
-                        💰 สถานะเงินมัดจำ ({formatBaht(selectedRental.rentals.reduce((s, r) => s + r.depositAmount, 0))})
-                      </div>
-                      {/* Determine combined deposit status */}
-                      {(() => {
-                        const depositStatuses = selectedRental.rentals
-                          .filter((r) => r.depositAmount > 0)
-                          .map((r) => r.depositStatus ?? 'pending_return')
-                        if (depositStatuses.length > 0 && depositStatuses.every((status) => status === 'returned')) {
-                          return (
-                            <div style={{ color: 'var(--success-color)', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              ✅ คืนมัดจำให้ลูกค้าแล้ว
-                            </div>
-                          )
-                        }
-                        if (depositStatuses.length > 0 && depositStatuses.every((status) => status === 'forfeited')) {
-                          return (
-                            <div style={{ color: '#f97316', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              🚫 ยึดมัดจำไว้ (หักค่าปรับ)
-                            </div>
-                          )
-                        }
-                        // pending_return or null — show action buttons
-                        return (
-                          <div>
-                            <div style={{ color: '#fbbf24', fontSize: '13px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              ⏳ รอดำเนินการคืนมัดจำ
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (window.confirm('ยืนยันว่าคืนเงินมัดจำให้ลูกค้าแล้ว?')) {
-                                    onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'returned')
-                                  }
-                                }}
-                                style={{
-                                  padding: '9px 8px',
-                                  borderRadius: '8px',
-                                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                                  background: 'rgba(16, 185, 129, 0.08)',
-                                  color: 'var(--success-color)',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.08)'}
-                              >
-                                💸 ยืนยันคืนมัดจำแล้ว
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (window.confirm('ยืนยันการยึดมัดจำ? เงินก้อนนี้จะถือเป็นรายได้ของร้าน')) {
-                                    onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'forfeited')
-                                  }
-                                }}
-                                style={{
-                                  padding: '9px 8px',
-                                  borderRadius: '8px',
-                                  border: '1px solid rgba(249, 115, 22, 0.4)',
-                                  background: 'rgba(249, 115, 22, 0.08)',
-                                  color: '#f97316',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 600,
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(249, 115, 22, 0.15)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(249, 115, 22, 0.08)'}
-                              >
-                                ⚠️ ยึดมัดจำ / หักค่าปรับ
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })()}
+                {/* การจัดส่ง (Shipping Options/Controls) */}
+                <section className="detail-section controls-section">
+                  <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>การจัดส่ง</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
+                      🛵 Grab
                     </div>
-                  )}
-
-                  {/* ─── Cancel Order (booked/overdue only, hidden deep with double confirm) ─── */}
-                  {(selectedRental.status === 'booked' || selectedRental.status === 'overdue') && onCancelRental && (
-                    <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
+                      📦 EMS
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
+                      🏪 รับหน้าร้าน
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
+                      🚚 Messenger
+                    </div>
+                  </div>
+                  
+                  {/* Delivery Status buttons if booked */}
+                  {selectedRental.status === 'booked' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                       <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'grab' })}
+                        style={{ width: '100%', fontSize: '12px', background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '8px' }}
+                      >
+                        🟢 เรียกไรเดอร์ Grab
+                      </button>
+                      <button
+                        className="primary-button"
                         type="button"
                         onClick={() => {
-                          const first = window.confirm(`ยืนยันยกเลิกออเดอร์ ${selectedRental.orderCode}?\n\nการยกเลิกจะปลดล็อกคิวปฏิทินของชุดทันที`)
-                          if (!first) return
-                          const second = window.confirm(`⚠️ กดยืนยันอีกครั้งเพื่อยืนยันการยกเลิก\n\nออเดอร์ ${selectedRental.orderCode} จะถูกเปลี่ยนสถานะเป็น "ยกเลิกแล้ว" และไม่สามารถย้อนกลับได้`)
-                          if (!second) return
-                          onCancelRental(selectedRental.rentals.map(r => r.id))
+                          const tracking = window.prompt('กรุณากรอกเลขพัสดุ (Tracking Number):')
+                          if (tracking && tracking.trim()) {
+                            updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', {
+                              method: 'thailand_post',
+                              trackingNumber: tracking.trim()
+                            })
+                          }
                         }}
-                        style={{
-                          width: '100%',
-                          padding: '9px',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
-                          background: 'rgba(239, 68, 68, 0.05)',
-                          color: 'var(--danger-color)',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)'}
+                        style={{ width: '100%', fontSize: '12px', background: '#FFC107', borderColor: '#FFC107', color: '#000', padding: '8px' }}
                       >
-                        ❌ ยกเลิกออเดอร์
+                        🟡 ส่งไปรษณีย์ไทย
                       </button>
                     </div>
                   )}
+                </section>
 
-                  {onDeleteRental && (
+                {/* Cancel Order / Delete Section */}
+                {((selectedRental.status === 'booked' || selectedRental.status === 'overdue') && onCancelRental) && (
+                  <div style={{ marginTop: '12px' }}>
                     <button
-                      className="archive-button"
                       type="button"
                       onClick={() => {
-                        if (window.confirm(`ต้องการลบใบเช่า ${selectedRental.orderCode} ใช่หรือไม่?`)) {
-                          onDeleteRental(selectedRental.rentals.map((r) => r.id))
+                        if (window.confirm(`ยืนยันยกเลิกออเดอร์ ${selectedRental.orderCode}?`) && window.confirm('กดยืนยันอีกครั้งเพื่อยกเลิก')) {
+                          onCancelRental(selectedRental.rentals.map(r => r.id))
                         }
                       }}
-                      style={{ marginTop: '16px' }}
+                      style={{
+                        width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)',
+                        background: 'rgba(239, 68, 68, 0.05)', color: 'var(--danger-color)', cursor: 'pointer',
+                        fontSize: '12px', fontWeight: 600
+                      }}
                     >
-                      <Trash2 size={16} />
-                      ลบใบเช่านี้
+                      ❌ ยกเลิกออเดอร์
                     </button>
-                  )}
-                </section>
+                  </div>
+                )}
+                {onDeleteRental && (
+                  <button
+                    className="archive-button"
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`ต้องการลบใบเช่า ${selectedRental.orderCode} ใช่หรือไม่?`)) {
+                        onDeleteRental(selectedRental.rentals.map((r) => r.id))
+                      }
+                    }}
+                    style={{ marginTop: '16px' }}
+                  >
+                    <Trash2 size={16} />
+                    ลบใบเช่านี้
+                  </button>
+                )}
               </aside>
             </div>
           </div>
