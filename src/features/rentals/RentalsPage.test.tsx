@@ -176,14 +176,15 @@ describe('RentalsPage', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /ส่งไปรษณีย์ไทย/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งมอบชุด' }))
+    fireEvent.click(screen.getByRole('button', { name: /EMS/ }))
 
     expect(promptSpy).toHaveBeenCalledTimes(1)
     expect(alertSpy).toHaveBeenCalledWith('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
     expect(onUpdateRentalStatus).not.toHaveBeenCalled()
   })
 
-  it('uses Messenger as the quick delivery action instead of Grab', () => {
+  it('uses clickable delivery method actions instead of Grab', () => {
     const onUpdateRentalStatus = vi.fn()
 
     render(
@@ -197,13 +198,41 @@ describe('RentalsPage', () => {
     )
 
     expect(screen.queryByText(/Grab/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'ส่งมอบชุด' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: /เรียก Messenger/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งมอบชุด' }))
+    expect(screen.getByRole('button', { name: /EMS/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /รับหน้าร้าน/ })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /Messenger/ }))
 
     expect(onUpdateRentalStatus).toHaveBeenCalledWith(
       ['rental_1'],
       'active',
       { method: 'messenger' }
+    )
+  })
+
+  it('marks a booked rental active for storefront pickup', () => {
+    const onUpdateRentalStatus = vi.fn()
+
+    render(
+      <RentalsPage
+        rentals={[makeRental()]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={onUpdateRentalStatus}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งมอบชุด' }))
+    fireEvent.click(screen.getByRole('button', { name: /รับหน้าร้าน/ }))
+
+    expect(onUpdateRentalStatus).toHaveBeenCalledWith(
+      ['rental_1'],
+      'active',
+      { method: 'store_pickup' }
     )
   })
 

@@ -110,6 +110,7 @@ export function RentalsPage({
   }
 
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
+  const [isDeliveryMethodModalOpen, setIsDeliveryMethodModalOpen] = useState(false)
 
   // Auto-open detail panel on mobile if an external selected rental is provided
   useEffect(() => {
@@ -508,6 +509,36 @@ export function RentalsPage({
     if (!selectedRental) return null
     return calculateCustomerInsights(selectedRental.customer, rentals, todayStr)
   }, [selectedRental, rentals, todayStr])
+
+  const selectedShippingMethod = selectedRental?.rentals.find((rental) => rental.shippingMethod)?.shippingMethod
+
+  const closeDeliveryMethodModal = () => setIsDeliveryMethodModalOpen(false)
+
+  const handleConfirmEmsDelivery = () => {
+    if (!selectedRental) return
+    const tracking = window.prompt('กรุณากรอกเลขพัสดุ (Tracking Number):')
+    if (tracking && tracking.trim()) {
+      updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', {
+        method: 'thailand_post',
+        trackingNumber: tracking.trim()
+      })
+      closeDeliveryMethodModal()
+    } else {
+      window.alert('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
+    }
+  }
+
+  const handleConfirmStorefrontPickup = () => {
+    if (!selectedRental) return
+    updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'store_pickup' })
+    closeDeliveryMethodModal()
+  }
+
+  const handleConfirmMessengerDelivery = () => {
+    if (!selectedRental) return
+    updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'messenger' })
+    closeDeliveryMethodModal()
+  }
 
   // Handle Form Submission (create OR edit)
   const handleSubmit = async (e: React.FormEvent) => {
@@ -987,31 +1018,33 @@ export function RentalsPage({
                     <strong style={{ color: 'var(--text-bright)', fontSize: '18px' }}>
                       {selectedRental.orderCode.replace(/^PR-ORD-/, '#')}
                     </strong>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    {/* Primary Actions based on status */}
-                    {selectedRental.status === 'booked' && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
-                        style={{ background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '6px 12px', minHeight: '32px', fontSize: '13px' }}
-                      >
-                        รับชุด
-                      </button>
-                    )}
-                    {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
+	                  </div>
+	                  <div style={{ display: 'flex', gap: '8px' }}>
+	                    {/* Primary Actions based on status */}
+	                    {selectedRental.status === 'booked' && (
+	                      <button
+	                        className="primary-button"
+	                        type="button"
+	                        onClick={() => setIsDeliveryMethodModalOpen(true)}
+	                        style={{ background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '6px 12px', minHeight: '32px', fontSize: '13px' }}
+	                      >
+	                        ส่งมอบชุด
+	                      </button>
+	                    )}
+	                    {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
+	                      <button
+	                        className="primary-button"
+	                        type="button"
+	                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
                         style={{ background: '#007BFF', borderColor: '#007BFF', color: '#fff', padding: '6px 12px', minHeight: '32px', fontSize: '13px' }}
                       >
-                        คืนชุด
-                      </button>
-                    )}
-                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }}></div>
-                    <button
+	                        คืนชุด
+	                      </button>
+	                    )}
+	                    {(selectedRental.status === 'booked' || selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
+	                      <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }}></div>
+	                    )}
+	                    <button
                       type="button"
                       title="พิมพ์ใบแท็กชุด"
                       onClick={() => window.print()}
@@ -1328,49 +1361,13 @@ export function RentalsPage({
                 {/* การจัดส่ง (Shipping Options/Controls) */}
                 <section className="detail-section controls-section">
                   <h3 style={{ fontSize: '15px', color: '#fff', margin: '0 0 12px' }}>การจัดส่ง</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
-                      📦 EMS
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
-                      🏪 รับหน้าร้าน
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)' }}>
-                      🚚 Messenger
-                    </div>
+                  <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {selectedRental.status === 'booked'
+                      ? 'กดปุ่มส่งมอบชุดด้านบนเพื่อเลือก EMS, รับหน้าร้าน หรือ Messenger'
+                      : selectedShippingMethod
+                        ? `วิธีจัดส่ง: ${selectedShippingMethod}`
+                        : 'ยังไม่มีข้อมูลวิธีจัดส่ง'}
                   </div>
-
-                  {/* Delivery Status buttons if booked */}
-                  {selectedRental.status === 'booked' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'messenger' })}
-                        style={{ width: '100%', fontSize: '12px', background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '8px' }}
-                      >
-                        🟢 เรียก Messenger
-                      </button>
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => {
-                          const tracking = window.prompt('กรุณากรอกเลขพัสดุ (Tracking Number):')
-                          if (tracking && tracking.trim()) {
-                            updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', {
-                              method: 'thailand_post',
-                              trackingNumber: tracking.trim()
-                            })
-                          } else {
-                            window.alert('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
-                          }
-                        }}
-                        style={{ width: '100%', fontSize: '12px', background: '#FFC107', borderColor: '#FFC107', color: '#000', padding: '8px' }}
-                      >
-                        🟡 ส่งไปรษณีย์ไทย
-                      </button>
-                    </div>
-                  )}
                 </section>
 
                 {/* Cancel Order / Delete Section */}
@@ -1457,6 +1454,56 @@ export function RentalsPage({
         </div>
       )}
 
+
+      {/* DELIVERY METHOD MODAL */}
+      {isDeliveryMethodModalOpen && selectedRental && (
+        <div className="modal-backdrop" role="presentation" onClick={closeDeliveryMethodModal}>
+          <section
+            className="modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="เลือกวิธีจัดส่ง"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '460px', width: '100%' }}
+          >
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Delivery Method</p>
+                <h2>เลือกวิธีจัดส่ง</h2>
+              </div>
+              <button className="ghost-button" type="button" onClick={closeDeliveryMethodModal}>
+                ปิด
+              </button>
+            </div>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handleConfirmEmsDelivery}
+                style={{ width: '100%', background: 'rgba(255,193,7,0.12)', borderColor: 'rgba(255,193,7,0.5)', color: '#ffd24d', justifyContent: 'flex-start', padding: '12px 14px' }}
+              >
+                📦 EMS
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handleConfirmStorefrontPickup}
+                style={{ width: '100%', background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-color)', color: '#fff', justifyContent: 'flex-start', padding: '12px 14px' }}
+              >
+                🏪 รับหน้าร้าน
+              </button>
+              <button
+                className="primary-button"
+                type="button"
+                onClick={handleConfirmMessengerDelivery}
+                style={{ width: '100%', background: 'rgba(16,185,129,0.14)', borderColor: 'rgba(16,185,129,0.5)', color: '#34d399', justifyContent: 'flex-start', padding: '12px 14px' }}
+              >
+                🚚 Messenger
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* CREATE / EDIT RENTAL FORM MODAL */}
       {isFormOpen && (
