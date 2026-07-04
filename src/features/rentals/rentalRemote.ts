@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import type { Customer } from '../customers/customerTypes'
-import type { RentalOrder, RentalStatus } from './rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './rentalTypes'
 
 type RentalRow = {
   id: string
@@ -16,6 +16,10 @@ type RentalRow = {
   deposit_amount: number | string
   collected_amount: number | string
   status: RentalStatus
+  shipping_method: string | null
+  tracking_number: string | null
+  return_tracking_note: string | null
+  shipping_cost: number | string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -76,6 +80,10 @@ function toRentalInsert(shopId: string, rental: RentalOrder) {
     deposit_amount: rental.depositAmount,
     collected_amount: rental.collectedAmount,
     status: rental.status,
+    shipping_method: rental.shippingMethod ?? null,
+    tracking_number: rental.trackingNumber ?? null,
+    return_tracking_note: rental.returnTrackingNote ?? null,
+    shipping_cost: rental.shippingCost ?? 0,
     notes: rental.notes ?? '',
     created_at: rental.createdAt,
     updated_at: rental.updatedAt,
@@ -87,12 +95,24 @@ export async function updateRemoteRentalStatus(
   shopId: string,
   rentalIds: string[],
   status: RentalStatus,
+  shippingInfo?: RentalShippingUpdate
 ): Promise<void> {
   if (rentalIds.length === 0) return
 
+  const updateData: {
+    status: RentalStatus
+    updated_at: string
+    shipping_method?: string
+    tracking_number?: string
+    return_tracking_note?: string
+  } = { status, updated_at: new Date().toISOString() }
+  if (shippingInfo?.method) updateData.shipping_method = shippingInfo.method
+  if (shippingInfo?.trackingNumber) updateData.tracking_number = shippingInfo.trackingNumber
+  if (shippingInfo?.returnTrackingNote) updateData.return_tracking_note = shippingInfo.returnTrackingNote
+
   const { error } = await supabase
     .from('rentals')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq('shop_id', shopId)
     .in('id', rentalIds)
 
@@ -144,6 +164,10 @@ function mapRentalRow(
     depositAmount: Number(row.deposit_amount) || 0,
     collectedAmount: Number(row.collected_amount) || 0,
     status: row.status,
+    shippingMethod: row.shipping_method ?? undefined,
+    trackingNumber: row.tracking_number ?? undefined,
+    returnTrackingNote: row.return_tracking_note ?? undefined,
+    shippingCost: Number(row.shipping_cost) || 0,
     notes: row.notes ?? '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -29,6 +29,39 @@ describe('rentalRemote', () => {
     expect(updateQuery.in).toHaveBeenCalledWith('id', ['rental_1', 'rental_2'])
   })
 
+  it('persists outbound and return shipping fields without overloading tracking_number', async () => {
+    const updateQuery = {
+      eq: vi.fn(() => updateQuery),
+      in: vi.fn(() => ({ error: null })),
+    }
+    const update = vi.fn(() => updateQuery)
+    const supabase = {
+      from: vi.fn(() => ({ update })),
+    } as unknown as SupabaseClient
+
+    await updateRemoteRentalStatus(
+      supabase,
+      'shop_1',
+      ['rental_1'],
+      'returned',
+      {
+        method: 'thailand_post',
+        trackingNumber: 'TH1234',
+        returnTrackingNote: 'ลูกค้าส่งกลับทาง Kerry'
+      }
+    )
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'returned',
+        shipping_method: 'thailand_post',
+        tracking_number: 'TH1234',
+        return_tracking_note: 'ลูกค้าส่งกลับทาง Kerry',
+        updated_at: expect.any(String),
+      }),
+    )
+  })
+
   it('scopes rental deletes by shop id and rental ids', async () => {
     const filters: Array<[string, string]> = []
     const deleteQuery = {

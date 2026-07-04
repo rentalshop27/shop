@@ -9,7 +9,7 @@ import {
   ChevronDown,
   X
 } from 'lucide-react'
-import type { RentalOrder, RentalStatus } from './rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import { findOpenRentalConflict, resolveRentalPrice, calculateReturnDate } from './rentalRules'
@@ -32,7 +32,7 @@ interface RentalsPageProps {
   customers: Customer[]
   stockItems: FlatStockItem[]
   onCreateRentals: (drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]) => boolean | Promise<boolean>
-  onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus) => void
+  onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus, shippingInfo?: RentalShippingUpdate) => void
   onDeleteRental?: (rentalId: string | string[]) => void
 
   // Optional external controls
@@ -129,6 +129,7 @@ export function RentalsPage({
   const [rentalPrice, setRentalPrice] = useState('')
   const [depositAmount, setDepositAmount] = useState('')
   const [discountAmount, setDiscountAmount] = useState('0')
+  const [shippingCost, setShippingCost] = useState('0')
   const [collectedAmount, setCollectedAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [formError, setFormError] = useState('')
@@ -227,6 +228,7 @@ export function RentalsPage({
       setRentalPrice('')
       setDepositAmount('')
       setDiscountAmount('0')
+      setShippingCost('0')
       setCollectedAmount('')
       return
     }
@@ -266,6 +268,7 @@ export function RentalsPage({
         
         const totalDeposit = selectedCostumes.reduce((sum, item) => sum + item.depositAmount, 0)
         setDiscountAmount('0')
+        setShippingCost('0')
         setCollectedAmount((totalBasePrice + totalDeposit).toString())
       }
     }
@@ -275,18 +278,20 @@ export function RentalsPage({
     return parseFloat(value) || 0
   }
 
-  const syncCollectedAmount = (priceVal: string, depVal: string, discountVal: string) => {
+  const syncCollectedAmount = (priceVal: string, depVal: string, discountVal: string, shipVal: string) => {
     const p = parseFloat(priceVal) || 0
     const d = parseFloat(depVal) || 0
     const discount = parseMoneyInput(discountVal)
-    setCollectedAmount(Math.max(0, p + d - discount).toString())
+    const ship = parseMoneyInput(shipVal)
+    setCollectedAmount(Math.max(0, p + d + ship - discount).toString())
   }
 
-  const syncDiscountAmount = (priceVal: string, depVal: string, collectedVal: string) => {
+  const syncDiscountAmount = (priceVal: string, depVal: string, collectedVal: string, shipVal: string) => {
     const p = parseMoneyInput(priceVal)
     const d = parseMoneyInput(depVal)
+    const ship = parseMoneyInput(shipVal)
     const collected = parseMoneyInput(collectedVal)
-    setDiscountAmount(Math.max(0, p + d - collected).toString())
+    setDiscountAmount(Math.max(0, p + d + ship - collected).toString())
   }
 
   const splitAmountByWeights = (total: number, weights: number[]) => {
@@ -340,11 +345,13 @@ export function RentalsPage({
   const updateRentalStatuses = (
     groupItems: RentalOrder[],
     fromStatuses: RentalStatus[],
-    nextStatus: RentalStatus
+    nextStatus: RentalStatus,
+    shippingInfo?: RentalShippingUpdate
   ) => {
     const ids = getTransitionableRentalIds(groupItems, fromStatuses)
-    if (ids.length === 0) return
-    onUpdateRentalStatus(ids, nextStatus)
+    if (ids.length > 0) {
+      onUpdateRentalStatus(ids, nextStatus, shippingInfo)
+    }
   }
 
   // Group line-item order codes such as PR-ORD-101-1 back into one displayed order.
@@ -363,6 +370,7 @@ export function RentalsPage({
       const first = groupItems[0]
       const totalPrice = groupItems.reduce((sum, r) => sum + r.rentalPrice, 0)
       const totalDeposit = groupItems.reduce((sum, r) => sum + r.depositAmount, 0)
+      const totalShippingCost = groupItems.reduce((sum, r) => sum + (r.shippingCost ?? 0), 0)
       const totalCollected = groupItems.reduce((sum, r) => sum + r.collectedAmount, 0)
       const groupStatus = getGroupStatus(groupItems)
       const notes = groupItems.map((r) => r.notes).filter(Boolean).join('\n')
@@ -391,6 +399,7 @@ export function RentalsPage({
         returnDate,
         rentalPrice: totalPrice, // Sum for compatibility with list display
         depositAmount: totalDeposit, // Sum for compatibility with list display
+        shippingCost: totalShippingCost,
         collectedAmount: totalCollected, // Sum for compatibility with list display
         status: groupStatus,
         notes,
@@ -497,8 +506,9 @@ export function RentalsPage({
 
     const price = parseFloat(rentalPrice) || 0
     const deposit = parseFloat(depositAmount) || 0
+    const ship = parseFloat(shippingCost) || 0
     const collected = parseFloat(collectedAmount)
-    const collectedTotal = Number.isFinite(collected) ? collected : price + deposit
+    const collectedTotal = Number.isFinite(collected) ? collected : price + deposit + ship
 
     const pickup = new Date(`${pickupDate}T12:00:00`)
     const ret = new Date(`${returnDate}T12:00:00`)
@@ -513,7 +523,10 @@ export function RentalsPage({
     
     const depositWeights = selectedCostumes.map((item) => item.depositAmount || 1)
     const depositShares = splitAmountByWeights(deposit, depositWeights)
-    
+
+    // Distribute shipping cost evenly or proportional to price? We can use price weights
+    const shipShares = splitAmountByWeights(ship, priceWeights)
+
     const collectedWeights = selectedCostumes.map((item, i) => priceWeights[i] + (item.depositAmount || 0))
     const collectedShares = splitAmountByWeights(collectedTotal, collectedWeights)
 
@@ -525,6 +538,7 @@ export function RentalsPage({
         returnDate,
         rentalPrice: priceShares[index],
         depositAmount: depositShares[index],
+        shippingCost: shipShares[index],
         collectedAmount: collectedShares[index],
         status: 'booked' as RentalStatus,
         notes
@@ -556,12 +570,19 @@ export function RentalsPage({
     })}`
   }
 
-  const getDiscountAmount = (price: number, deposit: number, collected: number) => {
-    return Math.max(0, Number((price + deposit - collected).toFixed(2)))
+  const getDiscountAmount = (price: number, deposit: number, shipping: number, collected: number) => {
+    return Math.max(0, Number((price + deposit + shipping - collected).toFixed(2)))
   }
 
   // Get status translation
-  const getStatusBadge = (status: RentalStatus) => {
+  const getStatusBadge = (status: RentalStatus, pickupDate?: string) => {
+    if (status === 'booked' && pickupDate) {
+      const todayStr = getTodayString()
+      if (pickupDate < todayStr) {
+        return <span className="status-pill danger" style={{ fontWeight: 'bold' }}>🚨 เลยกำหนดส่ง</span>
+      }
+    }
+
     switch (status) {
       case 'booked':
         return <span className="status-pill warning">รอส่งมอบ</span>
@@ -647,15 +668,20 @@ export function RentalsPage({
                   <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
                     {rental.customer.lineAccount ? `LINE: ${rental.customer.lineAccount}` : rental.customer.customerCode}
                   </small>
+                  {rental.rentals.some(r => r.trackingNumber) && (
+                    <small style={{ display: 'block', color: 'var(--text-gold)', fontSize: '10px', marginTop: '2px' }}>
+                      📦 {rental.rentals.find(r => r.trackingNumber)?.trackingNumber}
+                    </small>
+                  )}
                 </span>
                 <span style={{ fontSize: '13px' }}>
                   {formatDateRange(rental.pickupDate, rental.returnDate)}
                 </span>
                 <span>
                   {formatBaht(rental.collectedAmount)}
-                  {getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.collectedAmount) > 0 ? (
+                  {getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.shippingCost ?? 0, rental.collectedAmount) > 0 ? (
                     <small style={{ display: 'block', color: 'var(--success-color)', fontSize: '11px' }}>
-                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.collectedAmount))}
+                      ลด: {formatBaht(getDiscountAmount(rental.rentalPrice, rental.depositAmount, rental.shippingCost ?? 0, rental.collectedAmount))}
                     </small>
                   ) : (
                     <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px' }}>
@@ -663,7 +689,7 @@ export function RentalsPage({
                     </small>
                   )}
                 </span>
-                {getStatusBadge(rental.status)}
+                {getStatusBadge(rental.status, rental.pickupDate)}
                 <ChevronRight size={18} className="arrow-icon" />
               </button>
             ))}
@@ -720,7 +746,7 @@ export function RentalsPage({
                       <p>LINE: {selectedRental.customer.lineAccount || '-'}</p>
                     </div>
                   </div>
-                  {getStatusBadge(selectedRental.status)}
+                  {getStatusBadge(selectedRental.status, selectedRental.pickupDate)}
                 </div>
 
                 {/* Measurements Grid */}
@@ -817,17 +843,31 @@ export function RentalsPage({
                               {r.costume.primaryColor}
                             </span>
                           </p>
+                          {(r.trackingNumber || r.returnTrackingNote) && (
+                            <div style={{ marginTop: '6px', display: 'grid', gap: '4px' }}>
+                              {r.trackingNumber && (
+                                <small style={{ color: 'var(--text-gold)', fontSize: '11px' }}>
+                                  พัสดุขาไป: {r.trackingNumber}
+                                </small>
+                              )}
+                              {r.returnTrackingNote && (
+                                <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+                                  ข้อมูลรับคืน: {r.returnTrackingNote}
+                                </small>
+                              )}
+                            </div>
+                          )}
                           <div style={{ marginTop: '6px' }}>
-                            {getStatusBadge(r.status)}
+                            {getStatusBadge(r.status, r.pickupDate)}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <strong style={{ fontSize: '16px', color: 'var(--text-gold)', display: 'block' }}>
                             {formatBaht(r.collectedAmount)}
                           </strong>
-                          {getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount) > 0 && (
+                          {getDiscountAmount(r.rentalPrice, r.depositAmount, r.shippingCost ?? 0, r.collectedAmount) > 0 && (
                             <small style={{ color: 'var(--success-color)', fontSize: '11px', display: 'block' }}>
-                              ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.collectedAmount))}
+                              ลด: {formatBaht(getDiscountAmount(r.rentalPrice, r.depositAmount, r.shippingCost ?? 0, r.collectedAmount))}
                             </small>
                           )}
                           {r.depositAmount > 0 && (
@@ -848,53 +888,72 @@ export function RentalsPage({
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     {selectedRental.status === 'booked' && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active')}
-                        style={{ width: '100%', fontSize: '14px', background: 'var(--text-gold)', color: '#000' }}
-                      >
-                        ส่งมอบชุด (ขนส่ง)
-                      </button>
+                      <>
+                        <button
+                          className="primary-button"
+                          type="button"
+                          onClick={() => updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', { method: 'grab' })}
+                          style={{ width: '100%', fontSize: '13px', background: '#00B14F', borderColor: '#00B14F', color: '#fff', padding: '10px 8px' }}
+                        >
+                          🟢 🛵 เรียกไรเดอร์สำเร็จ (Grab)
+                        </button>
+                        <button
+                          className="primary-button"
+                          type="button"
+                          onClick={() => {
+                            const tracking = window.prompt('กรุณากรอกเลขพัสดุ (Tracking Number):')
+                            const normalizedTracking = tracking?.trim()
+                            if (tracking === null) {
+                              return
+                            }
+                            if (!normalizedTracking) {
+                              window.alert('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
+                              return
+                            }
+                            updateRentalStatuses(selectedRental.rentals, ['booked'], 'active', {
+                              method: 'thailand_post',
+                              trackingNumber: normalizedTracking
+                            })
+                          }}
+                          style={{ width: '100%', fontSize: '13px', background: '#FFC107', borderColor: '#FFC107', color: '#000', padding: '10px 8px' }}
+                        >
+                          🟡 📦 ส่งไปรษณีย์ไทยแล้ว
+                        </button>
+                      </>
                     )}
                     {(selectedRental.status === 'active' || selectedRental.status === 'overdue') && (
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
-                        style={{ width: '100%', fontSize: '14px', background: 'var(--success-color)', borderColor: 'var(--success-color)', color: '#fff' }}
-                      >
-                        รับคืนชุด (รับคืน)
-                      </button>
+                      <>
+                        <button
+                          className="primary-button"
+                          type="button"
+                          onClick={() => updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned')}
+                          style={{ width: '100%', fontSize: '13px', background: '#007BFF', borderColor: '#007BFF', color: '#fff', padding: '10px 8px' }}
+                        >
+                          🔵 ↩️ ไรเดอร์ส่งชุดคืนถึงร้านแล้ว
+                        </button>
+                        <button
+                          className="primary-button"
+                          type="button"
+                          onClick={() => {
+                            const note = window.prompt('กรุณากรอกเลขพัสดุขากลับ หรือหมายเหตุการรับคืน (ถ้ามี):')
+                            const normalizedNote = note?.trim()
+                            if (note === null) {
+                              return
+                            }
+                            updateRentalStatuses(selectedRental.rentals, ['active', 'overdue'], 'returned', {
+                              returnTrackingNote: normalizedNote || undefined
+                            })
+                          }}
+                          style={{ width: '100%', fontSize: '13px', background: '#FD7E14', borderColor: '#FD7E14', color: '#fff', padding: '10px 8px' }}
+                        >
+                          🟠 🔍 เช็คเลขพัสดุขากลับ
+                        </button>
+                      </>
                     )}
                     {selectedRental.status === 'returned' && (
                       <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--success-color)', background: 'var(--success-bg)', borderRadius: '8px', padding: '12px', fontWeight: 600 }}>
                         ออเดอร์นี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
                       </div>
-                    )}
-
-                    {selectedRental.status !== 'returned' && (
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        onClick={() => {
-                          const currentStatus = selectedRental.status
-                          if (currentStatus === 'returned') return
-                          const nextTransitionMap: Record<Exclude<RentalStatus, 'returned'>, {
-                            from: RentalStatus[]
-                            to: RentalStatus
-                          }> = {
-                            booked: { from: ['booked'], to: 'active' },
-                            active: { from: ['active'], to: 'overdue' },
-                            overdue: { from: ['overdue'], to: 'returned' }
-                          }
-                          const transition = nextTransitionMap[currentStatus]
-                          updateRentalStatuses(selectedRental.rentals, transition.from, transition.to)
-                        }}
-                        style={{ fontSize: '14px' }}
-                      >
-                        เปลี่ยนสถานะถัดไป
-                      </button>
                     )}
                   </div>
 
@@ -1295,13 +1354,13 @@ export function RentalsPage({
                       placeholder="0"
                       onChange={(e) => {
                         setRentalPrice(e.target.value)
-                        syncCollectedAmount(e.target.value, depositAmount, discountAmount)
+                        syncCollectedAmount(e.target.value, depositAmount, discountAmount, shippingCost)
                       }}
                     />
                   </label>
                 </div>
 
-                <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                   <label className="field">
                     <span>ค่ามัดจำ / ประกัน</span>
                     <input
@@ -1310,7 +1369,20 @@ export function RentalsPage({
                       placeholder="0"
                       onChange={(e) => {
                         setDepositAmount(e.target.value)
-                        syncCollectedAmount(rentalPrice, e.target.value, discountAmount)
+                        syncCollectedAmount(rentalPrice, e.target.value, discountAmount, shippingCost)
+                      }}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>ค่าจัดส่ง</span>
+                    <input
+                      type="number"
+                      value={shippingCost}
+                      placeholder="0"
+                      min="0"
+                      onChange={(e) => {
+                        setShippingCost(e.target.value)
+                        syncCollectedAmount(rentalPrice, depositAmount, discountAmount, e.target.value)
                       }}
                     />
                   </label>
@@ -1323,7 +1395,7 @@ export function RentalsPage({
                       min="0"
                       onChange={(e) => {
                         setDiscountAmount(e.target.value)
-                        syncCollectedAmount(rentalPrice, depositAmount, e.target.value)
+                        syncCollectedAmount(rentalPrice, depositAmount, e.target.value, shippingCost)
                       }}
                     />
                   </label>
@@ -1338,7 +1410,7 @@ export function RentalsPage({
                       placeholder="0"
                       onChange={(e) => {
                         setCollectedAmount(e.target.value)
-                        syncDiscountAmount(rentalPrice, depositAmount, e.target.value)
+                        syncDiscountAmount(rentalPrice, depositAmount, e.target.value, shippingCost)
                       }}
                     />
                   </label>

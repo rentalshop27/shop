@@ -79,6 +79,10 @@
     "mtime": 1782930024.366298,
     "hash": "b233e08babc50973fa995f8503dd55cd"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0023_shipping_info.sql": {
+    "mtime": 1783158333.9596233,
+    "hash": "5ea60654288dd9af1320b671329c2d55"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/supabase/migrations/0022_rental_overlap_uses_stock_item_id.sql": {
     "mtime": 1783062936.975937,
     "hash": "a03c5969da4fc9a494fdf0e3d36afb9f"
@@ -152,8 +156,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1783063582.4869132,
-    "hash": "706a6995c3048960fbd350406c1bf685"
+    "mtime": 1783158333.921398,
+    "hash": "d01d27c8eadd277c81f6799009963db5"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1781269137.6949344,
@@ -203,29 +207,33 @@
     "mtime": 1781269137.6934338,
     "hash": "c5cfda5e0bbf42be31fdfcddf306e1bb"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/RentalsPage.test.tsx": {
+    "mtime": 1783158442.517427,
+    "hash": "7439686e53dc40e5248b3950a6d68e6c"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalRemote.test.ts": {
-    "mtime": 1783062936.970964,
-    "hash": "1c7b487fc57e9a9b5a346b342c724dd7"
+    "mtime": 1783158333.9441147,
+    "hash": "3958e4b128ab401b8b7ac8954216bcc7"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalSeed.ts": {
     "mtime": 1782849912.3870337,
     "hash": "05ecdd65f948214d2ee29866a0c66543"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalTypes.ts": {
-    "mtime": 1782849912.3874745,
-    "hash": "f26810146a2a30a0d61b81baeb8a5be4"
+    "mtime": 1783158333.7610438,
+    "hash": "b4c3a08ac23190e1456fbcf9a8df0675"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalRemote.ts": {
-    "mtime": 1783062936.969387,
-    "hash": "74bf4758f1b7a910c642ed0795c5e2e0"
+    "mtime": 1783158442.5153928,
+    "hash": "a8ef017c6ce0d78804e92535c5ed32db"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/rentalRules.ts": {
     "mtime": 1782934493.8004935,
     "hash": "857f6c799b0c772bf04d79bb31c5064d"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/rentals/RentalsPage.tsx": {
-    "mtime": 1783061281.013317,
-    "hash": "cd3d171208ae99abc9c69f23885c648f"
+    "mtime": 1783158564.162421,
+    "hash": "22c5c4faa9af5b7d0d1274895f8cb20d"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/calendar/CalendarPage.tsx": {
     "mtime": 1781369268.2545013,
@@ -303,13 +311,17 @@
     "mtime": 1783062110.7763796,
     "hash": "e3a6c492c07ebaeee764877686042307"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/StockManagementDrawer.test.tsx": {
+    "mtime": 1783148534.6199934,
+    "hash": "9cfeb29f724fdfea4396cff4b85c2c3e"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/stockRemote.ts": {
     "mtime": 1783065030.7605164,
     "hash": "cae7d9b56960ec90abe010d8dfbba6cb"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/StockManagementDrawer.tsx": {
-    "mtime": 1782924328.7671764,
-    "hash": "1bdbaa6c3a09988971b7c586a21ee4c2"
+    "mtime": 1783148494.6087427,
+    "hash": "d230f6bd6a08fb125483758903f161ba"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.ts": {
     "mtime": 1783062050.6228826,
@@ -356,8 +368,8 @@
     "hash": "8ee39dcfe68a23b3797b02648930d699"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/handoff.md": {
-    "mtime": 1783006848.4645739,
-    "hash": "94136c7e77a6d40d5fea5f61f60e654d"
+    "mtime": 1783158564.1605465,
+    "hash": "784c1c597ad3d316b1e6df63e4022b2a"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/docs/google-oauth-setup.md": {
     "mtime": 1781764053.847583,

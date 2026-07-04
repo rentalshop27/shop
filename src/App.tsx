@@ -19,7 +19,7 @@ import { MultiShopDashboardPage, type OverviewShopData } from './features/dashbo
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals } from './features/rentals/rentalSeed'
-import type { RentalOrder, RentalStatus } from './features/rentals/rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './features/rentals/rentalTypes'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
@@ -772,7 +772,11 @@ function PrivateApp() {
     return true
   }
 
-  async function handleUpdateRentalStatus(rentalIdOrIds: string | string[], status: RentalStatus) {
+  async function handleUpdateRentalStatus(
+    rentalIdOrIds: string | string[],
+    status: RentalStatus,
+    shippingInfo?: RentalShippingUpdate
+  ) {
     const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
     if (ids.length === 0) return
 
@@ -783,7 +787,7 @@ function PrivateApp() {
       }
 
       try {
-        await updateRemoteRentalStatus(supabase, shopId, ids, status)
+        await updateRemoteRentalStatus(supabase, shopId, ids, status, shippingInfo)
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
@@ -792,11 +796,19 @@ function PrivateApp() {
     }
 
     setRentals((current) =>
-      current.map((r) =>
-        ids.includes(r.id)
-          ? { ...r, status, updatedAt: new Date().toISOString() }
-          : r
-      )
+      current.map((r) => {
+        if (ids.includes(r.id)) {
+          return {
+            ...r,
+            status,
+            shippingMethod: shippingInfo?.method ?? r.shippingMethod,
+            trackingNumber: shippingInfo?.trackingNumber ?? r.trackingNumber,
+            returnTrackingNote: shippingInfo?.returnTrackingNote ?? r.returnTrackingNote,
+            updatedAt: new Date().toISOString()
+          }
+        }
+        return r
+      })
     )
   }
 
