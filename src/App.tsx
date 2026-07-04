@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState, useRef } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   CalendarCheck,
   CalendarDays,
@@ -262,15 +262,36 @@ function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
 function App() {
   const publicCatalogKey = getPublicCatalogKey()
 
-  if (publicCatalogKey) {
-    return (
-      <Suspense fallback={<LoadingScreen title="กำลังโหลดหน้า catalog" subtitle="กำลังเตรียมรายการชุดสำหรับลูกค้า" />}>
-        <LazyPublicCatalogRoute catalogKey={publicCatalogKey} />
-      </Suspense>
-    )
-  }
+  const appContent = publicCatalogKey ? (
+    <Suspense fallback={<LoadingScreen title="กำลังโหลดหน้า catalog" subtitle="กำลังเตรียมรายการชุดสำหรับลูกค้า" />}>
+      <LazyPublicCatalogRoute catalogKey={publicCatalogKey} />
+    </Suspense>
+  ) : (
+    <PrivateApp />
+  )
 
-  return <PrivateApp />
+  return (
+    <>
+      <UpdatePrompt />
+      {appContent}
+    </>
+  )
+}
+
+function AuthShell({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    const originalScrollRestoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+    const scrollingElement = document.scrollingElement ?? document.documentElement
+    scrollingElement.scrollLeft = 0
+    scrollingElement.scrollTop = 0
+
+    return () => {
+      window.history.scrollRestoration = originalScrollRestoration
+    }
+  }, [])
+
+  return <main className="auth-shell">{children}</main>
 }
 
 function PrivateApp() {
@@ -2112,7 +2133,6 @@ function PrivateApp() {
           </div>
         )}
       </main>
-      <UpdatePrompt />
       <nav className="mobile-bottom-nav">
         <button
           className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -2227,7 +2247,7 @@ function LoginScreen() {
   }
 
   return (
-    <main className="auth-shell">
+    <AuthShell>
       <section className="modal-panel auth-panel">
         <p className="eyebrow">Precious Shop</p>
         <h1>เข้าสู่ระบบหลังร้าน</h1>
@@ -2241,7 +2261,7 @@ function LoginScreen() {
           {isSubmitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
         </button>
       </section>
-    </main>
+    </AuthShell>
   )
 }
 
@@ -2263,7 +2283,7 @@ function EmptyShopAccessScreen({ message, onLogout }: { message: string; onLogou
   }
 
   return (
-    <main className="auth-shell">
+    <AuthShell>
       <section className="modal-panel auth-panel">
         <p className="eyebrow">Precious Shop</p>
         <h1>ยังไม่พบบัญชีร้านค้า</h1>
@@ -2273,7 +2293,7 @@ function EmptyShopAccessScreen({ message, onLogout }: { message: string; onLogou
         </button>
         {logoutError && <p className="form-error" role="alert">{logoutError}</p>}
       </section>
-    </main>
+    </AuthShell>
   )
 }
 
@@ -2285,13 +2305,13 @@ function LoadingScreen({
   subtitle?: string
 }) {
   return (
-    <main className="auth-shell">
+    <AuthShell>
       <section className="modal-panel auth-panel">
         <p className="eyebrow">Precious Shop</p>
         <h1>{title}</h1>
         {subtitle && <p className="subtitle">{subtitle}</p>}
       </section>
-    </main>
+    </AuthShell>
   )
 }
 
