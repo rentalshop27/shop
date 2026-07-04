@@ -17,6 +17,13 @@ export type StockManagementDrawerProps = {
 }
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Custom']
+const displayStatusLabels: Record<'rented' | 'booked' | StockItemStatus, string> = {
+  rented: 'ถูกเช่า',
+  booked: 'มีคิวจอง',
+  available: 'ว่าง',
+  repair: 'ซ่อม',
+  wash: 'ซัก',
+}
 
 export function StockManagementDrawer({
   product,
@@ -147,16 +154,21 @@ export function StockManagementDrawer({
                 </div>
                 {items.map(si => {
                   const { primaryStatus } = getInventoryDisplayStatus(si, rentals, today)
+                  const statusValue = primaryStatus === 'rented' || primaryStatus === 'booked' ? primaryStatus : si.status
                   return (
                     <div key={si.id} className="drawer-item-row">
                       <span className="drawer-item-sku">{si.sku}</span>
                       <div className="drawer-item-actions">
                         <select 
-                          value={si.status} 
+                          aria-label={`สถานะของ ${si.sku}`}
+                          value={statusValue} 
                           onChange={(e) => onUpdateStatus(product.id, si.id, e.target.value as StockItemStatus)}
                           disabled={isSaving}
                           style={{ fontSize: '0.8rem', padding: '4px 8px', borderRadius: '4px', background: 'var(--surface-sunken)', color: 'var(--text-primary)', border: '1px solid rgba(255,255,255,0.1)' }}
                         >
+                          {(primaryStatus === 'rented' || primaryStatus === 'booked') && (
+                            <option value={primaryStatus} disabled>{displayStatusLabels[primaryStatus]}</option>
+                          )}
                           <option value="available">ว่าง</option>
                           <option value="repair">ซ่อม</option>
                           <option value="wash">ซัก</option>
