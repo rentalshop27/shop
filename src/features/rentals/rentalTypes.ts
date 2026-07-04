@@ -1,7 +1,9 @@
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 
-export type RentalStatus = 'booked' | 'active' | 'returned' | 'overdue'
+export type RentalStatus = 'booked' | 'active' | 'returned' | 'overdue' | 'cancelled'
+
+export type DepositStatus = 'pending_return' | 'returned' | 'forfeited'
 
 export type RentalShippingUpdate = {
   method?: 'grab' | 'thailand_post' | string
@@ -20,6 +22,7 @@ export type RentalOrder = {
   depositAmount: number    // Deposit paid
   collectedAmount: number  // Total amount collected at the counter (customizable)
   status: RentalStatus
+  depositStatus?: DepositStatus  // Lifecycle of deposit money after costume returned
   shippingMethod?: 'grab' | 'thailand_post' | string
   trackingNumber?: string
   returnTrackingNote?: string

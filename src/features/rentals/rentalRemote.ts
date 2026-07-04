@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import type { Customer } from '../customers/customerTypes'
-import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus, DepositStatus } from './rentalTypes'
 
 type RentalRow = {
   id: string
@@ -16,6 +16,7 @@ type RentalRow = {
   deposit_amount: number | string
   collected_amount: number | string
   status: RentalStatus
+  deposit_status: DepositStatus | null
   shipping_method: string | null
   tracking_number: string | null
   return_tracking_note: string | null
@@ -80,6 +81,7 @@ function toRentalInsert(shopId: string, rental: RentalOrder) {
     deposit_amount: rental.depositAmount,
     collected_amount: rental.collectedAmount,
     status: rental.status,
+    deposit_status: rental.depositStatus ?? null,
     shipping_method: rental.shippingMethod ?? null,
     tracking_number: rental.trackingNumber ?? null,
     return_tracking_note: rental.returnTrackingNote ?? null,
@@ -115,6 +117,54 @@ export async function updateRemoteRentalStatus(
     .update(updateData)
     .eq('shop_id', shopId)
     .in('id', rentalIds)
+
+  if (error) throw error
+}
+
+/** อัปเดต deposit_status ของ rentals หลายแถวพร้อมกัน */
+export async function updateRemoteRentalDeposit(
+  supabase: SupabaseClient,
+  shopId: string,
+  rentalIds: string[],
+  depositStatus: DepositStatus
+): Promise<void> {
+  if (rentalIds.length === 0) return
+
+  const { error } = await supabase
+    .from('rentals')
+    .update({ deposit_status: depositStatus, updated_at: new Date().toISOString() })
+    .eq('shop_id', shopId)
+    .in('id', rentalIds)
+
+  if (error) throw error
+}
+
+/**
+ * อัปเดต field ที่แก้ไขได้ของ rental (ใช้ใน Edit Modal)
+ * ส่งเฉพาะ field ที่ต้องการเปลี่ยนจริงๆ — partial patch
+ */
+export async function updateRemoteRentalFields(
+  supabase: SupabaseClient,
+  shopId: string,
+  rentalId: string,
+  patch: {
+    stock_item_id?: string
+    stock_item_sku?: string
+    pickup_date?: string
+    return_date?: string
+    rental_price?: number
+    deposit_amount?: number
+    collected_amount?: number
+    shipping_cost?: number
+    notes?: string
+    return_tracking_note?: string
+  }
+): Promise<void> {
+  const { error } = await supabase
+    .from('rentals')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('shop_id', shopId)
+    .eq('id', rentalId)
 
   if (error) throw error
 }
@@ -164,6 +214,7 @@ function mapRentalRow(
     depositAmount: Number(row.deposit_amount) || 0,
     collectedAmount: Number(row.collected_amount) || 0,
     status: row.status,
+    depositStatus: row.deposit_status ?? undefined,
     shippingMethod: row.shipping_method ?? undefined,
     trackingNumber: row.tracking_number ?? undefined,
     returnTrackingNote: row.return_tracking_note ?? undefined,

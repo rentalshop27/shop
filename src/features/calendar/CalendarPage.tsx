@@ -126,6 +126,8 @@ function getGroupStatus(groupItems: RentalOrder[]): RentalStatus {
   if (groupItems.some((rental) => rental.status === 'overdue')) return 'overdue'
   if (groupItems.some((rental) => rental.status === 'active')) return 'active'
   if (groupItems.some((rental) => rental.status === 'booked')) return 'booked'
+  if (groupItems.some((rental) => rental.status === 'returned')) return 'returned'
+  if (groupItems.every((rental) => rental.status === 'cancelled')) return 'cancelled'
   return 'returned'
 }
 
@@ -407,6 +409,8 @@ export function CalendarPage({
     }
 
     rentals.forEach((rental) => {
+      if (rental.status === 'cancelled') return
+
       // Pickups
       if (rental.pickupDate && isDateInRange(rental.pickupDate)) {
         if (!index[rental.pickupDate]) {

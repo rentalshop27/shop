@@ -58,6 +58,125 @@ button {
   min-height: 100vh;
 }
 
+.print-tag-wrapper {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-tag-wrapper,
+  .print-tag-wrapper * {
+    visibility: visible !important;
+  }
+
+  .print-tag-wrapper {
+    background: #fff;
+    display: block !important;
+    inset: 0;
+    padding: 12px;
+    position: fixed;
+    z-index: 99999;
+  }
+
+  .print-tag {
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Kanit', 'Noto Sans Thai', sans-serif;
+    font-size: 13px;
+    gap: 10px;
+    min-height: 6in;
+    width: 4in;
+  }
+
+  .print-tag-header {
+    align-items: center;
+    border-bottom: 2px solid #000;
+    display: flex;
+    font-size: 16px;
+    justify-content: space-between;
+    padding-bottom: 8px;
+  }
+
+  .print-tag-code,
+  .print-tag-sub,
+  .print-tag-footer {
+    color: #444;
+    font-size: 11px;
+  }
+
+  .print-tag-label {
+    color: #666;
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+
+  .print-tag-value {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .print-tag-measurements,
+  .print-tag-dates {
+    background: #f2f2f2;
+    border-radius: 6px;
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .print-tag-measurements {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .print-tag-dates {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .print-tag-measurements span,
+  .print-tag-dates span {
+    color: #666;
+    display: block;
+    font-size: 10px;
+  }
+
+  .print-tag-measurements strong,
+  .print-tag-dates strong {
+    font-size: 14px;
+  }
+
+  .print-tag-notes {
+    border: 1px dashed #bbb;
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  .print-tag-notes-text {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .print-tag-footer {
+    margin-top: auto;
+    text-align: right;
+  }
+}
+
 /* App Layout */
 .app-layout {
   display: grid;

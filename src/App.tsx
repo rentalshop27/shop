@@ -19,12 +19,14 @@ import { MultiShopDashboardPage, type OverviewShopData } from './features/dashbo
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals } from './features/rentals/rentalSeed'
-import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './features/rentals/rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus, DepositStatus } from './features/rentals/rentalTypes'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import {
   createRemoteRentals,
   loadRentals,
   updateRemoteRentalStatus,
+  updateRemoteRentalDeposit,
+  updateRemoteRentalFields,
   deleteRemoteRental,
 } from './features/rentals/rentalRemote'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
@@ -832,6 +834,179 @@ function PrivateApp() {
     }
 
     setRentals((current) => current.filter((r) => !ids.includes(r.id)))
+  }
+
+  /** ยกเลิกออเดอร์ — เปลี่ยน status เป็น cancelled และระบบปล่อยคิวปฏิทินคืนทันที */
+  async function handleCancelRental(rentalIdOrIds: string | string[]) {
+    const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
+    if (ids.length === 0) return
+
+    if (supabase && isAuthenticated) {
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
+      try {
+        await updateRemoteRentalStatus(supabase, shopId, ids, 'cancelled')
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
+    setRentals((current) =>
+      current.map((r) =>
+        ids.includes(r.id)
+          ? { ...r, status: 'cancelled' as RentalStatus, updatedAt: new Date().toISOString() }
+          : r
+      )
+    )
+  }
+
+  /** อัปเดต deposit_status ของออเดอร์หลังคืนชุด */
+  async function handleUpdateRentalDeposit(rentalIdOrIds: string | string[], depositStatus: DepositStatus) {
+    const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
+    if (ids.length === 0) return
+
+    if (supabase && isAuthenticated) {
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
+      try {
+        await updateRemoteRentalDeposit(supabase, shopId, ids, depositStatus)
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
+    setRentals((current) =>
+      current.map((r) =>
+        ids.includes(r.id)
+          ? { ...r, depositStatus, updatedAt: new Date().toISOString() }
+          : r
+      )
+    )
+  }
+
+  /**
+   * แก้ไข field ของออเดอร์ตาม status-aware rules:
+   * - booked/overdue: แก้ได้ทุก field + ตรวจ calendar conflict
+   * - active: แก้ได้เฉพาะ return_date, notes, return_tracking_note
+   */
+  async function handleEditRentalFields(
+    rentalId: string,
+    patch: Parameters<typeof updateRemoteRentalFields>[3],
+    skipConflictCheck?: boolean
+  ) {
+    const currentRental = rentals.find((r) => r.id === rentalId)
+    if (!currentRental) {
+      window.alert('ไม่พบออเดอร์ที่ต้องการแก้ไข')
+      return false
+    }
+
+    const fullEditFields = new Set<keyof Parameters<typeof updateRemoteRentalFields>[3]>([
+      'stock_item_id',
+      'stock_item_sku',
+      'pickup_date',
+      'return_date',
+      'rental_price',
+      'deposit_amount',
+      'collected_amount',
+      'shipping_cost',
+      'notes',
+      'return_tracking_note',
+    ])
+    const limitedEditFields = new Set<keyof Parameters<typeof updateRemoteRentalFields>[3]>([
+      'return_date',
+      'rental_price',
+      'collected_amount',
+      'notes',
+      'return_tracking_note',
+    ])
+    const allowedFields =
+      currentRental.status === 'booked' || currentRental.status === 'overdue'
+        ? fullEditFields
+        : currentRental.status === 'active'
+          ? limitedEditFields
+          : null
+
+    if (!allowedFields) {
+      window.alert('ออเดอร์สถานะนี้ไม่สามารถแก้ไขได้')
+      return false
+    }
+
+    const patchKeys = Object.keys(patch) as Array<keyof Parameters<typeof updateRemoteRentalFields>[3]>
+    const blockedField = patchKeys.find((key) => !allowedFields.has(key))
+    if (blockedField) {
+      window.alert('มีข้อมูลที่ไม่อนุญาตให้แก้ไขในสถานะปัจจุบัน')
+      return false
+    }
+
+    const nextCostume = patch.stock_item_id
+      ? flatStockItems.find((item) => item.id === patch.stock_item_id)
+      : undefined
+    if (patch.stock_item_id && !nextCostume) {
+      window.alert('ไม่พบชุดที่ต้องการเปลี่ยนในคลังสินค้า')
+      return false
+    }
+
+    if (!skipConflictCheck && (patch.pickup_date || patch.return_date || patch.stock_item_id)) {
+      const newPickup = patch.pickup_date ?? currentRental.pickupDate
+      const newReturn = patch.return_date ?? currentRental.returnDate
+      const newStockId = patch.stock_item_id ?? currentRental.costume.id
+      const otherRentals = rentals.filter((r) => r.id !== rentalId)
+      const conflictBySku = otherRentals.find(
+        (r) =>
+          r.costume.id === newStockId &&
+          ['booked', 'active', 'overdue'].includes(r.status) &&
+          r.pickupDate <= newReturn &&
+          r.returnDate >= newPickup
+      )
+      if (conflictBySku) {
+        window.alert(
+          `ชุดมีคิวจองชนกับออเดอร์ ${conflictBySku.orderCode} (${conflictBySku.pickupDate} – ${conflictBySku.returnDate}) ไม่สามารถบันทึกได้`
+        )
+        return false
+      }
+    }
+
+    if (supabase && isAuthenticated) {
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return false
+      }
+      try {
+        await updateRemoteRentalFields(supabase, shopId, rentalId, patch)
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return false
+      }
+    }
+
+    setRentals((current) =>
+      current.map((r) => {
+        if (r.id !== rentalId) return r
+        return {
+          ...r,
+          ...(nextCostume ? { costume: nextCostume } : {}),
+          ...(patch.pickup_date ? { pickupDate: patch.pickup_date } : {}),
+          ...(patch.return_date ? { returnDate: patch.return_date } : {}),
+          ...(patch.rental_price !== undefined ? { rentalPrice: patch.rental_price } : {}),
+          ...(patch.deposit_amount !== undefined ? { depositAmount: patch.deposit_amount } : {}),
+          ...(patch.collected_amount !== undefined ? { collectedAmount: patch.collected_amount } : {}),
+          ...(patch.shipping_cost !== undefined ? { shippingCost: patch.shipping_cost } : {}),
+          ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
+          ...(patch.return_tracking_note !== undefined ? { returnTrackingNote: patch.return_tracking_note } : {}),
+          updatedAt: new Date().toISOString(),
+        }
+      })
+    )
+    return true
   }
   const [formError, setFormError] = useState('')
   const [sessionReady, setSessionReady] = useState(!hasSupabaseConfig)
@@ -1742,6 +1917,9 @@ function PrivateApp() {
               onCreateRentals={handleCreateRentals}
               onUpdateRentalStatus={handleUpdateRentalStatus}
               onDeleteRental={handleDeleteRental}
+              onCancelRental={handleCancelRental}
+              onUpdateDepositStatus={handleUpdateRentalDeposit}
+              onEditRentalFields={handleEditRentalFields}
               externalSelectedRentalId={externalSelectedRentalId}
               onSelectRental={setExternalSelectedRentalId}
               externalIsFormOpen={externalIsFormOpen}

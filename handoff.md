@@ -1,36 +1,261 @@
-# Handoff Report: Order Tracking & Explicit Shipping Actions
+# Handoff Report: Order Editing Logic, Deposit Lifecycle, Cancel & Print Tag
+
+**Branch:** `codex/test-sandbox`
+**อัปเดตล่าสุด:** 2026-07-04
+
+---
 
 ## สรุปภาพรวม (Overview)
-การอัปเดตระบบในรอบนี้คือการเพิ่มความสามารถในการติดตามการจัดส่ง (Shipping & Tracking) ให้กับระบบจัดการการเช่า (Rentals) เพื่อช่วยลดข้อผิดพลาดในการทำงานของแอดมิน และเพิ่มความรวดเร็วในการบริการลูกค้า โดยเน้นปรับปุ่มให้เป็น 1-Click Action สำหรับขนส่งด่วน และเพิ่มระบบแจ้งเตือนออเดอร์ค้างส่ง
+
+การอัปเดตในรอบนี้เพิ่ม 4 ฟีเจอร์หลักที่ปิดลูปการทำงานของระบบเช่าชุดให้ครบวงจร:
+
+1. **Order Editing Modal (Status-Aware)** — แก้ไขออเดอร์โดยมีกฎล็อกตามสถานะ
+2. **Deposit Return Lifecycle** — ติดตามสถานะเงินมัดจำหลังคืนชุด
+3. **Cancel Order** — ยกเลิกออเดอร์พร้อมปลดล็อกคิวปฏิทินทันที
+4. **Print Tag** — พิมพ์ใบแท็กชุด 4×6 นิ้ว (Thermal Label) สำหรับแขวนชุด
+
+---
 
 ## รายละเอียดสิ่งที่ทำเสร็จแล้ว (Completed Work)
 
-### 1. Database & Migrations
-- **สร้าง Migration `0023_shipping_info.sql`**: เพิ่มคอลัมน์ใหม่ในตาราง `rentals` สำหรับเก็บข้อมูลขนส่ง ประกอบด้วย:
-  - `shipping_method` (text): วิธีการจัดส่ง (เช่น `grab`, `thailand_post`)
-  - `tracking_number` (text): หมายเลขพัสดุ
-  - `shipping_cost` (numeric): ค่าจัดส่งที่ระบุในบิล
+### 1. Database Migration
 
-### 2. TypeScript Types & Core APIs
-- **อัปเดต `rentalTypes.ts`**: แก้ไข Type ของ `RentalOrder` ให้รองรับ `shippingMethod`, `trackingNumber`, และ `shippingCost`
-- **อัปเดต `rentalRemote.ts`**:
-  - แก้ไขฟังก์ชัน `mapRentalRow` และ `toRentalInsert` เพื่อรองรับการอ่าน/เขียนฟิลด์ข้อมูลการจัดส่ง
-  - แก้ไข `updateRemoteRentalStatus` ให้สามารถแนบข้อมูล `shippingInfo` เพื่ออัปเดตไปพร้อมกับ Status ได้ในจังหวะเดียวกัน
+#### `0024_order_edit_and_deposit.sql`
+- **เพิ่ม `'cancelled'` เข้า enum `public.rental_status`** โดยใช้ `ALTER TYPE ... ADD VALUE IF NOT EXISTS`
+- **เพิ่มคอลัมน์ `deposit_status`** (`text`, nullable) พร้อม check constraint รับค่าได้ 3 ค่า:
+  - `pending_return` — รอคืนมัดจำ
+  - `returned` — คืนเงินมัดจำให้ลูกค้าแล้ว
+  - `forfeited` — ยึดมัดจำ (ชุดพัง/หักค่าปรับ)
 
-### 3. User Interface (UI Redesign)
-- **Rental Order Form (`RentalsPage.tsx`)**:
-  - ย้ายช่องกรอก **ค่าจัดส่ง** ไปไว้ที่ขั้นตอนการสร้างออเดอร์เช่าชุด เพื่อให้กระบวนการชำระเงินจบในขั้นตอนเดียว
-  - อัปเดตสมการคำนวณ **ยอดรวมที่ต้องชำระ** อัตโนมัติ (`ยอดสุทธิ = ราคาเช่า + ค่ามัดจำ + ค่าจัดส่ง - ส่วนลด`)
-- **Overdue Alert Logic**:
-  - เปลี่ยนป้ายสถานะเป็น **🚨 เลยกำหนดส่ง** (ตัวอักษรหนา สีแดง) สำหรับออเดอร์ที่อยู่ในสถานะ "รอส่งมอบ" แต่วันที่เริ่มเช่า (`pickupDate`) ผ่านมาแล้วเมื่อเทียบกับวันที่ปัจจุบัน
-- **Order List Display**:
-  - ดึงข้อมูล **Tracking Number** ไปแสดงเป็นข้อความขนาดเล็ก (📦 THXXXX) ใต้ชื่อลูกค้าที่ฝั่งรายชื่อออเดอร์ด้านซ้ายมือ ช่วยให้แอดมินก๊อปปี้ไปส่งลูกค้าได้ทันทีโดยไม่ต้องกดเข้าดู
-- **Lifecycle Control Buttons (Explicit Actions)**:
-  - ถอดปุ่ม "เปลี่ยนสถานะถัดไป" แบบรวมศูนย์ออก และแทนที่ด้วยปุ่มเฉพาะเจาะจง:
-    - 🟢 **[ 🛵 เรียกไรเดอร์สำเร็จ (Grab) ]**: กด 1-Click เปลี่ยนเป็นสถานะ "ใช้งานอยู่" และบันทึก Method ทันที
-    - 🟡 **[ 📦 ส่งไปรษณีย์ไทยแล้ว ]**: เมื่อกดจะมีหน้าต่าง (Prompt) เด้งให้กรอกเลขพัสดุก่อน ค่อยบันทึกสถานะ
-    - 🔵 **[ ↩️ ไรเดอร์ส่งชุดคืนถึงร้านแล้ว ]**: กดรับคืน 1-Click แบบเร็ว
-    - 🟠 **[ 🔍 เช็คเลขพัสดุขากลับ ]**: กดแล้วมี Prompt ให้กรอกหมายเหตุ หรือเลขพัสดุขากลับ
+> ⚠️ **ต้อง deploy migration นี้ใน Supabase ก่อน** ไม่เช่นนั้น frontend จะส่ง status `cancelled` ไม่ผ่าน DB constraint
+
+---
+
+### 2. TypeScript Types (`rentalTypes.ts`)
+
+| เพิ่ม | รายละเอียด |
+|---|---|
+| `'cancelled'` ใน `RentalStatus` | union type ครบ: `booked \| active \| returned \| overdue \| cancelled` |
+| `DepositStatus` (type ใหม่) | `'pending_return' \| 'returned' \| 'forfeited'` |
+| `depositStatus?: DepositStatus` ใน `RentalOrder` | ฟิลด์ optional สำหรับ lifecycle มัดจำ |
+
+---
+
+### 3. Remote Layer (`rentalRemote.ts`)
+
+| ฟังก์ชัน | ใช้ทำอะไร |
+|---|---|
+| `mapRentalRow()` | เพิ่ม map `deposit_status` จาก DB → `depositStatus` ใน object |
+| `toRentalInsert()` | เพิ่ม `deposit_status` ในการ insert |
+| **NEW** `updateRemoteRentalDeposit()` | อัปเดต `deposit_status` ของ rental หลายแถวพร้อมกัน |
+| **NEW** `updateRemoteRentalFields()` | Partial patch ฟิลด์ต่างๆ ของออเดอร์ (ใช้ใน Edit Modal) รองรับ: `stock_item_id`, `pickup_date`, `return_date`, `rental_price`, `deposit_amount`, `collected_amount`, `shipping_cost`, `notes`, `return_tracking_note` |
+
+---
 
 ### 4. Application State (`App.tsx`)
-- แก้ไขลายเซ็นของฟังก์ชัน `handleUpdateRentalStatus` ให้สามารถรับและกระจาย `shippingInfo` ลงไปอัปเดต State `rentals` ใน Memory ได้อย่างถูกต้องสมบูรณ์
+
+เพิ่ม handlers 3 ตัว และต่อ props ลง `<LazyRentalsPage>`:
+
+| Handler | Logic |
+|---|---|
+| `handleCancelRental` | เรียก `updateRemoteRentalStatus(..., 'cancelled')` → set state ใน memory |
+| `handleUpdateRentalDeposit` | เรียก `updateRemoteRentalDeposit()` → set `depositStatus` ใน state |
+| `handleEditRentalFields` | Validate calendar conflict (exclude self) → เรียก `updateRemoteRentalFields()` → merge patch ลง state |
+
+Props ใหม่ที่ส่งลงใน `<LazyRentalsPage>`:
+```tsx
+onCancelRental={handleCancelRental}
+onUpdateDepositStatus={handleUpdateRentalDeposit}
+onEditRentalFields={handleEditRentalFields}
+```
+
+---
+
+### 5. RentalsPage UI (`RentalsPage.tsx`)
+
+#### A. Status-Aware Order Editing Modal
+
+- เพิ่ม state `editingRentalId`, `editMode` (`'full' | 'limited'`), `editFormError`
+- ฟังก์ชัน `openEditModal(rental, mode)` — Pre-fill form ทุก field จากออเดอร์ที่เลือก
+- `handleSubmit()` ถูก fork เป็น 2 branches:
+  - **Edit branch** (เมื่อ `editingRentalId` มีค่า): route ตาม `editMode`
+  - **Create branch**: ตรรกะเดิมทั้งหมด (ไม่กระทบ)
+
+**กฎ Edit Mode ตามสถานะ:**
+
+| สถานะ | ปุ่มที่ปรากฏ | Field ที่แก้ได้ |
+|---|---|---|
+| `booked` / `overdue` | ✏️ แก้ไขออเดอร์ (ทอง) | ทุก field รวมชุด, วันรับ-คืน, ราคา, โน้ต |
+| `active` | ✏️ แก้ไข (จำกัด) (น้ำเงิน) | เฉพาะวันคืน, ราคา Override, ยอดเก็บ, โน้ต |
+| `returned` / `cancelled` | ไม่มีปุ่ม | Read-only |
+
+Calendar conflict check ใน `handleEditRentalFields()` — exclude ออเดอร์ตัวเองออกก่อนเช็ค
+
+#### B. Deposit Return Lifecycle
+
+แสดงกล่อง "สถานะเงินมัดจำ" เฉพาะเมื่อ:
+- สถานะ = `returned`
+- ออเดอร์มี `depositAmount > 0`
+- prop `onUpdateDepositStatus` ถูกส่งมา
+
+สถานะที่แสดง:
+- `null` / `pending_return` → `⏳ รอดำเนินการ` + ปุ่ม **💸 ยืนยันคืนมัดจำ** และ **⚠️ ยึดมัดจำ** (มี confirm dialog)
+- `returned` → `✅ คืนมัดจำแล้ว`
+- `forfeited` → `🚫 ยึดมัดจำไว้`
+
+#### C. Cancel Order Button
+
+- แสดงเฉพาะ `booked` และ `overdue`
+- ต้องกด confirm **2 รอบ** ก่อนดำเนินการ
+- หลัง cancel → status = `cancelled`, ชุดกลับมาว่างในปฏิทินทันที (`cancelled` ไม่ถูกนับเป็น open rental)
+
+#### D. Print Tag Button 🖨️
+
+- ปุ่มเล็กๆ มุมขวาบนของ detail panel (ปรากฏทุกสถานะ)
+- เรียก `window.print()` → CSS `@media print` ซ่อนทุกอย่าง แสดงเฉพาะ `.print-tag`
+- เนื้อหาใบแท็ก:
+  - ชื่อร้าน + รหัสออเดอร์
+  - ชื่อลูกค้า, เบอร์, LINE
+  - สัดส่วน (อก/เอว/สะโพก/สูง)
+  - ชุดที่เช่า (ชื่อ + SKU + สี + ไซส์) — รองรับหลายชุดในออเดอร์เดียว
+  - วันรับ → วันคืน
+  - โน้ตช่างเย็บ (ถ้ามี)
+  - วันที่พิมพ์
+
+#### E. UI Additions อื่นๆ
+- สถานะ `cancelled` มี badge ใหม่ (strikethrough + muted)
+- Filter dropdown เพิ่มตัวเลือก "ยกเลิกแล้ว"
+
+---
+
+### 6. CSS / Print Styles (`index.css`)
+
+> ⚠️ **TODO ที่ยังต้องทำ:** เพิ่ม `@media print` styles และ `.print-tag` layout ใน `index.css`
+
+สิ่งที่ต้องเพิ่ม:
+
+```css
+/* ── Print Tag: ซ่อนทุกอย่างยกเว้น print tag ── */
+@media print {
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+
+  body > * { display: none !important; }
+
+  .print-tag-wrapper {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #fff;
+    padding: 12px;
+  }
+
+  .print-tag {
+    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+    color: #000;
+    width: 4in;
+    min-height: 6in;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .print-tag-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+    font-size: 16px;
+  }
+
+  .print-tag-code { font-size: 11px; color: #555; }
+
+  .print-tag-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #777;
+    margin-bottom: 2px;
+  }
+
+  .print-tag-value { font-weight: 700; font-size: 15px; }
+  .print-tag-sub { font-size: 11px; color: #444; }
+
+  .print-tag-measurements {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .print-tag-measurements span { font-size: 10px; color: #777; display: block; }
+  .print-tag-measurements strong { font-size: 14px; }
+
+  .print-tag-dates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .print-tag-dates span { font-size: 10px; color: #777; display: block; }
+  .print-tag-dates strong { font-size: 14px; }
+
+  .print-tag-notes {
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  .print-tag-notes-text { font-size: 13px; line-height: 1.6; }
+
+  .print-tag-footer {
+    margin-top: auto;
+    font-size: 10px;
+    color: #aaa;
+    text-align: right;
+  }
+
+  /* ซ่อน print-tag-wrapper ในหน้าจอปกติ */
+  .print-tag-wrapper { display: none; }
+}
+```
+
+---
+
+## Architecture Notes
+
+### Calendar Conflict Check — Cancelled Orders
+`findOpenRentalConflict()` ใน `rentalRules.ts` นับเฉพาะ `openRentalStatuses = ['booked', 'active', 'overdue']` ซึ่งไม่รวม `cancelled` อยู่แล้ว ✅
+
+`handleEditRentalFields()` ใน App.tsx ก็ filter เฉพาะ `['booked', 'active', 'overdue']` ก่อนเช็ค conflict เช่นกัน ✅
+
+Calendar View ควร filter `cancelled` ออกจากการเรนเดอร์แถบสี (**TODO ถ้ายังไม่ได้ทำ**)
+
+### Deposit Forfeited → รายได้
+ยอด `forfeited` ควรถูกนับรวมเป็นรายรับสุทธิใน Report ระยะถัดไป (ไม่ได้ทำในรอบนี้)
+
+### Edit Modal — Active Status Override ราคา
+เมื่อแก้ไขออเดอร์ `active` (ขยายวันเช่า) ระบบ **ไม่คำนวณราคาอัตโนมัติ** แอดมินต้องพิมพ์ตัวเลขค่าต่อเวลาลงในช่อง Override เอง (ตาม design decision)
+
+---
+
+## สิ่งที่ยังต้อง Deploy / TODO
+
+| รายการ | สถานะ |
+|---|---|
+| Deploy migration `0024_order_edit_and_deposit.sql` ใน Supabase | ⏳ ยังไม่ได้ทำ |
+| เพิ่ม `@media print` + `.print-tag` CSS ใน `index.css` | ⏳ ยังไม่ได้ทำ |
+| Filter `cancelled` ออกจาก Calendar View render | ⏳ ควรตรวจสอบ |
+| Build + push branch | ⏳ ยังไม่ได้ทำ |

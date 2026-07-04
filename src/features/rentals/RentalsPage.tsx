@@ -7,9 +7,11 @@ import {
   Shirt,
   Trash2,
   ChevronDown,
-  X
+  X,
+  Pencil,
+  Printer
 } from 'lucide-react'
-import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus, DepositStatus } from './rentalTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import { findOpenRentalConflict, resolveRentalPrice, calculateReturnDate } from './rentalRules'
@@ -34,6 +36,12 @@ interface RentalsPageProps {
   onCreateRentals: (drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]) => boolean | Promise<boolean>
   onUpdateRentalStatus: (rentalId: string | string[], status: RentalStatus, shippingInfo?: RentalShippingUpdate) => void
   onDeleteRental?: (rentalId: string | string[]) => void
+  /** ยกเลิกออเดอร์ — ปล่อยคิวปฏิทินของชุดทันที */
+  onCancelRental?: (rentalId: string | string[]) => void
+  /** อัปเดต deposit_status ของออเดอร์หลังคืนชุด */
+  onUpdateDepositStatus?: (rentalId: string | string[], depositStatus: DepositStatus) => void
+  /** แก้ไข field ของออเดอร์ตาม status-aware rules */
+  onEditRentalFields?: (rentalId: string, patch: Record<string, unknown>, skipConflictCheck?: boolean) => Promise<boolean | void>
 
   // Optional external controls
   externalSelectedRentalId?: string
@@ -76,6 +84,9 @@ export function RentalsPage({
   onCreateRentals,
   onUpdateRentalStatus,
   onDeleteRental,
+  onCancelRental,
+  onUpdateDepositStatus,
+  onEditRentalFields,
 
   // Optional external controls
   externalSelectedRentalId,
@@ -112,7 +123,14 @@ export function RentalsPage({
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
+  // Edit modal state
+  // editMode: 'full' = booked/overdue (แก้ได้ทุก field), 'limited' = active (แก้เฉพาะวันคืน/notes)
+  const [editingRentalId, setEditingRentalId] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState<'full' | 'limited'>('full')
+  const [editFormError, setEditFormError] = useState('')
+
   // Form states
+
   const [customerSearch, setCustomerSearch] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
@@ -333,6 +351,8 @@ export function RentalsPage({
     if (groupItems.some((r) => r.status === 'overdue')) return 'overdue'
     if (groupItems.some((r) => r.status === 'active')) return 'active'
     if (groupItems.some((r) => r.status === 'booked')) return 'booked'
+    if (groupItems.some((r) => r.status === 'returned')) return 'returned'
+    if (groupItems.every((r) => r.status === 'cancelled')) return 'cancelled'
     return 'returned'
   }
 
@@ -447,11 +467,66 @@ export function RentalsPage({
     return group ?? filteredGroupedRentals[0] ?? groupedRentals[0]
   }, [groupedRentals, selectedRentalId, filteredGroupedRentals])
 
-  // Handle Form Submission
+  // Handle Form Submission (create OR edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    setEditFormError('')
 
+    // ─────────────────────────────────────────────────────────────
+    // EDIT MODE — ส่ง patch ตาม editMode rules แทนการสร้างใหม่
+    // ─────────────────────────────────────────────────────────────
+    if (editingRentalId && onEditRentalFields) {
+      if (!returnDate) {
+        setEditFormError('กรุณาระบุวันที่คืน')
+        return
+      }
+      if (new Date(returnDate) < new Date(pickupDate)) {
+        setEditFormError('วันที่คืนต้องอยู่หลังวันที่รับชุด')
+        return
+      }
+
+      if (editMode === 'full') {
+        // full edit: ส่งทุก field รวมถึงชุดและวันรับ
+        if (selectedCostumes.length === 0) {
+          setEditFormError('กรุณาเลือกแบบชุดอย่างน้อย 1 ชุด')
+          return
+        }
+        const costume = selectedCostumes[0]
+        const patch: Record<string, unknown> = {
+          stock_item_id: costume.id,
+          stock_item_sku: costume.sku,
+          pickup_date: pickupDate,
+          return_date: returnDate,
+          rental_price: parseFloat(rentalPrice) || 0,
+          deposit_amount: parseFloat(depositAmount) || 0,
+          collected_amount: parseFloat(collectedAmount) || 0,
+          shipping_cost: parseFloat(shippingCost) || 0,
+          notes,
+        }
+        const saved = await onEditRentalFields(editingRentalId, patch, false)
+        if (!saved) return
+      } else {
+        // limited edit (active): เฉพาะวันคืน, notes, returnTrackingNote
+        const patch: Record<string, unknown> = {
+          return_date: returnDate,
+          rental_price: parseFloat(rentalPrice) || 0,
+          collected_amount: parseFloat(collectedAmount) || 0,
+          notes,
+        }
+        // ตรวจ return_date conflict ก่อน
+        const saved = await onEditRentalFields(editingRentalId, patch, false)
+        if (!saved) return
+      }
+
+      resetRentalForm()
+      setIsFormOpen(false)
+      return
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CREATE MODE — ตรรกะเดิม
+    // ─────────────────────────────────────────────────────────────
     if (!selectedCustomer) {
       setFormError('กรุณาเลือกผู้เช่า')
       return
@@ -550,15 +625,7 @@ export function RentalsPage({
       return
     }
 
-    // Reset Form
-    setSelectedCustomer(null)
-    setCustomerSearch('')
-    setSelectedCostumes([])
-    setCostumeSearch('')
-    setPickupDate(getTodayString())
-    setReturnDate('')
-    setDiscountAmount('0')
-    setNotes('')
+    resetRentalForm()
     setIsFormOpen(false)
   }
 
@@ -592,9 +659,67 @@ export function RentalsPage({
         return <span className="status-pill success">คืนแล้ว</span>
       case 'overdue':
         return <span className="status-pill danger">เกินกำหนด</span>
+      case 'cancelled':
+        return <span className="status-pill muted" style={{ textDecoration: 'line-through', opacity: 0.6 }}>❌ ยกเลิกแล้ว</span>
       default:
         return <span className="status-pill muted">{status}</span>
     }
+  }
+
+  /** เปิด Edit Modal และ pre-fill form ด้วยข้อมูลออเดอร์ปัจจุบัน */
+  const openEditModal = (rental: RentalOrder, mode: 'full' | 'limited') => {
+    setEditingRentalId(rental.id)
+    setEditMode(mode)
+    setEditFormError('')
+    // Pre-fill form with existing values
+    setSelectedCustomer(rental.customer)
+    setCustomerSearch(`${rental.customer.fullName} (${rental.customer.customerCode})`)
+    const costumeItem = stockItems.find((s) => s.id === rental.costume.id) ?? null
+    setSelectedCostumes(costumeItem ? [costumeItem] : [])
+    setCostumeSearch('')
+    setPickupDate(rental.pickupDate)
+    setReturnDate(rental.returnDate)
+    setRentalPrice(String(rental.rentalPrice))
+    setDepositAmount(String(rental.depositAmount))
+    setShippingCost(String(rental.shippingCost ?? 0))
+    setCollectedAmount(String(rental.collectedAmount))
+    setSelectedTierDays('custom')
+    setBasePriceFromTier(0)
+    const disc = Math.max(0, rental.rentalPrice + rental.depositAmount + (rental.shippingCost ?? 0) - rental.collectedAmount)
+    setDiscountAmount(String(disc))
+    setNotes(rental.notes ?? '')
+    setIsFormOpen(true)
+  }
+
+  const resetRentalForm = () => {
+    setEditingRentalId(null)
+    setEditMode('full')
+    setEditFormError('')
+    setFormError('')
+    setSelectedCustomer(null)
+    setCustomerSearch('')
+    setSelectedCostumes([])
+    setCostumeSearch('')
+    setSelectedTierDays(null)
+    setBasePriceFromTier(0)
+    setPickupDate(getTodayString())
+    setReturnDate('')
+    setRentalPrice('')
+    setDepositAmount('')
+    setShippingCost('0')
+    setCollectedAmount('')
+    setDiscountAmount('0')
+    setNotes('')
+  }
+
+  const openCreateModal = () => {
+    resetRentalForm()
+    setIsFormOpen(true)
+  }
+
+  const closeRentalForm = () => {
+    resetRentalForm()
+    setIsFormOpen(false)
   }
 
   // Date formatted display e.g. "2026-06-11 to 2026-06-13"
@@ -610,7 +735,7 @@ export function RentalsPage({
           <h1>หน้าเช่าชุด</h1>
           <p className="subtitle">บันทึกข้อมูลการเช่าชุด จัดทำประวัติการเช่า ติดตามช่วงรับ/ส่งชุดและส่งคืน</p>
         </div>
-        <button className="primary-button" type="button" onClick={() => setIsFormOpen(true)}>
+        <button className="primary-button" type="button" onClick={openCreateModal}>
           <Plus size={22} />
           สร้างใบเช่าชุด
         </button>
@@ -638,6 +763,7 @@ export function RentalsPage({
               <option value="active">ใช้งานอยู่ (กำลังใช้งาน)</option>
               <option value="returned">คืนแล้ว</option>
               <option value="overdue">เกินกำหนดคืน</option>
+              <option value="cancelled">ยกเลิกแล้ว</option>
             </select>
           </div>
 
@@ -733,6 +859,34 @@ export function RentalsPage({
                 <button className="close-detail-btn" type="button" onClick={() => setIsMobileDetailOpen(false)} aria-label="ปิด">
                   <X size={20} />
                 </button>
+                {/* Top action bar: Print + Edit (status-aware) */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  {/* Print tag button — always visible */}
+                  <button
+                    type="button"
+                    title="พิมพ์ใบแท็กชุด"
+                    onClick={() => window.print()}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '6px 10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+                  >
+                    <Printer size={14} /> พิมพ์แท็ก
+                  </button>
+
+                </div>
+
                 <div className="profile-card-top">
                   <div className="profile-card-info">
                     <div className="profile-avatar">
@@ -875,6 +1029,50 @@ export function RentalsPage({
                               ประกัน: {formatBaht(r.depositAmount)}
                             </small>
                           )}
+                          {onEditRentalFields && (r.status === 'booked' || r.status === 'overdue') && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(r, 'full')}
+                              style={{
+                                marginTop: '8px',
+                                background: 'rgba(218, 165, 32, 0.1)',
+                                border: '1px solid rgba(218, 165, 32, 0.3)',
+                                borderRadius: '8px',
+                                color: 'var(--text-gold)',
+                                cursor: 'pointer',
+                                padding: '6px 10px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}
+                            >
+                              <Pencil size={14} /> แก้ไข
+                            </button>
+                          )}
+                          {onEditRentalFields && r.status === 'active' && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(r, 'limited')}
+                              style={{
+                                marginTop: '8px',
+                                background: 'rgba(59, 130, 246, 0.1)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                                borderRadius: '8px',
+                                color: '#93c5fd',
+                                cursor: 'pointer',
+                                padding: '6px 10px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}
+                            >
+                              <Pencil size={14} /> แก้ไขจำกัด
+                            </button>
+                          )}
                         </div>
                       </div>
                       )
@@ -955,7 +1153,133 @@ export function RentalsPage({
                         ออเดอร์นี้สิ้นสุดแล้ว (คืนชุดเรียบร้อย)
                       </div>
                     )}
+                    {selectedRental.status === 'cancelled' && (
+                      <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', fontWeight: 600, border: '1px solid var(--border-color)' }}>
+                        ❌ ออเดอร์นี้ถูกยกเลิกแล้ว — ชุดกลับมาว่างในปฏิทินแล้ว
+                      </div>
+                    )}
                   </div>
+
+                  {/* ─── Deposit Return Lifecycle (returned orders only) ─── */}
+                  {selectedRental.status === 'returned' && selectedRental.rentals.some(r => r.depositAmount > 0) && onUpdateDepositStatus && (
+                    <div style={{ marginTop: '16px', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 600 }}>
+                        💰 สถานะเงินมัดจำ ({formatBaht(selectedRental.rentals.reduce((s, r) => s + r.depositAmount, 0))})
+                      </div>
+                      {/* Determine combined deposit status */}
+                      {(() => {
+                        const depositStatuses = selectedRental.rentals
+                          .filter((r) => r.depositAmount > 0)
+                          .map((r) => r.depositStatus ?? 'pending_return')
+                        if (depositStatuses.length > 0 && depositStatuses.every((status) => status === 'returned')) {
+                          return (
+                            <div style={{ color: 'var(--success-color)', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ✅ คืนมัดจำให้ลูกค้าแล้ว
+                            </div>
+                          )
+                        }
+                        if (depositStatuses.length > 0 && depositStatuses.every((status) => status === 'forfeited')) {
+                          return (
+                            <div style={{ color: '#f97316', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              🚫 ยึดมัดจำไว้ (หักค่าปรับ)
+                            </div>
+                          )
+                        }
+                        // pending_return or null — show action buttons
+                        return (
+                          <div>
+                            <div style={{ color: '#fbbf24', fontSize: '13px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ⏳ รอดำเนินการคืนมัดจำ
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm('ยืนยันว่าคืนเงินมัดจำให้ลูกค้าแล้ว?')) {
+                                    onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'returned')
+                                  }
+                                }}
+                                style={{
+                                  padding: '9px 8px',
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                                  background: 'rgba(16, 185, 129, 0.08)',
+                                  color: 'var(--success-color)',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(16, 185, 129, 0.08)'}
+                              >
+                                💸 ยืนยันคืนมัดจำแล้ว
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm('ยืนยันการยึดมัดจำ? เงินก้อนนี้จะถือเป็นรายได้ของร้าน')) {
+                                    onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'forfeited')
+                                  }
+                                }}
+                                style={{
+                                  padding: '9px 8px',
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(249, 115, 22, 0.4)',
+                                  background: 'rgba(249, 115, 22, 0.08)',
+                                  color: '#f97316',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(249, 115, 22, 0.15)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(249, 115, 22, 0.08)'}
+                              >
+                                ⚠️ ยึดมัดจำ / หักค่าปรับ
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
+
+                  {/* ─── Cancel Order (booked/overdue only, hidden deep with double confirm) ─── */}
+                  {(selectedRental.status === 'booked' || selectedRental.status === 'overdue') && onCancelRental && (
+                    <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed rgba(255,255,255,0.08)' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const first = window.confirm(`ยืนยันยกเลิกออเดอร์ ${selectedRental.orderCode}?\n\nการยกเลิกจะปลดล็อกคิวปฏิทินของชุดทันที`)
+                          if (!first) return
+                          const second = window.confirm(`⚠️ กดยืนยันอีกครั้งเพื่อยืนยันการยกเลิก\n\nออเดอร์ ${selectedRental.orderCode} จะถูกเปลี่ยนสถานะเป็น "ยกเลิกแล้ว" และไม่สามารถย้อนกลับได้`)
+                          if (!second) return
+                          onCancelRental(selectedRental.rentals.map(r => r.id))
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '9px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          background: 'rgba(239, 68, 68, 0.05)',
+                          color: 'var(--danger-color)',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)'}
+                      >
+                        ❌ ยกเลิกออเดอร์
+                      </button>
+                    </div>
+                  )}
 
                   {onDeleteRental && (
                     <button
@@ -979,16 +1303,60 @@ export function RentalsPage({
         )}
       </section>
 
-      {/* CREATE RENTAL FORM MODAL */}
+      {/* HIDDEN PRINT TAG — only visible during window.print() */}
+      {selectedRental && (
+        <div className="print-tag-wrapper" aria-hidden="true">
+          <div className="print-tag">
+            <div className="print-tag-header">
+              <strong>PRECIOUS RENTAL</strong>
+              <span className="print-tag-code">{selectedRental.orderCode}</span>
+            </div>
+            <div className="print-tag-customer">
+              <div className="print-tag-label">ลูกค้า</div>
+              <div className="print-tag-value">{selectedRental.customer.fullName}</div>
+              <div className="print-tag-sub">{selectedRental.customer.phone}{selectedRental.customer.lineAccount ? ` | LINE: ${selectedRental.customer.lineAccount}` : ''}</div>
+            </div>
+            <div className="print-tag-measurements">
+              <div><span>อก</span><strong>{selectedRental.customer.bustIn ? `${selectedRental.customer.bustIn}"` : '-'}</strong></div>
+              <div><span>เอว</span><strong>{selectedRental.customer.waistIn ? `${selectedRental.customer.waistIn}"` : '-'}</strong></div>
+              <div><span>สะโพก</span><strong>{selectedRental.customer.hipIn ? `${selectedRental.customer.hipIn}"` : '-'}</strong></div>
+              <div><span>สูง</span><strong>{selectedRental.customer.heightCm ? `${selectedRental.customer.heightCm}cm` : '-'}</strong></div>
+            </div>
+            {selectedRental.rentals.map((r) => (
+              <div key={r.id} className="print-tag-costume">
+                <div className="print-tag-label">ชุด</div>
+                <div className="print-tag-value">{r.costume.productName}</div>
+                <div className="print-tag-sub">SKU: {r.costume.sku} | สี: {r.costume.primaryColor} | ไซส์: {r.costume.size}</div>
+              </div>
+            ))}
+            <div className="print-tag-dates">
+              <div><span>รับชุด</span><strong>{selectedRental.pickupDate}</strong></div>
+              <div><span>คืนชุด</span><strong>{selectedRental.returnDate}</strong></div>
+            </div>
+            {selectedRental.notes && (
+              <div className="print-tag-notes">
+                <div className="print-tag-label">โน้ตช่างเย็บ</div>
+                <div className="print-tag-notes-text">{selectedRental.notes}</div>
+              </div>
+            )}
+            <div className="print-tag-footer">
+              พิมพ์เมื่อ {new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* CREATE / EDIT RENTAL FORM MODAL */}
       {isFormOpen && (
         <div className="modal-backdrop" role="presentation">
-          <section className="modal-panel" aria-label="สร้างใบเช่าชุดใหม่" style={{ maxWidth: '650px', width: '100%' }}>
+          <section className="modal-panel" aria-label={editingRentalId ? 'แก้ไขใบเช่าชุด' : 'สร้างใบเช่าชุดใหม่'} style={{ maxWidth: '650px', width: '100%' }}>
             <div className="modal-header">
               <div>
                 <p className="eyebrow">Rental Order</p>
-                <h2>ลงทะเบียนเช่าชุดใหม่</h2>
+                <h2>{editingRentalId ? (editMode === 'limited' ? 'แก้ไขออเดอร์แบบจำกัด' : 'แก้ไขออเดอร์') : 'ลงทะเบียนเช่าชุดใหม่'}</h2>
               </div>
-              <button className="ghost-button" type="button" onClick={() => setIsFormOpen(false)}>
+              <button className="ghost-button" type="button" onClick={closeRentalForm}>
                 ปิด
               </button>
             </div>
@@ -1005,17 +1373,22 @@ export function RentalsPage({
                       type="text"
                       value={customerSearch}
                       placeholder="เช่น pun, PR-C001"
+                      readOnly={Boolean(editingRentalId)}
                       onChange={(e) => {
+                        if (editingRentalId) return
                         setCustomerSearch(e.target.value)
                         setSelectedCustomer(null)
                         setShowCustomerDropdown(true)
                       }}
                       onFocus={(e) => {
                         e.target.select()
-                        setShowCustomerDropdown(true)
+                        if (!editingRentalId) {
+                          setShowCustomerDropdown(true)
+                        }
                       }}
                       style={{ width: '100%', paddingLeft: '38px', paddingRight: '38px' }}
                     />
+                    {!editingRentalId && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1044,10 +1417,11 @@ export function RentalsPage({
                         }}
                       />
                     </button>
+                    )}
                   </div>
                 </label>
 
-                {showCustomerDropdown && (
+                {!editingRentalId && showCustomerDropdown && (
                   filteredCustomersSuggestions.length > 0 ? (
                     <ul style={{
                       position: 'absolute', top: '100%', left: 0, right: 0,
@@ -1114,13 +1488,17 @@ export function RentalsPage({
                       type="text"
                       value={costumeSearch}
                       placeholder="เช่น Midnight, PR-8130"
+                      readOnly={editMode === 'limited'}
                       onChange={(e) => {
+                        if (editMode === 'limited') return
                         setCostumeSearch(e.target.value)
                         setShowCostumeDropdown(true)
                       }}
                       onFocus={(e) => {
                         e.target.select()
-                        setShowCostumeDropdown(true)
+                        if (editMode !== 'limited') {
+                          setShowCostumeDropdown(true)
+                        }
                       }}
                       style={{ width: '100%', paddingLeft: '38px', paddingRight: '38px' }}
                     />
@@ -1155,7 +1533,7 @@ export function RentalsPage({
                   </div>
                 </label>
 
-                {showCostumeDropdown && (
+                {editMode !== 'limited' && showCostumeDropdown && (
                   filteredCostumesSuggestions.length > 0 ? (
                     <ul style={{
                       position: 'absolute', top: '100%', left: 0, right: 0,
@@ -1222,10 +1600,11 @@ export function RentalsPage({
                             สี: {item.primaryColor} | ไซส์: {item.size} | ค่าเช่า: {formatTierRange(item.rentalTiers)}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedCostumes(selectedCostumes.filter((c) => c.id !== item.id))
+	                        {editMode !== 'limited' && (
+	                        <button
+	                          type="button"
+	                          onClick={() => {
+	                            setSelectedCostumes(selectedCostumes.filter((c) => c.id !== item.id))
                           }}
                           style={{
                             background: 'none',
@@ -1242,9 +1621,10 @@ export function RentalsPage({
                           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           title="ลบออก"
-                        >
-                          <X size={16} />
-                        </button>
+	                        >
+	                          <X size={16} />
+	                        </button>
+	                        )}
                       </div>
                     ))}
                   </div>
@@ -1252,7 +1632,7 @@ export function RentalsPage({
               </div>
               
               {/* PACKAGE CHOICE CHIPS */}
-              {selectedCostumes.length > 0 && (
+	              {!editingRentalId && selectedCostumes.length > 0 && (
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <label className="field" style={{ marginBottom: '12px' }}>
                     <span>เลือกแพ็กเกจระยะเวลาเช่า<b style={{ color: 'red' }}> *</b></span>
@@ -1314,11 +1694,13 @@ export function RentalsPage({
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <label className="field">
                   <span>วันที่รับชุด<b style={{ color: 'red' }}> *</b></span>
-                  <input
-                    type="date"
-                    value={pickupDate}
-                    onChange={(e) => setPickupDate(e.target.value)}
-                  />
+	                  <input
+	                    type="date"
+	                    value={pickupDate}
+	                    readOnly={editMode === 'limited'}
+	                    style={editMode === 'limited' ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
+	                    onChange={(e) => setPickupDate(e.target.value)}
+	                  />
                 </label>
                 <label className="field">
                   <span>วันที่คืน<b style={{ color: 'red' }}> *</b></span>
@@ -1364,26 +1746,32 @@ export function RentalsPage({
                   <label className="field">
                     <span>ค่ามัดจำ / ประกัน</span>
                     <input
-                      type="number"
-                      value={depositAmount}
-                      placeholder="0"
-                      onChange={(e) => {
-                        setDepositAmount(e.target.value)
-                        syncCollectedAmount(rentalPrice, e.target.value, discountAmount, shippingCost)
-                      }}
+	                    type="number"
+	                    value={depositAmount}
+	                    placeholder="0"
+	                    readOnly={editMode === 'limited'}
+	                    style={editMode === 'limited' ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
+	                    onChange={(e) => {
+	                      if (editMode === 'limited') return
+	                      setDepositAmount(e.target.value)
+	                      syncCollectedAmount(rentalPrice, e.target.value, discountAmount, shippingCost)
+	                    }}
                     />
                   </label>
                   <label className="field">
                     <span>ค่าจัดส่ง</span>
                     <input
-                      type="number"
-                      value={shippingCost}
-                      placeholder="0"
-                      min="0"
-                      onChange={(e) => {
-                        setShippingCost(e.target.value)
-                        syncCollectedAmount(rentalPrice, depositAmount, discountAmount, e.target.value)
-                      }}
+	                    type="number"
+	                    value={shippingCost}
+	                    placeholder="0"
+	                    min="0"
+	                    readOnly={editMode === 'limited'}
+	                    style={editMode === 'limited' ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
+	                    onChange={(e) => {
+	                      if (editMode === 'limited') return
+	                      setShippingCost(e.target.value)
+	                      syncCollectedAmount(rentalPrice, depositAmount, discountAmount, e.target.value)
+	                    }}
                     />
                   </label>
                   <label className="field">
@@ -1428,14 +1816,14 @@ export function RentalsPage({
                 />
               </label>
 
-              {formError && <p className="form-error">{formError}</p>}
+	              {(formError || editFormError) && <p className="form-error">{editFormError || formError}</p>}
 
               <div className="modal-actions">
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => setIsFormOpen(false)}
-                >
+	                <button
+	                  className="secondary-button"
+	                  type="button"
+	                  onClick={closeRentalForm}
+	                >
                   ยกเลิก
                 </button>
                 <button
@@ -1443,8 +1831,8 @@ export function RentalsPage({
                   type="submit"
                   style={{ background: 'var(--text-gold)', color: '#000' }}
                 >
-                  บันทึกการเช่า
-                </button>
+	                  {editingRentalId ? 'บันทึกการแก้ไข' : 'บันทึกการเช่า'}
+	                </button>
               </div>
             </form>
           </section>
