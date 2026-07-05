@@ -45,6 +45,26 @@ export type ShopSummary = {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const CUSTOMER_WITH_DOCUMENTS_SELECT = '*, customer_documents!customer_documents_shop_customer_fk(*)'
+const CUSTOMER_SUMMARY_SELECT = [
+  'id',
+  'shop_id',
+  'customer_code',
+  'full_name',
+  'line_account',
+  'phone',
+  'phone_normalized',
+  'current_address',
+  'notes',
+  'profile_status',
+  'risk_flag',
+  'bust_in',
+  'waist_in',
+  'hip_in',
+  'height_cm',
+  'archived_at',
+  'created_at',
+  'updated_at',
+].join(', ')
 
 function getFunctionUrl(name: string) {
   if (!supabaseUrl) return ''
@@ -77,6 +97,19 @@ export async function loadCustomers(supabase: SupabaseClient, shopId: string) {
 
   const rows = (data ?? []) as CustomerRow[]
   return Promise.all(rows.map((row) => mapCustomerRow(supabase, row)))
+}
+
+export async function loadCustomerSummaries(supabase: SupabaseClient, shopId: string): Promise<Customer[]> {
+  const { data, error } = await supabase
+    .from('customers')
+    .select(CUSTOMER_SUMMARY_SELECT)
+    .eq('shop_id', shopId)
+    .is('archived_at', null)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return ((data ?? []) as unknown as CustomerRow[]).map((row) => mapCustomerSummaryRow(row))
 }
 
 export async function createRemoteCustomer(
@@ -270,6 +303,10 @@ async function mapCustomerRow(supabase: SupabaseClient, row: CustomerRow): Promi
       .map((document) => mapDocumentRow(supabase, document)),
   )
 
+  return mapCustomerSummaryRow(row, documents)
+}
+
+function mapCustomerSummaryRow(row: CustomerRow, documents: CustomerDocument[] = []): Customer {
   return {
     id: row.id,
     shopId: row.shop_id,

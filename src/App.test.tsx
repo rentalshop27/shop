@@ -5,7 +5,9 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
   loadAccessibleShops,
+  loadCustomerSummaries,
   loadCustomers,
+  loadStockItemsForRentalMapping,
   loadProductsWithStock,
   loadShopSettings,
   loadRentals,
@@ -20,7 +22,9 @@ const {
 
     return {
       loadAccessibleShops: vi.fn(),
+      loadCustomerSummaries: vi.fn(),
       loadCustomers: vi.fn(),
+      loadStockItemsForRentalMapping: vi.fn(),
       loadProductsWithStock: vi.fn(),
       loadShopSettings: vi.fn(),
       loadRentals: vi.fn(),
@@ -59,6 +63,7 @@ vi.mock('./features/catalog/publicCatalogRemote', () => ({
 
 vi.mock('./features/customers/customerRemote', () => ({
   loadAccessibleShops,
+  loadCustomerSummaries,
   loadCustomers,
   archiveRemoteCustomer: vi.fn(),
   createRemoteCustomer: vi.fn(),
@@ -72,6 +77,7 @@ vi.mock('./features/customers/customerRemote', () => ({
 vi.mock('./features/inventory/stockRemote', () => ({
   countRemoteRentalsForProduct: vi.fn(),
   countRemoteRentalsForStockItem: vi.fn(),
+  loadStockItemsForRentalMapping,
   loadProductsWithStock,
   createProductWithVariants: vi.fn(),
   addStockToVariant: vi.fn(),
@@ -117,7 +123,9 @@ describe('App shop selection', () => {
       { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam' },
       { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: 'precious-silom' },
     ])
+    loadCustomerSummaries.mockResolvedValue([])
     loadCustomers.mockResolvedValue([])
+    loadStockItemsForRentalMapping.mockResolvedValue([])
     loadProductsWithStock.mockResolvedValue([])
     loadShopSettings.mockResolvedValue(null)
     loadRentals.mockResolvedValue([])
@@ -149,6 +157,20 @@ describe('App shop selection', () => {
     cleanup()
   })
 
+  it('loads the multi-shop overview with lightweight data', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(loadCustomerSummaries).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadCustomerSummaries).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadStockItemsForRentalMapping).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadStockItemsForRentalMapping).toHaveBeenCalledWith(supabase, 'shop_2')
+    })
+
+    expect(loadCustomers).not.toHaveBeenCalled()
+    expect(loadProductsWithStock).not.toHaveBeenCalled()
+  })
+
   it('multi-shop login displays aggregate dashboard, does not show ShopSelectScreen', async () => {
     document.documentElement.scrollTop = 900
     document.body.scrollTop = 900
@@ -172,14 +194,14 @@ describe('App shop selection', () => {
     expect(screen.queryByText('ร้านที่กำลังใช้งาน')).toBeNull()
   })
 
-  it('multi-shop overview loads customers/stock/rentals separately for each shop id', async () => {
+  it('multi-shop overview loads summaries/stock mapping/rentals separately for each shop id', async () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_1')
-      expect(loadCustomers).toHaveBeenCalledWith(supabase, 'shop_2')
-      expect(loadProductsWithStock).toHaveBeenCalledWith(supabase, 'shop_1')
-      expect(loadProductsWithStock).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadCustomerSummaries).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadCustomerSummaries).toHaveBeenCalledWith(supabase, 'shop_2')
+      expect(loadStockItemsForRentalMapping).toHaveBeenCalledWith(supabase, 'shop_1')
+      expect(loadStockItemsForRentalMapping).toHaveBeenCalledWith(supabase, 'shop_2')
       expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_1', [], [])
       expect(loadRentals).toHaveBeenCalledWith(supabase, 'shop_2', [], [])
     })
@@ -287,7 +309,7 @@ describe('App shop selection', () => {
   })
 
   it('keeps a failed overview shop available to enter', async () => {
-    loadCustomers.mockImplementation((_client, selectedShopId) => {
+    loadCustomerSummaries.mockImplementation((_client, selectedShopId) => {
       if (selectedShopId === 'shop_2') {
         return Promise.reject(new Error('customers unavailable'))
       }
@@ -303,7 +325,7 @@ describe('App shop selection', () => {
     const enterButton = shopCard?.querySelector<HTMLButtonElement>('button')
     expect(enterButton).toBeTruthy()
 
-    loadCustomers.mockResolvedValue([])
+    loadCustomerSummaries.mockResolvedValue([])
     fireEvent.click(enterButton!)
 
     await waitFor(() => {

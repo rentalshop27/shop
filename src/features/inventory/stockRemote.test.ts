@@ -5,6 +5,7 @@ import {
   createProductWithVariants,
   deleteRemoteProduct,
   loadProductsWithStock,
+  loadStockItemsForRentalMapping,
   updateRemoteProduct,
 } from './stockRemote'
 
@@ -13,7 +14,7 @@ describe('stockRemote', () => {
     vi.restoreAllMocks()
   })
 
-  it('converts stored costume image refs into signed URLs when loading products', async () => {
+  it('converts stored costume image refs into public URLs when loading products', async () => {
     const createSignedUrl = vi.fn(async (path: string) => ({
       data: { signedUrl: `https://signed.example/costumes/${path}` },
       error: null,
@@ -68,15 +69,15 @@ describe('stockRemote', () => {
     const products = await loadProductsWithStock(supabase, 'shop_1')
 
     expect(products[0].imageUrls).toEqual([
-      'https://signed.example/costumes/shop_1/ruby-front.webp',
-      'https://signed.example/costumes/shop_1/ruby-back.webp',
+      'https://cdn.example/shop_1/ruby-front.webp',
+      'https://cdn.example/shop_1/ruby-back.webp',
     ])
-    expect(createSignedUrl).toHaveBeenNthCalledWith(1, 'shop_1/ruby-front.webp', 60 * 60)
-    expect(createSignedUrl).toHaveBeenNthCalledWith(2, 'shop_1/ruby-back.webp', 60 * 60)
-    expect(getPublicUrl).not.toHaveBeenCalled()
+    expect(createSignedUrl).not.toHaveBeenCalled()
+    expect(getPublicUrl).toHaveBeenNthCalledWith(1, 'shop_1/ruby-front.webp')
+    expect(getPublicUrl).toHaveBeenNthCalledWith(2, 'shop_1/ruby-back.webp')
   })
 
-  it('falls back to legacy stock image signed URLs for old product image refs', async () => {
+  it('keeps old product image refs on the public costumes bucket path', async () => {
     const createSignedUrlByBucket: Record<string, ReturnType<typeof vi.fn>> = {
       costumes: vi.fn(async () => ({ data: null, error: new Error('missing in costumes') })),
       'stock-images': vi.fn(async (path: string) => ({
@@ -121,9 +122,75 @@ describe('stockRemote', () => {
 
     const products = await loadProductsWithStock(supabase, 'shop_1')
 
-    expect(products[0].imageUrls).toEqual(['https://signed.example/stock-images/shop_1/legacy-front.webp'])
-    expect(createSignedUrlByBucket.costumes).toHaveBeenCalledWith('shop_1/legacy-front.webp', 60 * 60)
-    expect(createSignedUrlByBucket['stock-images']).toHaveBeenCalledWith('shop_1/legacy-front.webp', 60 * 60)
+    expect(products[0].imageUrls).toEqual(['https://cdn.example/costumes/shop_1/legacy-front.webp'])
+    expect(createSignedUrlByBucket.costumes).not.toHaveBeenCalled()
+    expect(createSignedUrlByBucket['stock-images']).not.toHaveBeenCalled()
+  })
+
+  it('loads lightweight stock items for rental mapping without image URLs', async () => {
+    const productsEq = vi.fn(() => ({
+      data: [{
+        id: 'product_1',
+        product_name: 'Ruby Dress',
+        brand: 'Precious',
+        category: 'Evening',
+        primary_color: 'Red',
+        rental_tiers: [{ days: 1, price: 2200 }],
+        late_fee_rule: '100/day',
+        deposit_amount: 5000,
+        public_visible: true,
+        is_featured: false,
+        display_order: 2,
+      }],
+      error: null,
+    }))
+    const stockEq = vi.fn(() => ({
+      data: [{
+        id: 'stock_1',
+        shop_id: 'shop_1',
+        product_id: 'product_1',
+        sku: 'PR-001-M-01',
+        size: 'M',
+        status: 'available',
+        created_at: '2026-07-01T00:00:00.000Z',
+      }],
+      error: null,
+    }))
+    const productSelect = vi.fn(() => ({ eq: productsEq }))
+    const stockSelect = vi.fn(() => ({ eq: stockEq }))
+    const storageFrom = vi.fn()
+    const supabase = {
+      storage: { from: storageFrom },
+      from: vi.fn((table: string) => {
+        if (table === 'products') return { select: productSelect }
+        if (table === 'stock_items') return { select: stockSelect }
+        throw new Error(`Unexpected table ${table}`)
+      }),
+    } as unknown as SupabaseClient
+
+    const stockItems = await loadStockItemsForRentalMapping(supabase, 'shop_1')
+
+    expect(stockItems).toEqual([{
+      id: 'stock_1',
+      shopId: 'shop_1',
+      productId: 'product_1',
+      sku: 'PR-001-M-01',
+      size: 'M',
+      status: 'available',
+      createdAt: '2026-07-01T00:00:00.000Z',
+      productName: 'Ruby Dress',
+      brand: 'Precious',
+      category: 'Evening',
+      primaryColor: 'Red',
+      rentalTiers: [{ days: 1, price: 2200 }],
+      lateFeeRule: '100/day',
+      depositAmount: 5000,
+      imageUrls: [],
+      publicVisible: true,
+      isFeatured: false,
+      displayOrder: 2,
+    }])
+    expect(storageFrom).not.toHaveBeenCalled()
   })
 
   it('scopes product updates by shop id and removes deleted costume images after success', async () => {

@@ -6,6 +6,7 @@ import type { Customer } from './customerTypes'
 import {
   loadAccessibleShops,
   loadCustomerDocumentPreview,
+  loadCustomerSummaries,
   loadCustomers,
   deleteRemoteCustomerDocuments,
   archiveRemoteCustomer,
@@ -87,6 +88,62 @@ describe('customer remote', () => {
       ['archived_at', null],
     ])
     expect(order).toHaveBeenCalledWith('created_at', { ascending: false })
+  })
+
+  it('loads customer summaries without document joins for dashboards', async () => {
+    const filters: Array<[string, string | null]> = []
+    const order = vi.fn(() => ({
+      data: [{
+        id: 'customer_1',
+        shop_id: 'shop_1',
+        customer_code: 'PR-C001',
+        full_name: 'นนท์',
+        line_account: null,
+        phone: '0987654321',
+        phone_normalized: '0987654321',
+        current_address: null,
+        notes: null,
+        profile_status: 'verified',
+        risk_flag: 'none',
+        bust_in: null,
+        waist_in: null,
+        hip_in: null,
+        height_cm: null,
+        archived_at: null,
+        created_at: '2026-06-13T00:00:00.000Z',
+        updated_at: '2026-06-13T00:00:00.000Z',
+      }],
+      error: null,
+    }))
+    const is = vi.fn((column: string, value: null) => {
+      filters.push([column, value])
+      return { order }
+    })
+    const eq = vi.fn((column: string, value: string) => {
+      filters.push([column, value])
+      return { is }
+    })
+    const select = vi.fn(() => ({ eq }))
+    const supabase = {
+      from: vi.fn(() => ({ select })),
+      storage: { from: vi.fn() },
+    } as unknown as SupabaseClient
+
+    const customers = await loadCustomerSummaries(supabase, 'shop_1')
+
+    expect(supabase.from).toHaveBeenCalledWith('customers')
+    expect(select).toHaveBeenCalledWith(expect.not.stringContaining('customer_documents'))
+    expect(filters).toEqual([
+      ['shop_id', 'shop_1'],
+      ['archived_at', null],
+    ])
+    expect(customers[0]).toMatchObject({
+      id: 'customer_1',
+      shopId: 'shop_1',
+      customerCode: 'PR-C001',
+      documents: [],
+    })
+    expect(supabase.storage.from).not.toHaveBeenCalled()
   })
 
   it('does not download Google Drive documents while loading the customer list', async () => {

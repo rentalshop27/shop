@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ProductWithStockSummary, StockItemStatus, ProductDraft } from './inventoryTypes'
+import type { FlatStockItem, ProductWithStockSummary, StockItemStatus, ProductDraft } from './inventoryTypes'
 
 const COSTUMES_BUCKET = 'costumes'
 const LEGACY_STOCK_IMAGES_BUCKET = 'stock-images'
@@ -9,6 +9,30 @@ type ProductImageBucket = typeof PRODUCT_IMAGE_BUCKETS[number]
 type ProductImageRef = {
   bucket: ProductImageBucket | null
   path: string
+}
+
+type ProductOverviewRow = {
+  id: string
+  product_name: string
+  brand: string | null
+  category: string | null
+  primary_color: string | null
+  rental_tiers: unknown
+  late_fee_rule: string | null
+  deposit_amount: number | string | null
+  public_visible: boolean
+  is_featured: boolean | null
+  display_order: number | null
+}
+
+type StockOverviewRow = {
+  id: string
+  shop_id: string
+  product_id: string
+  sku: string
+  size: string
+  status: StockItemStatus
+  created_at: string
 }
 
 export async function loadProductsWithStock(supabase: SupabaseClient, shopId: string): Promise<ProductWithStockSummary[]> {
@@ -65,6 +89,55 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
   }
 
   return products
+}
+
+export async function loadStockItemsForRentalMapping(
+  supabase: SupabaseClient,
+  shopId: string,
+): Promise<FlatStockItem[]> {
+  const [productsResult, stockResult] = await Promise.all([
+    supabase
+      .from('products')
+      .select('id, product_name, brand, category, primary_color, rental_tiers, late_fee_rule, deposit_amount, public_visible, is_featured, display_order')
+      .eq('shop_id', shopId),
+    supabase
+      .from('stock_items')
+      .select('id, shop_id, product_id, sku, size, status, created_at')
+      .eq('shop_id', shopId),
+  ])
+
+  if (productsResult.error) throw productsResult.error
+  if (stockResult.error) throw stockResult.error
+
+  const productMap = new Map(
+    ((productsResult.data ?? []) as ProductOverviewRow[]).map((row) => [row.id, row]),
+  )
+
+  return ((stockResult.data ?? []) as StockOverviewRow[]).flatMap((stockRow) => {
+    const product = productMap.get(stockRow.product_id)
+    if (!product) return []
+
+    return [{
+      id: stockRow.id,
+      shopId: stockRow.shop_id,
+      productId: stockRow.product_id,
+      sku: stockRow.sku,
+      size: stockRow.size,
+      status: stockRow.status,
+      createdAt: stockRow.created_at,
+      productName: product.product_name,
+      brand: product.brand ?? '',
+      category: product.category ?? '',
+      primaryColor: product.primary_color ?? '',
+      rentalTiers: Array.isArray(product.rental_tiers) ? product.rental_tiers : [],
+      lateFeeRule: product.late_fee_rule ?? '',
+      depositAmount: Number(product.deposit_amount) || 0,
+      imageUrls: [],
+      publicVisible: product.public_visible,
+      isFeatured: Boolean(product.is_featured),
+      displayOrder: Number(product.display_order) || 0,
+    }]
+  })
 }
 
 export function createProductImageDisplayUrl(supabase: SupabaseClient, imageRef: string) {

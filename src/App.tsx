@@ -40,6 +40,7 @@ import {
   loadAccessibleShops,
   loadCustomerDocumentPreview,
   loadCustomers,
+  loadCustomerSummaries,
   type ShopSummary,
   updateRemoteCustomer,
   updateRemoteCustomerRisk,
@@ -48,6 +49,7 @@ import {
 } from './features/customers/customerRemote'
 import {
   deleteShopHeroImage,
+  loadStockItemsForRentalMapping,
   loadProductsWithStock,
   type ShopSettings,
   updateShopSettings,
@@ -1198,23 +1200,11 @@ function PrivateApp() {
       const results = await Promise.all(
         availableShops.map(async (shop) => {
           try {
-            const customers = await loadCustomers(client, shop.id)
-            const products = await loadProductsWithStock(client, shop.id)
-            const tempFlatStock = products.flatMap(p => 
-              p.stockItems.map(si => ({
-                ...si,
-                productName: p.productName,
-                brand: p.brand,
-                category: p.category,
-                primaryColor: p.primaryColor,
-                rentalTiers: p.rentalTiers,
-                lateFeeRule: p.lateFeeRule,
-                depositAmount: p.depositAmount,
-                imageUrls: p.imageUrls,
-                publicVisible: p.publicVisible,
-              } as FlatStockItem))
-            )
-            const rentals = await loadRentals(client, shop.id, customers, tempFlatStock)
+            const [customers, stockItems] = await Promise.all([
+              loadCustomerSummaries(client, shop.id),
+              loadStockItemsForRentalMapping(client, shop.id),
+            ])
+            const rentals = await loadRentals(client, shop.id, customers, stockItems)
             return {
               shop,
               status: 'ready' as const,
