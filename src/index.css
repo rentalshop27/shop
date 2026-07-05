@@ -803,6 +803,46 @@ a.secondary-button {
   padding: 12px 18px;
 }
 
+.runtime-error-panel {
+  background: var(--bg-card);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  border-radius: 12px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  margin: 48px auto;
+  max-width: 720px;
+  padding: 32px;
+  width: min(calc(100% - 32px), 720px);
+}
+
+.runtime-error-panel h1 {
+  color: var(--text-bright);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  margin: 0 0 10px;
+}
+
+.runtime-error-panel .subtitle {
+  color: var(--text-muted);
+  margin: 0 0 18px;
+}
+
+.runtime-error-panel pre {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  border-radius: 8px;
+  color: #fecaca;
+  margin: 0 0 20px;
+  overflow-x: auto;
+  padding: 14px 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.runtime-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .shop-selection-grid {
   display: grid;
   gap: 12px;

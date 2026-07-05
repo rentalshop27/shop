@@ -79,6 +79,7 @@ import {
 } from './features/customers/customerRules'
 import { TextField } from './components/TextField'
 import { buildCatalogSizeSummary } from './features/catalog/catalogAvailability'
+import { AppErrorBoundary } from './components/AppErrorBoundary'
 
 const emptyDraft: CustomerDraft = {
   fullName: '',
@@ -1939,6 +1940,13 @@ function PrivateApp() {
         )}
         {remoteError && <section className="remote-error">{remoteError}</section>}
 
+        <AppErrorBoundary
+          resetKey={activeTab}
+          title="เปิดหน้านี้ไม่สำเร็จ"
+          description="ระบบหยุดแสดงผลของหน้านี้เพื่อป้องกันจอดำ"
+          resetLabel="กลับไปหน้าแดชบอร์ด"
+          onReset={() => setActiveTab('dashboard')}
+        >
         <Suspense fallback={<PageLoadingFallback activeTab={activeTab} />}>
           {activeTab === 'dashboard' && (
             <LazyDashboardPage
@@ -2134,6 +2142,7 @@ function PrivateApp() {
             />
           )}
         </Suspense>
+        </AppErrorBoundary>
 
         {activeTab !== 'dashboard' && activeTab !== 'inventory' && activeTab !== 'catalog' && activeTab !== 'customers' && activeTab !== 'rentals' && activeTab !== 'calendar' && activeTab !== 'settings' && activeTab !== 'audit' && activeTab !== 'reports' && activeTab !== 'profile' && (
           <div style={{ padding: '80px 40px', textAlign: 'center', color: '#c7bfb9' }}>
