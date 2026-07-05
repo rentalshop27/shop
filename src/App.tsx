@@ -241,6 +241,16 @@ function getPublicCatalogUrl(origin: string, shop: ShopSummary | null) {
   return catalogKey ? `${origin}/catalog/${encodeURIComponent(catalogKey)}` : undefined
 }
 
+function resetDocumentScroll() {
+  const scrollingElement = document.scrollingElement ?? document.documentElement
+  scrollingElement.scrollLeft = 0
+  scrollingElement.scrollTop = 0
+  document.documentElement.scrollLeft = 0
+  document.documentElement.scrollTop = 0
+  document.body.scrollLeft = 0
+  document.body.scrollTop = 0
+}
+
 function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
   return {
     fullName: customer.fullName,
@@ -282,9 +292,7 @@ function AuthShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const originalScrollRestoration = window.history.scrollRestoration
     window.history.scrollRestoration = 'manual'
-    const scrollingElement = document.scrollingElement ?? document.documentElement
-    scrollingElement.scrollLeft = 0
-    scrollingElement.scrollTop = 0
+    resetDocumentScroll()
 
     return () => {
       window.history.scrollRestoration = originalScrollRestoration
@@ -320,6 +328,7 @@ function PrivateApp() {
   }
 
   function handleTabChange(tab: ViewKey) {
+    resetDocumentScroll()
     setActiveTab(tab)
     if (tab !== 'rentals') {
       setExternalIsFormOpen(false)
@@ -327,6 +336,17 @@ function PrivateApp() {
       setExternalReturnDate('')
       setExternalSelectedRentalId('')
     }
+  }
+
+  function handleEnterShop(nextShopId: string) {
+    resetDocumentScroll()
+    setActiveTab('dashboard')
+    setShopId(nextShopId)
+  }
+
+  function handleShopChange(nextShopId: string | null) {
+    resetDocumentScroll()
+    setShopId(nextShopId)
   }
 
   const [customers, setCustomers] = useState<Customer[]>(hasSupabaseConfig ? [] : demoCustomers)
@@ -1854,7 +1874,7 @@ function PrivateApp() {
     return (
       <MultiShopDashboardPage
         shopsData={overviewShopsData}
-        onEnterShop={setShopId}
+        onEnterShop={handleEnterShop}
         preferredShopId={getPreferredShopId(authUserId, availableShops)}
         onLogout={handleLogout}
       />
@@ -2115,7 +2135,7 @@ function PrivateApp() {
               email={authUserEmail}
               availableShops={availableShops}
               selectedShopId={shopId}
-              onShopChange={setShopId}
+              onShopChange={handleShopChange}
               onLogout={hasSupabaseConfig ? handleLogout : undefined}
             />
           )}

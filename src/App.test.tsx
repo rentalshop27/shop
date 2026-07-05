@@ -185,6 +185,8 @@ describe('App shop selection', () => {
 
     // Wait for shops data to be loaded in overview
     await screen.findByText('หน้าแดชบอร์ดภาพรวมสาขา', {}, { timeout: 5000 })
+    document.documentElement.scrollTop = 900
+    document.body.scrollTop = 900
 
     // Find the enter shop button for Precious Silom
     const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ }, { timeout: 5000 })
@@ -204,6 +206,8 @@ describe('App shop selection', () => {
     }, { timeout: 5000 })
 
     expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน', {}, { timeout: 5000 })).textContent).toContain('Precious Silom')
+    expect(document.documentElement.scrollTop).toBe(0)
+    expect(document.body.scrollTop).toBe(0)
   })
 
   it('opens profile with the authenticated email and no legacy shop select', async () => {
