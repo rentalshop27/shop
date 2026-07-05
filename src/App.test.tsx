@@ -237,6 +237,28 @@ describe('App shop selection', () => {
     expect(document.body.scrollTop).toBe(0)
   })
 
+  it('keeps rendering when Safari rejects localStorage writes', async () => {
+    const storageSetItem = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+      })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      render(<App />)
+
+      const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+      fireEvent.click(enterButtons[0])
+
+      expect(await screen.findByLabelText('ร้านที่กำลังใช้งาน')).toBeTruthy()
+      expect(screen.queryByText('เปิดหน้าแอปไม่สำเร็จ')).toBeNull()
+    } finally {
+      storageSetItem.mockRestore()
+      warn.mockRestore()
+    }
+  })
+
   it('opens profile with the authenticated email and no legacy shop select', async () => {
     render(<App />)
 

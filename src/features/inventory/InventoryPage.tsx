@@ -108,12 +108,21 @@ export function InventoryPage({
 }: InventoryPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
-    return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'card'
+    try {
+      return (localStorage.getItem('inventoryViewMode') as 'table' | 'card') || 'card'
+    } catch (error) {
+      console.warn('Failed to read inventoryViewMode from localStorage', error)
+      return 'card'
+    }
   })
 
   const handleViewModeChange = (mode: 'table' | 'card') => {
     setViewMode(mode)
-    localStorage.setItem('inventoryViewMode', mode)
+    try {
+      localStorage.setItem('inventoryViewMode', mode)
+    } catch (error) {
+      console.warn('Failed to write inventoryViewMode to localStorage', error)
+    }
   }
 
   const [currentPage, setCurrentPage] = useState(1)

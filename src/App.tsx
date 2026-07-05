@@ -193,7 +193,7 @@ async function refreshAuditLogs(
 function getLocalArray<T>(key: string, fallback: T[]): T[] {
   if (hasSupabaseConfig) return fallback
 
-  const saved = localStorage.getItem(key)
+  const saved = safeLocalStorageGet(key)
   if (!saved) return fallback
 
   try {
@@ -205,7 +205,32 @@ function getLocalArray<T>(key: string, fallback: T[]): T[] {
 
 function getLocalString(key: string): string | null {
   if (hasSupabaseConfig) return null
-  return localStorage.getItem(key)
+  return safeLocalStorageGet(key)
+}
+
+function safeLocalStorageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch (error) {
+    console.warn(`Failed to read localStorage key "${key}"`, error)
+    return null
+  }
+}
+
+function safeLocalStorageSet(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value)
+  } catch (error) {
+    console.warn(`Failed to write localStorage key "${key}"`, error)
+  }
+}
+
+function safeLocalStorageRemove(key: string) {
+  try {
+    localStorage.removeItem(key)
+  } catch (error) {
+    console.warn(`Failed to remove localStorage key "${key}"`, error)
+  }
 }
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -228,7 +253,7 @@ function getPreferredShopId(userId: string | null, shops: ShopSummary[]) {
   if (shops.length === 0) return null
   if (!userId) return shops.length === 1 ? shops[0].id : null
 
-  const savedShopId = localStorage.getItem(getLastSelectedShopKey(userId))
+  const savedShopId = safeLocalStorageGet(getLastSelectedShopKey(userId))
   if (savedShopId && shops.some((shop) => shop.id === savedShopId)) {
     return savedShopId
   }
@@ -444,45 +469,45 @@ function PrivateApp() {
 
   useEffect(() => {
     if (hasSupabaseConfig) return
-    localStorage.setItem('precious_brands', JSON.stringify(brands))
+    safeLocalStorageSet('precious_brands', JSON.stringify(brands))
   }, [brands])
 
   useEffect(() => {
     if (hasSupabaseConfig) return
-    localStorage.setItem('precious_categories', JSON.stringify(categories))
+    safeLocalStorageSet('precious_categories', JSON.stringify(categories))
   }, [categories])
 
   useEffect(() => {
     if (hasSupabaseConfig) return
-    localStorage.setItem('precious_colors', JSON.stringify(colors))
+    safeLocalStorageSet('precious_colors', JSON.stringify(colors))
   }, [colors])
 
   useEffect(() => {
     if (hasSupabaseConfig) return
-    localStorage.setItem('precious_public_catalog_enabled', JSON.stringify(publicCatalogEnabled))
+    safeLocalStorageSet('precious_public_catalog_enabled', JSON.stringify(publicCatalogEnabled))
   }, [publicCatalogEnabled])
 
   useEffect(() => {
     if (hasSupabaseConfig) return
     if (catalogHeroImageUrl) {
-      localStorage.setItem(LOCAL_CATALOG_HERO_IMAGE_KEY, catalogHeroImageUrl)
+      safeLocalStorageSet(LOCAL_CATALOG_HERO_IMAGE_KEY, catalogHeroImageUrl)
     } else {
-      localStorage.removeItem(LOCAL_CATALOG_HERO_IMAGE_KEY)
+      safeLocalStorageRemove(LOCAL_CATALOG_HERO_IMAGE_KEY)
     }
   }, [catalogHeroImageUrl])
 
   useEffect(() => {
     if (hasSupabaseConfig) return
     if (catalogMobileHeroImageUrl) {
-      localStorage.setItem(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY, catalogMobileHeroImageUrl)
+      safeLocalStorageSet(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY, catalogMobileHeroImageUrl)
     } else {
-      localStorage.removeItem(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY)
+      safeLocalStorageRemove(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY)
     }
   }, [catalogMobileHeroImageUrl])
 
   useEffect(() => {
     if (hasSupabaseConfig) return
-    localStorage.setItem('precious_products', JSON.stringify(products))
+    safeLocalStorageSet('precious_products', JSON.stringify(products))
   }, [products])
 
   const flatStockItems = useMemo(() => {
@@ -739,7 +764,9 @@ function PrivateApp() {
 
   // Shared Rentals State with LocalStorage sync
   const [rentals, setRentals] = useState<RentalOrder[]>(() => {
-    const saved = localStorage.getItem('precious_rentals')
+    if (hasSupabaseConfig) return demoRentals
+
+    const saved = safeLocalStorageGet('precious_rentals')
     if (saved) {
       try {
         return JSON.parse(saved)
@@ -751,7 +778,8 @@ function PrivateApp() {
   })
 
   useEffect(() => {
-    localStorage.setItem('precious_rentals', JSON.stringify(rentals))
+    if (hasSupabaseConfig) return
+    safeLocalStorageSet('precious_rentals', JSON.stringify(rentals))
   }, [rentals])
 
   async function handleCreateRentals(drafts: Omit<RentalOrder, 'id' | 'orderCode' | 'createdAt' | 'updatedAt'>[]): Promise<boolean> {
@@ -1182,7 +1210,7 @@ function PrivateApp() {
 
   useEffect(() => {
     if (!authUserId || !shopId) return
-    localStorage.setItem(getLastSelectedShopKey(authUserId), shopId)
+    safeLocalStorageSet(getLastSelectedShopKey(authUserId), shopId)
   }, [authUserId, shopId])
 
   useEffect(() => {
