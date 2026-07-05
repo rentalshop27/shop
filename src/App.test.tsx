@@ -150,10 +150,15 @@ describe('App shop selection', () => {
   })
 
   it('multi-shop login displays aggregate dashboard, does not show ShopSelectScreen', async () => {
+    document.documentElement.scrollTop = 900
+    document.body.scrollTop = 900
+
     render(<App />)
 
     expect(await screen.findByText('หน้าแดชบอร์ดภาพรวมสาขา')).toBeTruthy()
     expect(screen.queryByText('เลือกร้านที่ต้องการเข้าใช้งาน')).toBeNull()
+    expect(document.documentElement.scrollTop).toBe(0)
+    expect(document.body.scrollTop).toBe(0)
   })
 
   it('opens public catalog routes without starting the authenticated app shell', async () => {

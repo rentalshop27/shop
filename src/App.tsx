@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import {
   CalendarCheck,
   CalendarDays,
@@ -272,6 +272,16 @@ function buildCustomerDraftFromCustomer(customer: Customer): CustomerDraft {
 function App() {
   const publicCatalogKey = getPublicCatalogKey()
 
+  useLayoutEffect(() => {
+    const originalScrollRestoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+    resetDocumentScroll()
+
+    return () => {
+      window.history.scrollRestoration = originalScrollRestoration
+    }
+  }, [])
+
   const appContent = publicCatalogKey ? (
     <Suspense fallback={<LoadingScreen title="กำลังโหลดหน้า catalog" subtitle="กำลังเตรียมรายการชุดสำหรับลูกค้า" />}>
       <LazyPublicCatalogRoute catalogKey={publicCatalogKey} />
@@ -289,14 +299,8 @@ function App() {
 }
 
 function AuthShell({ children }: { children: ReactNode }) {
-  useEffect(() => {
-    const originalScrollRestoration = window.history.scrollRestoration
-    window.history.scrollRestoration = 'manual'
+  useLayoutEffect(() => {
     resetDocumentScroll()
-
-    return () => {
-      window.history.scrollRestoration = originalScrollRestoration
-    }
   }, [])
 
   return <main className="auth-shell">{children}</main>
