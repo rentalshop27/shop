@@ -16,7 +16,13 @@ import type { DepositResolutionDraft } from './depositResolution'
 import { normalizeCurrencyAmount, toCents } from './depositResolution'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
-import { findOpenRentalConflict, resolveRentalPrice, calculateReturnDate } from './rentalRules'
+import {
+  canDeleteRentalGroup,
+  findOpenRentalConflictByStockItemIds,
+  getAllowedRentalEditFields,
+  resolveRentalPrice,
+  calculateReturnDate,
+} from './rentalRules'
 import { canCreateRentalForCustomer } from '../customers/customerRules'
 import { calculateCustomerInsights } from './customerInsights'
 
@@ -242,7 +248,7 @@ export function RentalsPage({
     const availableCostumes = stockItems.filter(
       (item) =>
         !selectedCostumes.some((selected) => selected.id === item.id) &&
-        !findOpenRentalConflict(rentals, [item.sku], pickupDate, returnDate)
+        !findOpenRentalConflictByStockItemIds(rentals, [item.id], pickupDate, returnDate)
     )
 
     if (!query) {
@@ -671,8 +677,6 @@ export function RentalsPage({
         // limited edit (active): เฉพาะวันคืน, notes, returnTrackingNote
         const patch: Record<string, unknown> = {
           return_date: returnDate,
-          rental_price: parseFloat(rentalPrice) || 0,
-          collected_amount: parseFloat(collectedAmount) || 0,
           notes,
         }
         // ตรวจ return_date conflict ก่อน
@@ -713,9 +717,9 @@ export function RentalsPage({
       setFormError('วันที่คืนต้องอยู่หลังวันที่รับชุด')
       return
     }
-    const openRentalConflict = findOpenRentalConflict(
+    const openRentalConflict = findOpenRentalConflictByStockItemIds(
       rentals,
-      selectedCostumes.map((item) => item.sku),
+      selectedCostumes.map((item) => item.id),
       pickupDate,
       returnDate,
     )
@@ -877,6 +881,9 @@ export function RentalsPage({
     resetRentalForm()
     setIsFormOpen(true)
   }
+
+  const activeRentalAllowedFields = getAllowedRentalEditFields('active')
+  const isLimitedMoneyLocked = editMode === 'limited' && Boolean(activeRentalAllowedFields)
 
   const closeRentalForm = () => {
     resetRentalForm()
@@ -1262,6 +1269,29 @@ export function RentalsPage({
                           )}
                           {isExtraFineOpen && (
                             <div style={{ marginTop: '10px', padding: '10px', borderRadius: '8px', border: '1px solid rgba(249, 115, 22, 0.35)', background: 'rgba(249, 115, 22, 0.06)' }}>
+                              {(() => {
+                                const returnDateObj = new Date(selectedRental.returnDate);
+                                const todayObj = new Date(getTodayString());
+                                const diffTime = todayObj.getTime() - returnDateObj.getTime();
+                                const overdueDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                const mainCostume = selectedRental.rentals[0]?.costume;
+                                const lateFeeRule = parseFloat(mainCostume?.lateFeeRule || '0') || 0;
+                                const suggestedFine = Math.max(0, overdueDays) * lateFeeRule;
+
+                                return (
+                                  <div style={{ marginBottom: '12px', padding: '10px', borderRadius: '6px', background: 'rgba(0,0,0,0.15)', border: '1px dashed rgba(255, 255, 255, 0.15)' }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                      ชุด: {mainCostume?.productName || mainCostume?.sku || '-'} (เกณฑ์ปรับเลท: ฿{lateFeeRule} / วัน)
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                      สถานะ: {overdueDays > 0 ? `เกินกำหนดมาแล้ว ${overdueDays} วัน` : 'ยังไม่เกินกำหนด หรือ คืนตรงเวลา'}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#fb923c', marginTop: '6px', fontWeight: 600 }}>
+                                      💡 ยอดคำนวณตามเกณฑ์แนะนำ: ฿{suggestedFine}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                                 จำนวนเงินค่าปรับ (฿)
                               </label>
@@ -1675,7 +1705,7 @@ export function RentalsPage({
                     </button>
                   </div>
                 )}
-                {onDeleteRental && (
+                {onDeleteRental && canDeleteRentalGroup(selectedRental.rentals) && (
                   <button
                     className="archive-button"
                     type="button"
@@ -2177,7 +2207,10 @@ export function RentalsPage({
                       type="number"
                       value={rentalPrice}
                       placeholder="0"
+                      readOnly={isLimitedMoneyLocked}
+                      style={isLimitedMoneyLocked ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
                       onChange={(e) => {
+                        if (isLimitedMoneyLocked) return
                         setRentalPrice(e.target.value)
                         syncCollectedAmount(e.target.value, depositAmount, discountAmount, shippingCost)
                       }}
@@ -2224,7 +2257,10 @@ export function RentalsPage({
                       value={discountAmount}
                       placeholder="0"
                       min="0"
+                      readOnly={isLimitedMoneyLocked}
+                      style={isLimitedMoneyLocked ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
                       onChange={(e) => {
+                        if (isLimitedMoneyLocked) return
                         setDiscountAmount(e.target.value)
                         syncCollectedAmount(rentalPrice, depositAmount, e.target.value, shippingCost)
                       }}
@@ -2239,7 +2275,10 @@ export function RentalsPage({
                       type="number"
                       value={collectedAmount}
                       placeholder="0"
+                      readOnly={isLimitedMoneyLocked}
+                      style={isLimitedMoneyLocked ? { backgroundColor: 'var(--surface-sunken)', color: 'var(--text-muted)' } : undefined}
                       onChange={(e) => {
+                        if (isLimitedMoneyLocked) return
                         setCollectedAmount(e.target.value)
                         syncDiscountAmount(rentalPrice, depositAmount, e.target.value, shippingCost)
                       }}

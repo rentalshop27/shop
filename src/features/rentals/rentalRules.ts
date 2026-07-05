@@ -2,6 +2,25 @@ import type { RentalOrder, RentalStatus } from './rentalTypes'
 import type { RentalTier } from '../inventory/inventoryTypes'
 
 export const openRentalStatuses: RentalStatus[] = ['booked', 'active', 'overdue']
+export const fullRentalEditFields = [
+  'stock_item_id',
+  'stock_item_sku',
+  'pickup_date',
+  'return_date',
+  'rental_price',
+  'deposit_amount',
+  'collected_amount',
+  'shipping_cost',
+  'notes',
+  'return_tracking_note',
+] as const
+export const limitedRentalEditFields = [
+  'return_date',
+  'notes',
+  'return_tracking_note',
+] as const
+
+export type RentalEditField = (typeof fullRentalEditFields)[number]
 
 export function isOpenRentalStatus(status: RentalStatus) {
   return openRentalStatuses.includes(status)
@@ -47,6 +66,19 @@ export function findOpenRentalForStockSku(rentals: RentalOrder[], stockSku: stri
   return rentals.find((rental) => rental.costume.sku === stockSku && isOpenRental(rental))
 }
 
+export function findConflictingRentalForStockItemId(
+  rentals: RentalOrder[],
+  stockItemId: string,
+  pickupDate: string,
+  returnDate: string,
+) {
+  return rentals.find(
+    (rental) =>
+      rental.costume.id === stockItemId &&
+      hasRentalConflict(rental, pickupDate, returnDate)
+  )
+}
+
 export function findOpenRentalConflict(
   rentals: RentalOrder[],
   stockSkus: string[],
@@ -61,6 +93,36 @@ export function findOpenRentalConflict(
   }
 
   return undefined
+}
+
+export function findOpenRentalConflictByStockItemIds(
+  rentals: RentalOrder[],
+  stockItemIds: string[],
+  pickupDate?: string,
+  returnDate?: string,
+) {
+  if (!pickupDate || !returnDate) return undefined
+  const uniqueIds = new Set(stockItemIds)
+  for (const stockItemId of uniqueIds) {
+    const conflict = findConflictingRentalForStockItemId(rentals, stockItemId, pickupDate, returnDate)
+    if (conflict) return conflict
+  }
+
+  return undefined
+}
+
+export function getAllowedRentalEditFields(status: RentalStatus): readonly RentalEditField[] | null {
+  if (status === 'booked' || status === 'overdue') return fullRentalEditFields
+  if (status === 'active') return limitedRentalEditFields
+  return null
+}
+
+export function canDeleteRental(rental: RentalOrder) {
+  return rental.status === 'cancelled'
+}
+
+export function canDeleteRentalGroup(rentals: RentalOrder[]) {
+  return rentals.length > 0 && rentals.every(canDeleteRental)
 }
 
 // ── Forward Logic: given rental days → resolve price from tiers ──

@@ -21,7 +21,11 @@ import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './features/rentals/rentalTypes'
-import { findOpenRentalConflict } from './features/rentals/rentalRules'
+import {
+  canDeleteRentalGroup,
+  findOpenRentalConflictByStockItemIds,
+  getAllowedRentalEditFields,
+} from './features/rentals/rentalRules'
 import type { DepositResolutionDraft } from './features/rentals/depositResolution'
 import { allocateFineAmount, allocateForfeitedDeposit, normalizeCurrencyAmount } from './features/rentals/depositResolution'
 import {
@@ -795,9 +799,9 @@ function PrivateApp() {
       return false
     }
 
-    const openRentalConflict = findOpenRentalConflict(
+    const openRentalConflict = findOpenRentalConflictByStockItemIds(
       rentals,
-      drafts.map((draft) => draft.costume.sku),
+      drafts.map((draft) => draft.costume.id),
       firstDraft.pickupDate,
       firstDraft.returnDate
     )
@@ -919,6 +923,11 @@ function PrivateApp() {
   async function handleDeleteRental(rentalIdOrIds: string | string[]) {
     const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
     if (ids.length === 0) return
+    const targetRentals = rentals.filter((r) => ids.includes(r.id))
+    if (!canDeleteRentalGroup(targetRentals)) {
+      window.alert('ลบใบเช่าได้เฉพาะรายการที่ยกเลิกแล้วเท่านั้น')
+      return
+    }
 
     if (supabase && isAuthenticated) {
       if (!shopId) {
@@ -1081,31 +1090,10 @@ function PrivateApp() {
       return false
     }
 
-    const fullEditFields = new Set<keyof Parameters<typeof updateRemoteRentalFields>[3]>([
-      'stock_item_id',
-      'stock_item_sku',
-      'pickup_date',
-      'return_date',
-      'rental_price',
-      'deposit_amount',
-      'collected_amount',
-      'shipping_cost',
-      'notes',
-      'return_tracking_note',
-    ])
-    const limitedEditFields = new Set<keyof Parameters<typeof updateRemoteRentalFields>[3]>([
-      'return_date',
-      'rental_price',
-      'collected_amount',
-      'notes',
-      'return_tracking_note',
-    ])
-    const allowedFields =
-      currentRental.status === 'booked' || currentRental.status === 'overdue'
-        ? fullEditFields
-        : currentRental.status === 'active'
-          ? limitedEditFields
-          : null
+    const allowedFieldList = getAllowedRentalEditFields(currentRental.status)
+    const allowedFields = allowedFieldList
+      ? new Set<keyof Parameters<typeof updateRemoteRentalFields>[3]>(allowedFieldList)
+      : null
 
     if (!allowedFields) {
       window.alert('ออเดอร์สถานะนี้ไม่สามารถแก้ไขได้')

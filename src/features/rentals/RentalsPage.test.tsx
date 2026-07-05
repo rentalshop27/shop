@@ -430,4 +430,68 @@ describe('RentalsPage', () => {
 
     expect(onSaveExtraFine).toHaveBeenCalledWith(['line_1', 'line_2'], 300, 'ซิปแตก')
   })
+
+  it('submits only limited edit fields for active rentals', async () => {
+    const onEditRentalFields = vi.fn(async () => true)
+
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'active' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onEditRentalFields={onEditRentalFields}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไข' }))
+    fireEvent.change(screen.getByDisplayValue('2026-07-05'), { target: { value: '2026-07-07' } })
+    fireEvent.change(screen.getByPlaceholderText('เช่น ลูกค้ารับเองหน้าร้าน, ช่องทาง LINE'), {
+      target: { value: 'โทรยืนยันแล้ว' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกการแก้ไข' }))
+
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(onEditRentalFields).toHaveBeenCalledWith(
+      'rental_1',
+      {
+        return_date: '2026-07-07',
+        notes: 'โทรยืนยันแล้ว',
+      },
+      false
+    )
+  })
+
+  it('hides the delete action for non-cancelled rentals', () => {
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'booked' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onDeleteRental={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'ลบใบเช่านี้' })).toBeNull()
+  })
+
+  it('shows the delete action for cancelled rentals', () => {
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'cancelled' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onDeleteRental={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'ลบใบเช่านี้' })).toBeTruthy()
+  })
 })
