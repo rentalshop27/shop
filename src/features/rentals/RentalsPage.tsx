@@ -45,6 +45,8 @@ interface RentalsPageProps {
   onResolveDeposit?: (rentalId: string | string[], resolution: DepositResolutionDraft) => void
   /** แก้ไข field ของออเดอร์ตาม status-aware rules */
   onEditRentalFields?: (rentalId: string, patch: Record<string, unknown>, skipConflictCheck?: boolean) => Promise<boolean | void>
+  /** เพิ่มค่าปรับย้อนหลังกรณีชุดพัง */
+  onSaveExtraFine?: (rentalIdOrIds: string | string[], amount: number, reason: string) => Promise<void>
 
   // Optional external controls
   externalSelectedRentalId?: string
@@ -90,6 +92,7 @@ export function RentalsPage({
   onCancelRental,
   onResolveDeposit,
   onEditRentalFields,
+  onSaveExtraFine,
 
   // Optional external controls
   externalSelectedRentalId,
@@ -118,6 +121,11 @@ export function RentalsPage({
   const [forfeitAmount, setForfeitAmount] = useState('')
   const [forfeitNote, setForfeitNote] = useState('')
   const [forfeitError, setForfeitError] = useState('')
+
+  const [isExtraFineOpen, setIsExtraFineOpen] = useState(false)
+  const [extraFineAmount, setExtraFineAmount] = useState('')
+  const [extraFineReason, setExtraFineReason] = useState('')
+  const [extraFineError, setExtraFineError] = useState('')
 
   // Auto-open detail panel on mobile if an external selected rental is provided
   useEffect(() => {
@@ -518,7 +526,7 @@ export function RentalsPage({
   }, [selectedRental, rentals, todayStr])
 
   const selectedDepositRows = useMemo(() => {
-    return selectedRental?.rentals.filter((rental) => rental.depositAmount > 0) ?? []
+    return selectedRental?.rentals ?? []
   }, [selectedRental])
   const selectedDepositTotal = useMemo(() => {
     return selectedDepositRows.reduce((sum, rental) => sum + rental.depositAmount, 0)
@@ -541,6 +549,13 @@ export function RentalsPage({
     setForfeitNote('')
     setForfeitError('')
   }, [selectedRental?.orderCode, selectedDepositTotal])
+
+  useEffect(() => {
+    setIsExtraFineOpen(false)
+    setExtraFineAmount('')
+    setExtraFineReason('')
+    setExtraFineError('')
+  }, [selectedRental?.orderCode])
 
   const closeDeliveryMethodModal = () => setIsDeliveryMethodModalOpen(false)
 
@@ -1191,29 +1206,111 @@ export function RentalsPage({
                   </div>
                   )}
                   {/* Deposit return controls */}
-                  {selectedRental.status === 'returned' && selectedDepositRows.length > 0 && onResolveDeposit && (
+                  {selectedRental.status === 'returned' && onResolveDeposit && (
                     <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
                       <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
                         💰 จัดการเงินมัดจำ
                       </div>
                       {selectedDepositResolved ? (
-                        <div
-                          role="status"
-                          style={{
-                            padding: '9px 10px',
-                            borderRadius: '6px',
-                            border: selectedDepositWasForfeited ? '1px solid rgba(249, 115, 22, 0.55)' : '1px solid rgba(16, 185, 129, 0.45)',
-                            background: selectedDepositWasForfeited ? 'rgba(249, 115, 22, 0.12)' : 'rgba(16, 185, 129, 0.1)',
-                            color: selectedDepositWasForfeited ? '#fb923c' : 'var(--success-color)',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            textAlign: 'center'
-                          }}
-                        >
-                          {selectedDepositWasForfeited
-                            ? `🚫 ยึดมัดจำ (${formatBaht(selectedDepositForfeitedTotal)})`
-                            : '✅ คืนมัดจำแล้ว'}
-                        </div>
+                        <>
+                          <div
+                            role="status"
+                            style={{
+                              padding: '9px 10px',
+                              borderRadius: '6px',
+                              border: selectedRental.rentals.some(r => (r.fineAmount ?? 0) > 0) || selectedDepositWasForfeited ? '1px solid rgba(249, 115, 22, 0.55)' : '1px solid rgba(16, 185, 129, 0.45)',
+                              background: selectedRental.rentals.some(r => (r.fineAmount ?? 0) > 0) || selectedDepositWasForfeited ? 'rgba(249, 115, 22, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+                              color: selectedRental.rentals.some(r => (r.fineAmount ?? 0) > 0) || selectedDepositWasForfeited ? '#fb923c' : 'var(--success-color)',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              textAlign: 'center'
+                            }}
+                          >
+                            {selectedRental.rentals.some(r => (r.fineAmount ?? 0) > 0)
+                              ? `🚫 ปิดงาน (มีค่าปรับ ฿${selectedRental.rentals.reduce((sum, r) => sum + (r.fineAmount ?? 0), 0)})`
+                              : (selectedDepositWasForfeited
+                                  ? `🚫 ยึดมัดจำ (${formatBaht(selectedDepositForfeitedTotal)})`
+                                  : (selectedDepositTotal === 0 ? '✅ ปิดงานสำเร็จ (ไม่มีมัดจำ)' : '✅ คืนมัดจำแล้ว'))}
+                          </div>
+                          {onSaveExtraFine && (
+                            <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const currentFine = selectedRental.rentals.reduce((sum, r) => sum + (r.fineAmount ?? 0), 0)
+                                  const currentReason = selectedRental.rentals.find(r => (r.fineAmount ?? 0) > 0)?.fineReason ?? ''
+                                  setExtraFineAmount(currentFine > 0 ? String(currentFine) : '')
+                                  setExtraFineReason(currentReason)
+                                  setIsExtraFineOpen(!isExtraFineOpen)
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: '1px solid rgba(249, 115, 22, 0.3)',
+                                  color: '#fb923c',
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                ⚠️ เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง
+                              </button>
+                            </div>
+                          )}
+                          {isExtraFineOpen && (
+                            <div style={{ marginTop: '10px', padding: '10px', borderRadius: '8px', border: '1px solid rgba(249, 115, 22, 0.35)', background: 'rgba(249, 115, 22, 0.06)' }}>
+                              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                จำนวนเงินค่าปรับ (฿)
+                              </label>
+                              <input
+                                aria-label="จำนวนเงินค่าปรับ (฿)"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={extraFineAmount}
+                                onChange={(e) => setExtraFineAmount(e.target.value)}
+                                style={{ width: '100%', marginBottom: '8px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#fff' }}
+                              />
+                              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                หมายเหตุ/เหตุผล
+                              </label>
+                              <textarea
+                                aria-label="หมายเหตุ/เหตุผล"
+                                value={extraFineReason}
+                                onChange={(e) => setExtraFineReason(e.target.value)}
+                                rows={2}
+                                placeholder="เช่น ซิปแตก, คราบไวน์ซักไม่ออก"
+                                style={{ width: '100%', resize: 'vertical', marginBottom: '8px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#fff' }}
+                              />
+                              {extraFineError && <div role="alert" style={{ color: '#fca5a5', fontSize: '11px', marginBottom: '8px' }}>{extraFineError}</div>}
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const amount = parseFloat(extraFineAmount) || 0
+                                    if (amount <= 0 && extraFineReason.trim() === '') {
+                                      setExtraFineError('กรุณากรอกยอดเงินหรือเหตุผล')
+                                      return
+                                    }
+                                    try {
+                                      await onSaveExtraFine!(selectedRental.rentals.map((rental) => rental.id), amount, extraFineReason)
+                                      setIsExtraFineOpen(false)
+                                      setExtraFineError('')
+                                    } catch {
+                                      setExtraFineError('เกิดข้อผิดพลาดในการบันทึกค่าปรับ')
+                                    }
+                                  }}
+                                  style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.5)', background: 'rgba(249, 115, 22, 0.18)', color: '#fb923c', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                                >
+                                  บันทึกค่าปรับ
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1405,8 +1502,21 @@ export function RentalsPage({
                     <div className={`timeline-item ${selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? 'active' : ''}`}>
                       <div className="timeline-icon">{selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? '●' : '○'}</div>
                       <div className="timeline-content">
-                        <div className="timeline-title">ซัก & ปิดงาน (เคลียร์มัดจำ)</div>
-                        <div className="timeline-date">-</div>
+                        <div className="timeline-title">
+                          {selectedRental.rentals.reduce((sum, r) => sum + r.depositAmount, 0) === 0
+                            ? 'ปิดงานสำเร็จ (ไม่มีมัดจำ)'
+                            : 'ซัก & ปิดงาน (เคลียร์มัดจำ)'}
+                        </div>
+                        <div className="timeline-date">
+                          {selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited')
+                            ? (selectedRental.rentals[0]?.depositResolvedAt ? selectedRental.rentals[0].depositResolvedAt.split('T')[0] : getTodayString())
+                            : '-'}
+                        </div>
+                        {selectedRental.rentals.some(r => (r.fineAmount ?? 0) > 0) && (
+                          <div style={{ fontSize: '11px', color: '#fb923c', marginTop: '4px' }}>
+                            (⚠️ มีค่าปรับเพิ่มเติม ฿{selectedRental.rentals.reduce((sum, r) => sum + (r.fineAmount ?? 0), 0)} - {selectedRental.rentals.find(r => (r.fineAmount ?? 0) > 0)?.fineReason})
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

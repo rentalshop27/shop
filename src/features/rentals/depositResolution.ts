@@ -10,6 +10,16 @@ export type DepositAllocation = {
   forfeitedAmount: number
 }
 
+export type FineAllocationInput = {
+  id: string
+  rentalPrice: number
+}
+
+export type FineAllocation = {
+  id: string
+  fineAmount: number
+}
+
 export type DepositResolutionDraft =
   | {
       depositStatus: Extract<DepositStatus, 'returned'>
@@ -62,5 +72,40 @@ export function allocateForfeitedDeposit(
   return rentals.map((rental) => ({
     id: rental.id,
     forfeitedAmount: depositRowIds.has(rental.id) ? fromCents(allocationById.get(rental.id) ?? 0) : 0,
+  }))
+}
+
+export function allocateFineAmount(
+  rentals: FineAllocationInput[],
+  totalFineAmount: number,
+): FineAllocation[] {
+  const targetCents = toCents(totalFineAmount)
+  if (rentals.length === 0 || targetCents <= 0) {
+    return rentals.map((rental) => ({ id: rental.id, fineAmount: 0 }))
+  }
+
+  const billableRows = rentals.filter((rental) => rental.rentalPrice > 0)
+  const weightedRows = billableRows.length > 0 ? billableRows : rentals
+  const totalWeightCents = weightedRows.reduce((sum, rental) => sum + toCents(rental.rentalPrice), 0)
+  const useEvenSplit = totalWeightCents <= 0
+
+  let allocatedCents = 0
+  const allocationById = new Map<string, number>()
+
+  weightedRows.forEach((rental, index) => {
+    const isLastRow = index === weightedRows.length - 1
+    const amountCents = isLastRow
+      ? targetCents - allocatedCents
+      : useEvenSplit
+        ? Math.floor(targetCents / weightedRows.length)
+        : Math.round((targetCents * toCents(rental.rentalPrice)) / totalWeightCents)
+
+    allocationById.set(rental.id, amountCents)
+    allocatedCents += amountCents
+  })
+
+  return rentals.map((rental) => ({
+    id: rental.id,
+    fineAmount: fromCents(allocationById.get(rental.id) ?? 0),
   }))
 }

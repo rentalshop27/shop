@@ -6,6 +6,7 @@ export type CustomerInsights = {
   completedRentalCount: number
   activeOverdueCount: number
   depositForfeitedCount: number
+  hasFines: boolean
   totalSpent: number
   starRating: number
   starDisplay: string
@@ -40,7 +41,7 @@ export function formatStarRating(rating: number) {
 
 export function calculateCustomerStarRating(
   customer: Customer,
-  metrics: Pick<CustomerInsights, 'rentalCount' | 'activeOverdueCount' | 'depositForfeitedCount'>
+  metrics: Pick<CustomerInsights, 'rentalCount' | 'activeOverdueCount' | 'depositForfeitedCount' | 'hasFines'>
 ) {
   let score = 5
 
@@ -53,6 +54,10 @@ export function calculateCustomerStarRating(
 
   score -= metrics.activeOverdueCount * 0.5
   score -= metrics.depositForfeitedCount
+  
+  if (metrics.hasFines) {
+    score -= 2.0
+  }
 
   if (metrics.rentalCount >= 20) {
     score += 0.75
@@ -90,6 +95,7 @@ export function calculateCustomerInsights(
   const depositForfeitedCount = groupedRentals.filter((group) =>
     group.some((rental) => rental.depositStatus === 'forfeited')
   ).length
+  const hasFines = customerRentals.some((rental) => (rental.fineAmount ?? 0) > 0)
   const totalSpent = customerRentals.reduce(
     (sum, rental) => sum + Math.max(0, rental.collectedAmount - rental.depositAmount) + (rental.depositForfeitedAmount ?? 0),
     0
@@ -99,6 +105,7 @@ export function calculateCustomerInsights(
     completedRentalCount,
     activeOverdueCount,
     depositForfeitedCount,
+    hasFines,
     totalSpent,
   }
   const starRating = calculateCustomerStarRating(customer, metrics)

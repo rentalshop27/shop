@@ -23,7 +23,7 @@ import { demoRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './features/rentals/rentalTypes'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
 import type { DepositResolutionDraft } from './features/rentals/depositResolution'
-import { allocateForfeitedDeposit } from './features/rentals/depositResolution'
+import { allocateFineAmount, allocateForfeitedDeposit, normalizeCurrencyAmount } from './features/rentals/depositResolution'
 import {
   createRemoteRentals,
   loadRentals,
@@ -31,6 +31,7 @@ import {
   updateRemoteRentalDepositResolution,
   updateRemoteRentalFields,
   deleteRemoteRental,
+  saveExtraFine,
 } from './features/rentals/rentalRemote'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
 import { demoCustomers } from './features/customers/customerSeed'
@@ -872,6 +873,22 @@ function PrivateApp() {
 
       try {
         await updateRemoteRentalStatus(supabase, shopId, ids, status, shippingInfo)
+        
+        // Auto-resolve deposit for zero-deposit rentals
+        if (status === 'returned') {
+          const updatedRentals = rentals.filter(r => ids.includes(r.id))
+          const zeroDepositIds = updatedRentals.filter(r => r.depositAmount === 0).map(r => r.id)
+          if (zeroDepositIds.length > 0) {
+            const resolutions = zeroDepositIds.map(id => ({
+              id,
+              depositStatus: 'returned' as const,
+              depositForfeitedAmount: 0,
+              depositResolvedAt: new Date().toISOString()
+            }))
+            await updateRemoteRentalDepositResolution(supabase, shopId, resolutions)
+          }
+        }
+        
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
@@ -882,12 +899,15 @@ function PrivateApp() {
     setRentals((current) =>
       current.map((r) => {
         if (ids.includes(r.id)) {
+          const isZeroDepositReturned = status === 'returned' && r.depositAmount === 0
           return {
             ...r,
             status,
             shippingMethod: shippingInfo?.method ?? r.shippingMethod,
             trackingNumber: shippingInfo?.trackingNumber ?? r.trackingNumber,
             returnTrackingNote: shippingInfo?.returnTrackingNote ?? r.returnTrackingNote,
+            depositStatus: isZeroDepositReturned ? 'returned' : r.depositStatus,
+            depositResolvedAt: isZeroDepositReturned ? new Date().toISOString() : r.depositResolvedAt,
             updatedAt: new Date().toISOString()
           }
         }
@@ -991,6 +1011,54 @@ function PrivateApp() {
               depositResolutionNote: resolution.depositStatus === 'forfeited' ? resolution.note.trim() : undefined,
               depositResolvedAt: resolvedAt,
               updatedAt: resolvedAt,
+            }
+          : r
+      )
+    )
+  }
+
+  /** เพิ่มค่าปรับย้อนหลังกรณีชุดพัง */
+  async function handleSaveExtraFine(rentalIdOrIds: string | string[], amount: number, reason: string) {
+    const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
+    if (ids.length === 0) return
+
+    const targetRentals = rentals.filter((rental) => ids.includes(rental.id))
+    if (targetRentals.length === 0) return
+
+    const fineCreatedAt = new Date().toISOString()
+    const fineReason = reason.trim()
+    const allocation = allocateFineAmount(targetRentals, normalizeCurrencyAmount(amount))
+    const fineById = new Map(allocation.map((item) => [item.id, item.fineAmount]))
+    const updates = targetRentals.map((rental) => ({
+      id: rental.id,
+      fineAmount: fineById.get(rental.id) ?? 0,
+      fineReason,
+      fineCreatedAt,
+    }))
+
+    if (supabase && isAuthenticated) {
+      if (!shopId) {
+        window.alert('ยังไม่พบร้านสำหรับบัญชีนี้')
+        return
+      }
+      try {
+        await saveExtraFine(supabase, shopId, updates)
+        handleLoadAuditLogs()
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
+    setRentals((current) =>
+      current.map((r) =>
+        ids.includes(r.id)
+          ? {
+              ...r,
+              fineAmount: fineById.get(r.id) ?? 0,
+              fineReason,
+              fineCreatedAt,
+              updatedAt: fineCreatedAt,
             }
           : r
       )
@@ -2021,6 +2089,7 @@ function PrivateApp() {
               onCancelRental={handleCancelRental}
               onResolveDeposit={handleResolveRentalDeposit}
               onEditRentalFields={handleEditRentalFields}
+              onSaveExtraFine={handleSaveExtraFine}
               externalSelectedRentalId={externalSelectedRentalId}
               onSelectRental={setExternalSelectedRentalId}
               externalIsFormOpen={externalIsFormOpen}

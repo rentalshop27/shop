@@ -30,6 +30,9 @@ export type RentalOrder = {
   trackingNumber?: string
   returnTrackingNote?: string
   shippingCost?: number
+  fineAmount?: number
+  fineReason?: string
+  fineCreatedAt?: string
   notes?: string
   createdAt: string
   updatedAt: string

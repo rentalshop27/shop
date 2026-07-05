@@ -11,6 +11,13 @@ export type RentalDepositResolutionUpdate = {
   depositResolvedAt: string
 }
 
+export type RentalFineUpdate = {
+  id: string
+  fineAmount: number
+  fineReason: string
+  fineCreatedAt: string
+}
+
 type RentalRow = {
   id: string
   shop_id: string
@@ -32,6 +39,9 @@ type RentalRow = {
   tracking_number: string | null
   return_tracking_note: string | null
   shipping_cost: number | string | null
+  fine_amount: number | string | null
+  fine_reason: string | null
+  fine_created_at: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -100,6 +110,9 @@ function toRentalInsert(shopId: string, rental: RentalOrder) {
     tracking_number: rental.trackingNumber ?? null,
     return_tracking_note: rental.returnTrackingNote ?? null,
     shipping_cost: rental.shippingCost ?? 0,
+    fine_amount: rental.fineAmount ?? 0,
+    fine_reason: rental.fineReason ?? '',
+    fine_created_at: rental.fineCreatedAt ?? null,
     notes: rental.notes ?? '',
     created_at: rental.createdAt,
     updated_at: rental.updatedAt,
@@ -202,6 +215,26 @@ export async function deleteRemoteRental(
   if (error) throw error
 }
 
+export async function saveExtraFine(
+  supabase: SupabaseClient,
+  shopId: string,
+  updates: RentalFineUpdate[],
+): Promise<void> {
+  if (updates.length === 0) return
+
+  const { error } = await supabase.rpc('save_rental_fine_updates', {
+    p_shop_id: shopId,
+    p_updates: updates.map((update) => ({
+      id: update.id,
+      fine_amount: update.fineAmount,
+      fine_reason: update.fineReason,
+      fine_created_at: update.fineCreatedAt,
+    })),
+  })
+
+  if (error) throw error
+}
+
 function mapRentalRow(
   row: RentalRow,
   customers: Customer[],
@@ -240,6 +273,9 @@ function mapRentalRow(
     trackingNumber: row.tracking_number ?? undefined,
     returnTrackingNote: row.return_tracking_note ?? undefined,
     shippingCost: Number(row.shipping_cost) || 0,
+    fineAmount: Number(row.fine_amount) || 0,
+    fineReason: row.fine_reason ?? undefined,
+    fineCreatedAt: row.fine_created_at ?? undefined,
     notes: row.notes ?? '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -391,4 +391,43 @@ describe('RentalsPage', () => {
     expect(screen.getByText('🚫 ยึดมัดจำ (฿250)')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /ยึดมัดจำ/ })).toBeNull()
   })
+
+  it('saves extra fines against every rental in the selected order group', async () => {
+    const onSaveExtraFine = vi.fn(async () => {})
+
+    render(
+      <RentalsPage
+        rentals={[
+          makeRental({
+            id: 'line_1',
+            orderCode: 'PR-ORD-260704-010-1',
+            status: 'returned',
+            depositAmount: 0,
+            depositStatus: 'returned',
+          }),
+          makeRental({
+            id: 'line_2',
+            orderCode: 'PR-ORD-260704-010-2',
+            status: 'returned',
+            depositAmount: 0,
+            depositStatus: 'returned',
+            rentalPrice: 600,
+          }),
+        ]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={vi.fn()}
+        onSaveExtraFine={onSaveExtraFine}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง/ }))
+    fireEvent.change(screen.getByLabelText('จำนวนเงินค่าปรับ (฿)'), { target: { value: '300' } })
+    fireEvent.change(screen.getByLabelText('หมายเหตุ/เหตุผล'), { target: { value: 'ซิปแตก' } })
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกค่าปรับ' }))
+
+    expect(onSaveExtraFine).toHaveBeenCalledWith(['line_1', 'line_2'], 300, 'ซิปแตก')
+  })
 })

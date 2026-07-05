@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
-import { deleteRemoteRental, loadRentals, updateRemoteRentalDepositResolution, updateRemoteRentalStatus } from './rentalRemote'
+import { deleteRemoteRental, loadRentals, saveExtraFine, updateRemoteRentalDepositResolution, updateRemoteRentalStatus } from './rentalRemote'
 
 const customer: Customer = {
   id: 'customer_1',
@@ -79,6 +79,9 @@ function makeRentalRow(overrides: Record<string, unknown> = {}) {
     tracking_number: null,
     return_tracking_note: null,
     shipping_cost: 0,
+    fine_amount: 0,
+    fine_reason: '',
+    fine_created_at: null,
     notes: null,
     created_at: '2026-07-04T00:00:00.000Z',
     updated_at: '2026-07-04T00:00:00.000Z',
@@ -129,6 +132,24 @@ describe('rentalRemote', () => {
       depositForfeitedAmount: 125.5,
       depositResolutionNote: 'ชุดขาด',
       depositResolvedAt: '2026-07-05T12:00:00.000Z',
+    }))
+  })
+
+  it('hydrates extra fine fields', async () => {
+    const { client } = createLoadRentalsClient([
+      makeRentalRow({
+        fine_amount: '350.25',
+        fine_reason: 'คราบไวน์',
+        fine_created_at: '2026-07-05T15:00:00.000Z',
+      }),
+    ])
+
+    const rentals = await loadRentals(client, 'shop_1', [customer], [stockItem])
+
+    expect(rentals[0]).toEqual(expect.objectContaining({
+      fineAmount: 350.25,
+      fineReason: 'คราบไวน์',
+      fineCreatedAt: '2026-07-05T15:00:00.000Z',
     }))
   })
 
@@ -216,6 +237,46 @@ describe('rentalRemote', () => {
           deposit_forfeited_amount: 125.5,
           deposit_resolution_note: 'ชุดขาด',
           deposit_resolved_at: '2026-07-05T12:00:00.000Z',
+        },
+      ],
+    })
+  })
+
+  it('saves grouped fine allocations through the atomic rpc', async () => {
+    const rpc = vi.fn(async () => ({ error: null }))
+    const supabase = {
+      rpc,
+    } as unknown as SupabaseClient
+
+    await saveExtraFine(supabase, 'shop_1', [
+      {
+        id: 'rental_1',
+        fineAmount: 200,
+        fineReason: 'ซิปแตก',
+        fineCreatedAt: '2026-07-06T01:23:45.000Z',
+      },
+      {
+        id: 'rental_2',
+        fineAmount: 100,
+        fineReason: 'ซิปแตก',
+        fineCreatedAt: '2026-07-06T01:23:45.000Z',
+      },
+    ])
+
+    expect(rpc).toHaveBeenCalledWith('save_rental_fine_updates', {
+      p_shop_id: 'shop_1',
+      p_updates: [
+        {
+          id: 'rental_1',
+          fine_amount: 200,
+          fine_reason: 'ซิปแตก',
+          fine_created_at: '2026-07-06T01:23:45.000Z',
+        },
+        {
+          id: 'rental_2',
+          fine_amount: 100,
+          fine_reason: 'ซิปแตก',
+          fine_created_at: '2026-07-06T01:23:45.000Z',
         },
       ],
     })

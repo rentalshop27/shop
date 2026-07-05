@@ -25,7 +25,23 @@ export function getLocalDateString(date: Date) {
 }
 
 export function buildDashboardMetrics(rentals: RentalOrder[], today: string) {
-  const totalRevenue = rentals.reduce((sum, rental) => sum + rental.collectedAmount, 0)
+  const totalCashFlow = rentals.reduce((sum, rental) => sum + rental.collectedAmount, 0)
+  const totalRevenue = totalCashFlow
+  
+  const activeHeldDeposits = rentals.reduce((sum, rental) => {
+    const isRenting = rental.status === 'booked' || rental.status === 'active' || rental.status === 'overdue'
+    const isPendingReturn = rental.status === 'returned' && rental.depositStatus === 'pending_return'
+    
+    if (isRenting || isPendingReturn) {
+      return sum + (rental.depositAmount || 0)
+    }
+    return sum
+  }, 0)
+
+  const totalFines = rentals.reduce((sum, rental) => sum + (rental.fineAmount || 0), 0)
+
+  const netRevenue = totalCashFlow - activeHeldDeposits
+
   const currentlyRented = rentals.filter((rental) => rental.status === 'active' || rental.status === 'overdue').length
 
   const pickups: RentalSchedule[] = rentals
@@ -71,6 +87,10 @@ export function buildDashboardMetrics(rentals: RentalOrder[], today: string) {
 
   return {
     totalRevenue,
+    netRevenue,
+    activeHeldDeposits,
+    totalCashFlow,
+    totalFines,
     currentlyRented,
     pickups,
     returns,
