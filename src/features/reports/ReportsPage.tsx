@@ -915,7 +915,7 @@ export function ReportsPage({
             <div className="analysis-panel-header">
               <div>
                 <h2>สรุปเงินประกันรายเดือน</h2>
-                <p>ยอดรับประกันรวม แยกเงินที่ยังถืออยู่และเงินของออเดอร์ที่คืนชุดแล้วตามเดือนรับชุด</p>
+                <p>ยอดรับประกันรวม แยกเงินที่ยังถืออยู่ เงินคืนลูกค้า และเงินยึดเป็นรายได้ค่าปรับตามเดือนรับชุด</p>
               </div>
               <Wallet size={22} />
             </div>
@@ -930,8 +930,12 @@ export function ReportsPage({
                 <strong>{formatBaht(generalStoreMetrics.totalDepositHeld)}</strong>
               </div>
               <div>
-                <span>ออเดอร์คืนชุดแล้ว</span>
-                <strong>{formatBaht(generalStoreMetrics.totalDepositInReturnedOrders)}</strong>
+                <span>คืนลูกค้าแล้ว</span>
+                <strong>{formatBaht(generalStoreMetrics.totalDepositRefunded)}</strong>
+              </div>
+              <div>
+                <span>ยึดเป็นรายได้</span>
+                <strong>{formatBaht(generalStoreMetrics.totalDepositForfeited)}</strong>
               </div>
             </div>
 
@@ -953,13 +957,18 @@ export function ReportsPage({
                         />
                         <div
                           className="deposit-bar-fill returned"
-                          style={{ width: `${(item.depositInReturnedOrders / monthlyDepositMax) * 100}%` }}
+                          style={{ width: `${(item.depositRefunded / monthlyDepositMax) * 100}%` }}
+                        />
+                        <div
+                          className="deposit-bar-fill forfeited"
+                          style={{ width: `${(item.depositForfeited / monthlyDepositMax) * 100}%` }}
                         />
                       </div>
                     </div>
                     <div className="deposit-month-values">
                       <span>ถืออยู่ {formatBaht(item.depositHeld)}</span>
-                      <span>คืนชุดแล้ว {formatBaht(item.depositInReturnedOrders)}</span>
+                      <span>คืนลูกค้า {formatBaht(item.depositRefunded)}</span>
+                      <span>ยึดเป็นรายได้ {formatBaht(item.depositForfeited)}</span>
                       <strong>รวม {formatBaht(item.depositCollected)}</strong>
                     </div>
                   </div>

@@ -11,6 +11,16 @@ export type CustomerInsights = {
   starDisplay: string
 }
 
+function getOrderGroupCode(orderCode: string) {
+  if (/^PR-ORD-\d{6}-\d{3}-\d+$/.test(orderCode)) {
+    return orderCode.replace(/-\d+$/, '')
+  }
+  if (/^PR-ORD-(?!\d{6}-\d{3}$)\d+-\d+$/.test(orderCode)) {
+    return orderCode.replace(/-\d+$/, '')
+  }
+  return orderCode
+}
+
 const clamp = (value: number, min: number, max: number) => {
   return Math.max(min, Math.min(max, value))
 }
@@ -61,17 +71,32 @@ export function calculateCustomerInsights(
   today: string
 ): CustomerInsights {
   const customerRentals = rentals.filter((rental) => rental.customer.id === customer.id)
+  const groups = new Map<string, RentalOrder[]>()
+  customerRentals.forEach((rental) => {
+    const key = getOrderGroupCode(rental.orderCode)
+    groups.set(key, [...(groups.get(key) ?? []), rental])
+  })
+  const groupedRentals = Array.from(groups.values())
   const activeOverdueCount = customerRentals.filter(
     (rental) => rental.status === 'overdue' || (rental.status === 'active' && rental.returnDate < today)
   ).length
-  const depositForfeitedCount = customerRentals.filter((rental) => rental.depositStatus === 'forfeited').length
+  const completedRentalCount = groupedRentals.filter((group) => {
+    const depositRows = group.filter((rental) => rental.depositAmount > 0)
+    return group.every((rental) => rental.status === 'returned') && (
+      depositRows.length === 0 ||
+      depositRows.every((rental) => rental.depositStatus === 'returned' || rental.depositStatus === 'forfeited')
+    )
+  }).length
+  const depositForfeitedCount = groupedRentals.filter((group) =>
+    group.some((rental) => rental.depositStatus === 'forfeited')
+  ).length
   const totalSpent = customerRentals.reduce(
-    (sum, rental) => sum + Math.max(0, rental.collectedAmount - rental.depositAmount),
+    (sum, rental) => sum + Math.max(0, rental.collectedAmount - rental.depositAmount) + (rental.depositForfeitedAmount ?? 0),
     0
   )
   const metrics = {
-    rentalCount: customerRentals.length,
-    completedRentalCount: customerRentals.filter((rental) => rental.status === 'returned').length,
+    rentalCount: groupedRentals.length,
+    completedRentalCount,
     activeOverdueCount,
     depositForfeitedCount,
     totalSpent,

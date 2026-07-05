@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
-import { deleteRemoteRental, loadRentals, updateRemoteRentalStatus } from './rentalRemote'
+import { deleteRemoteRental, loadRentals, updateRemoteRentalDepositResolution, updateRemoteRentalStatus } from './rentalRemote'
 
 const customer: Customer = {
   id: 'customer_1',
@@ -72,6 +72,9 @@ function makeRentalRow(overrides: Record<string, unknown> = {}) {
     collected_amount: 1700,
     status: 'booked',
     deposit_status: null,
+    deposit_forfeited_amount: 0,
+    deposit_resolution_note: null,
+    deposit_resolved_at: null,
     shipping_method: null,
     tracking_number: null,
     return_tracking_note: null,
@@ -107,6 +110,26 @@ describe('rentalRemote', () => {
 
     expect(rentals[0].costume.id).toBe('stock_1')
     expect(rentals[0].costume.imageUrls).toEqual(stockItem.imageUrls)
+  })
+
+  it('hydrates deposit resolution accounting fields', async () => {
+    const { client } = createLoadRentalsClient([
+      makeRentalRow({
+        deposit_status: 'forfeited',
+        deposit_forfeited_amount: '125.50',
+        deposit_resolution_note: 'ชุดขาด',
+        deposit_resolved_at: '2026-07-05T12:00:00.000Z',
+      }),
+    ])
+
+    const rentals = await loadRentals(client, 'shop_1', [customer], [stockItem])
+
+    expect(rentals[0]).toEqual(expect.objectContaining({
+      depositStatus: 'forfeited',
+      depositForfeitedAmount: 125.5,
+      depositResolutionNote: 'ชุดขาด',
+      depositResolvedAt: '2026-07-05T12:00:00.000Z',
+    }))
   })
 
   it('scopes rental status updates by shop id and rental ids', async () => {
@@ -166,6 +189,36 @@ describe('rentalRemote', () => {
         updated_at: expect.any(String),
       }),
     )
+  })
+
+  it('scopes deposit resolution updates by shop id and rental id', async () => {
+    const rpc = vi.fn(async () => ({ error: null }))
+    const supabase = {
+      rpc,
+    } as unknown as SupabaseClient
+
+    await updateRemoteRentalDepositResolution(supabase, 'shop_1', [
+      {
+        id: 'rental_1',
+        depositStatus: 'forfeited',
+        depositForfeitedAmount: 125.5,
+        depositResolutionNote: 'ชุดขาด',
+        depositResolvedAt: '2026-07-05T12:00:00.000Z',
+      },
+    ])
+
+    expect(rpc).toHaveBeenCalledWith('resolve_rental_deposit', {
+      p_shop_id: 'shop_1',
+      p_updates: [
+        {
+          id: 'rental_1',
+          deposit_status: 'forfeited',
+          deposit_forfeited_amount: 125.5,
+          deposit_resolution_note: 'ชุดขาด',
+          deposit_resolved_at: '2026-07-05T12:00:00.000Z',
+        },
+      ],
+    })
   })
 
   it('scopes rental deletes by shop id and rental ids', async () => {

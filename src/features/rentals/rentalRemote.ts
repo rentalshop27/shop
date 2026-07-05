@@ -3,6 +3,14 @@ import type { FlatStockItem } from '../inventory/inventoryTypes'
 import type { Customer } from '../customers/customerTypes'
 import type { RentalOrder, RentalShippingUpdate, RentalStatus, DepositStatus } from './rentalTypes'
 
+export type RentalDepositResolutionUpdate = {
+  id: string
+  depositStatus: DepositStatus
+  depositForfeitedAmount: number
+  depositResolutionNote?: string | null
+  depositResolvedAt: string
+}
+
 type RentalRow = {
   id: string
   shop_id: string
@@ -17,6 +25,9 @@ type RentalRow = {
   collected_amount: number | string
   status: RentalStatus
   deposit_status: DepositStatus | null
+  deposit_forfeited_amount: number | string | null
+  deposit_resolution_note: string | null
+  deposit_resolved_at: string | null
   shipping_method: string | null
   tracking_number: string | null
   return_tracking_note: string | null
@@ -82,6 +93,9 @@ function toRentalInsert(shopId: string, rental: RentalOrder) {
     collected_amount: rental.collectedAmount,
     status: rental.status,
     deposit_status: rental.depositStatus ?? null,
+    deposit_forfeited_amount: rental.depositForfeitedAmount ?? 0,
+    deposit_resolution_note: rental.depositResolutionNote ?? null,
+    deposit_resolved_at: rental.depositResolvedAt ?? null,
     shipping_method: rental.shippingMethod ?? null,
     tracking_number: rental.trackingNumber ?? null,
     return_tracking_note: rental.returnTrackingNote ?? null,
@@ -121,20 +135,24 @@ export async function updateRemoteRentalStatus(
   if (error) throw error
 }
 
-/** อัปเดต deposit_status ของ rentals หลายแถวพร้อมกัน */
-export async function updateRemoteRentalDeposit(
+/** อัปเดตสถานะปิดเคสเงินมัดจำของ rentals หลายแถวพร้อมกัน */
+export async function updateRemoteRentalDepositResolution(
   supabase: SupabaseClient,
   shopId: string,
-  rentalIds: string[],
-  depositStatus: DepositStatus
+  updates: RentalDepositResolutionUpdate[],
 ): Promise<void> {
-  if (rentalIds.length === 0) return
+  if (updates.length === 0) return
 
-  const { error } = await supabase
-    .from('rentals')
-    .update({ deposit_status: depositStatus, updated_at: new Date().toISOString() })
-    .eq('shop_id', shopId)
-    .in('id', rentalIds)
+  const { error } = await supabase.rpc('resolve_rental_deposit', {
+    p_shop_id: shopId,
+    p_updates: updates.map((update) => ({
+      id: update.id,
+      deposit_status: update.depositStatus,
+      deposit_forfeited_amount: update.depositForfeitedAmount,
+      deposit_resolution_note: update.depositResolutionNote ?? null,
+      deposit_resolved_at: update.depositResolvedAt,
+    })),
+  })
 
   if (error) throw error
 }
@@ -215,6 +233,9 @@ function mapRentalRow(
     collectedAmount: Number(row.collected_amount) || 0,
     status: row.status,
     depositStatus: row.deposit_status ?? undefined,
+    depositForfeitedAmount: Number(row.deposit_forfeited_amount) || 0,
+    depositResolutionNote: row.deposit_resolution_note ?? undefined,
+    depositResolvedAt: row.deposit_resolved_at ?? undefined,
     shippingMethod: row.shipping_method ?? undefined,
     trackingNumber: row.tracking_number ?? undefined,
     returnTrackingNote: row.return_tracking_note ?? undefined,

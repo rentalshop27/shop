@@ -72,7 +72,10 @@ describe('calculateCustomerInsights', () => {
   it('keeps a verified customer with clean completed rentals at five stars', () => {
     const insights = calculateCustomerInsights(
       customer,
-      [makeRental(), makeRental({ id: 'rental_2', orderCode: 'PR-ORD-260704-002' })],
+      [
+        makeRental({ depositStatus: 'returned' }),
+        makeRental({ id: 'rental_2', orderCode: 'PR-ORD-260704-002', depositStatus: 'returned' }),
+      ],
       '2026-07-05'
     )
 
@@ -89,8 +92,8 @@ describe('calculateCustomerInsights', () => {
       riskCustomer,
       [
         makeRental({ customer: riskCustomer, status: 'overdue', depositStatus: 'forfeited' }),
-        makeRental({ id: 'rental_2', customer: riskCustomer, status: 'overdue', depositStatus: 'forfeited' }),
-        makeRental({ id: 'rental_3', customer: riskCustomer, status: 'overdue', depositStatus: 'forfeited' }),
+        makeRental({ id: 'rental_2', orderCode: 'PR-ORD-260704-002', customer: riskCustomer, status: 'overdue', depositStatus: 'forfeited' }),
+        makeRental({ id: 'rental_3', orderCode: 'PR-ORD-260704-003', customer: riskCustomer, status: 'overdue', depositStatus: 'forfeited' }),
       ],
       '2026-07-05'
     )
@@ -124,6 +127,23 @@ describe('calculateCustomerInsights', () => {
 
     expect(insights.depositForfeitedCount).toBe(1)
     expect(insights.starRating).toBe(4)
+  })
+
+  it('counts returned rentals as completed only after deposit resolution', () => {
+    const insights = calculateCustomerInsights(
+      customer,
+      [
+        makeRental({ id: 'line_1', orderCode: 'PR-ORD-260704-010-1', depositStatus: 'returned' }),
+        makeRental({ id: 'line_2', orderCode: 'PR-ORD-260704-010-2' }),
+        makeRental({ id: 'line_3', orderCode: 'PR-ORD-260704-011-1', depositStatus: 'forfeited' }),
+        makeRental({ id: 'line_4', orderCode: 'PR-ORD-260704-011-2', depositStatus: 'forfeited' }),
+      ],
+      '2026-07-05'
+    )
+
+    expect(insights.rentalCount).toBe(2)
+    expect(insights.completedRentalCount).toBe(1)
+    expect(insights.depositForfeitedCount).toBe(1)
   })
 
   it('handles a new customer with no rental history', () => {

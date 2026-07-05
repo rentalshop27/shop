@@ -23,6 +23,9 @@ export type RentalOrder = {
   collectedAmount: number  // Total amount collected at the counter (customizable)
   status: RentalStatus
   depositStatus?: DepositStatus  // Lifecycle of deposit money after costume returned
+  depositForfeitedAmount?: number
+  depositResolutionNote?: string
+  depositResolvedAt?: string
   shippingMethod?: 'grab' | 'thailand_post' | string
   trackingNumber?: string
   returnTrackingNote?: string

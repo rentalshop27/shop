@@ -20,13 +20,15 @@ import { getLocalDateString } from './features/dashboard/dashboardMetrics'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals } from './features/rentals/rentalSeed'
-import type { RentalOrder, RentalShippingUpdate, RentalStatus, DepositStatus } from './features/rentals/rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './features/rentals/rentalTypes'
 import { findOpenRentalConflict } from './features/rentals/rentalRules'
+import type { DepositResolutionDraft } from './features/rentals/depositResolution'
+import { allocateForfeitedDeposit } from './features/rentals/depositResolution'
 import {
   createRemoteRentals,
   loadRentals,
   updateRemoteRentalStatus,
-  updateRemoteRentalDeposit,
+  updateRemoteRentalDepositResolution,
   updateRemoteRentalFields,
   deleteRemoteRental,
 } from './features/rentals/rentalRemote'
@@ -944,10 +946,26 @@ function PrivateApp() {
     )
   }
 
-  /** อัปเดต deposit_status ของออเดอร์หลังคืนชุด */
-  async function handleUpdateRentalDeposit(rentalIdOrIds: string | string[], depositStatus: DepositStatus) {
+  /** อัปเดตสถานะปิดเคสเงินมัดจำของออเดอร์หลังคืนชุด */
+  async function handleResolveRentalDeposit(rentalIdOrIds: string | string[], resolution: DepositResolutionDraft) {
     const ids = Array.isArray(rentalIdOrIds) ? rentalIdOrIds : [rentalIdOrIds]
     if (ids.length === 0) return
+    const targetRentals = rentals.filter((rental) => ids.includes(rental.id))
+    if (targetRentals.length === 0) return
+
+    const resolvedAt = new Date().toISOString()
+    const allocation =
+      resolution.depositStatus === 'forfeited'
+        ? allocateForfeitedDeposit(targetRentals, resolution.forfeitedAmount)
+        : targetRentals.map((rental) => ({ id: rental.id, forfeitedAmount: 0 }))
+    const allocationById = new Map(allocation.map((item) => [item.id, item.forfeitedAmount]))
+    const updates = targetRentals.map((rental) => ({
+      id: rental.id,
+      depositStatus: resolution.depositStatus,
+      depositForfeitedAmount: allocationById.get(rental.id) ?? 0,
+      depositResolutionNote: resolution.depositStatus === 'forfeited' ? resolution.note.trim() : null,
+      depositResolvedAt: resolvedAt,
+    }))
 
     if (supabase && isAuthenticated) {
       if (!shopId) {
@@ -955,7 +973,7 @@ function PrivateApp() {
         return
       }
       try {
-        await updateRemoteRentalDeposit(supabase, shopId, ids, depositStatus)
+        await updateRemoteRentalDepositResolution(supabase, shopId, updates)
         handleLoadAuditLogs()
       } catch (error) {
         window.alert(getErrorMessage(error))
@@ -966,7 +984,14 @@ function PrivateApp() {
     setRentals((current) =>
       current.map((r) =>
         ids.includes(r.id)
-          ? { ...r, depositStatus, updatedAt: new Date().toISOString() }
+          ? {
+              ...r,
+              depositStatus: resolution.depositStatus,
+              depositForfeitedAmount: allocationById.get(r.id) ?? 0,
+              depositResolutionNote: resolution.depositStatus === 'forfeited' ? resolution.note.trim() : undefined,
+              depositResolvedAt: resolvedAt,
+              updatedAt: resolvedAt,
+            }
           : r
       )
     )
@@ -1994,7 +2019,7 @@ function PrivateApp() {
               onUpdateRentalStatus={handleUpdateRentalStatus}
               onDeleteRental={handleDeleteRental}
               onCancelRental={handleCancelRental}
-              onUpdateDepositStatus={handleUpdateRentalDeposit}
+              onResolveDeposit={handleResolveRentalDeposit}
               onEditRentalFields={handleEditRentalFields}
               externalSelectedRentalId={externalSelectedRentalId}
               onSelectRental={setExternalSelectedRentalId}

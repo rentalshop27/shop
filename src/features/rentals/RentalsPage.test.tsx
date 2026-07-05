@@ -274,4 +274,121 @@ describe('RentalsPage', () => {
     expect(screen.queryByText('Late Return')).toBeNull()
     expect(screen.queryByText('No Show')).toBeNull()
   })
+
+  it('resolves a refunded deposit and renders the read-only refunded badge', () => {
+    const onResolveDeposit = vi.fn()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    const { rerender } = render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 500 })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={onResolveDeposit}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /คืนมัดจำแล้ว/ }))
+
+    expect(onResolveDeposit).toHaveBeenCalledWith(['rental_1'], { depositStatus: 'returned' })
+
+    rerender(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 500, depositStatus: 'returned' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={onResolveDeposit}
+      />
+    )
+
+    expect(screen.getByText('✅ คืนมัดจำแล้ว')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /คืนมัดจำแล้ว/ })).toBeNull()
+  })
+
+  it('requires amount and note before forfeiting a deposit', () => {
+    const onResolveDeposit = vi.fn()
+
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 500 })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={onResolveDeposit}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /ยึดมัดจำ/ }))
+    fireEvent.change(screen.getByLabelText('จำนวนเงินที่ยึด/ปรับ'), { target: { value: '600' } })
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกยึดมัดจำ' }))
+
+    expect(screen.getByRole('alert').textContent).toContain('ไม่เกินยอดมัดจำทั้งหมด')
+    expect(onResolveDeposit).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('จำนวนเงินที่ยึด/ปรับ'), { target: { value: '250' } })
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกยึดมัดจำ' }))
+
+    expect(screen.getByRole('alert').textContent).toContain('กรุณาระบุเหตุผล')
+    expect(onResolveDeposit).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('หมายเหตุเหตุผลการยึด'), { target: { value: 'ชุดขาด' } })
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกยึดมัดจำ' }))
+
+    expect(onResolveDeposit).toHaveBeenCalledWith(['rental_1'], {
+      depositStatus: 'forfeited',
+      forfeitedAmount: 250,
+      note: 'ชุดขาด',
+    })
+  })
+
+  it('rejects forfeited deposit amounts smaller than one satang after rounding', () => {
+    const onResolveDeposit = vi.fn()
+
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 500 })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={onResolveDeposit}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /ยึดมัดจำ/ }))
+    fireEvent.change(screen.getByLabelText('จำนวนเงินที่ยึด/ปรับ'), { target: { value: '0.001' } })
+    fireEvent.change(screen.getByLabelText('หมายเหตุเหตุผลการยึด'), { target: { value: 'ชุดขาด' } })
+    fireEvent.click(screen.getByRole('button', { name: 'บันทึกยึดมัดจำ' }))
+
+    expect(screen.getByRole('alert').textContent).toContain('มากกว่า 0')
+    expect(onResolveDeposit).not.toHaveBeenCalled()
+  })
+
+  it('renders a read-only forfeited deposit badge with the forfeited amount', () => {
+    render(
+      <RentalsPage
+        rentals={[
+          makeRental({
+            status: 'returned',
+            depositAmount: 500,
+            depositStatus: 'forfeited',
+            depositForfeitedAmount: 250,
+          }),
+        ]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('🚫 ยึดมัดจำ (฿250)')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /ยึดมัดจำ/ })).toBeNull()
+  })
 })

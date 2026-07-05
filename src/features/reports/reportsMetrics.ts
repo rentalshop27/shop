@@ -30,6 +30,8 @@ export interface GeneralStoreMetrics {
   totalDepositCollected: number
   totalDepositHeld: number
   totalDepositInReturnedOrders: number
+  totalDepositRefunded: number
+  totalDepositForfeited: number
 }
 
 export interface MonthlyRevenueTrend {
@@ -50,6 +52,8 @@ export interface MonthlyDepositSummary {
   depositCollected: number
   depositHeld: number
   depositInReturnedOrders: number
+  depositRefunded: number
+  depositForfeited: number
   rentalCount: number
 }
 
@@ -92,7 +96,7 @@ function isDateInRange(dateStr: string, range: DateRange) {
 }
 
 function calculateNetRentalRevenue(rental: RentalOrder) {
-  return Math.max(0, rental.collectedAmount - rental.depositAmount)
+  return Math.max(0, rental.collectedAmount - rental.depositAmount) + (rental.depositForfeitedAmount ?? 0)
 }
 
 function getMonthKey(dateStr: string) {
@@ -167,11 +171,21 @@ export function buildMonthlyDepositSummary(rentals: RentalOrder[]): MonthlyDepos
       depositCollected: 0,
       depositHeld: 0,
       depositInReturnedOrders: 0,
+      depositRefunded: 0,
+      depositForfeited: 0,
       rentalCount: 0,
     }
     current.depositCollected += rental.depositAmount
-    if (rental.status === 'returned') {
+    if (rental.depositStatus === 'returned') {
       current.depositInReturnedOrders += rental.depositAmount
+      current.depositRefunded += rental.depositAmount
+    } else if (rental.depositStatus === 'forfeited') {
+      const forfeitedAmount = Math.min(rental.depositAmount, rental.depositForfeitedAmount ?? 0)
+      current.depositInReturnedOrders += rental.depositAmount
+      current.depositRefunded += Math.max(0, rental.depositAmount - forfeitedAmount)
+      current.depositForfeited += forfeitedAmount
+    } else if (rental.status === 'returned') {
+      current.depositHeld += rental.depositAmount
     } else {
       current.depositHeld += rental.depositAmount
     }
@@ -185,6 +199,8 @@ export function buildMonthlyDepositSummary(rentals: RentalOrder[]): MonthlyDepos
       depositCollected: 0,
       depositHeld: 0,
       depositInReturnedOrders: 0,
+      depositRefunded: 0,
+      depositForfeited: 0,
       rentalCount: 0,
     }
   ))
@@ -297,9 +313,13 @@ export function buildGeneralStoreMetrics(rentals: RentalOrder[]): GeneralStoreMe
   const monthlyDepositSummary = buildMonthlyDepositSummary(rentals)
   const totalDepositCollected = rentals.reduce((sum, rental) => sum + rental.depositAmount, 0)
   const totalDepositHeld = rentals.reduce((sum, rental) => (
-    rental.status === 'returned' ? sum : sum + rental.depositAmount
+    rental.status === 'returned' && (rental.depositStatus === 'returned' || rental.depositStatus === 'forfeited')
+      ? sum
+      : sum + rental.depositAmount
   ), 0)
   const totalDepositInReturnedOrders = totalDepositCollected - totalDepositHeld
+  const totalDepositForfeited = rentals.reduce((sum, rental) => sum + (rental.depositForfeitedAmount ?? 0), 0)
+  const totalDepositRefunded = monthlyDepositSummary.reduce((sum, item) => sum + item.depositRefunded, 0)
 
   const statusCounts = rentals.reduce((acc, rental) => {
     acc[rental.status] = (acc[rental.status] || 0) + 1
@@ -317,5 +337,7 @@ export function buildGeneralStoreMetrics(rentals: RentalOrder[]): GeneralStoreMe
     totalDepositCollected,
     totalDepositHeld,
     totalDepositInReturnedOrders,
+    totalDepositRefunded,
+    totalDepositForfeited,
   }
 }

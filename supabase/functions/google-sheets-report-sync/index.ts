@@ -157,7 +157,7 @@ async function loadReportData(supabase: ServiceClient, shopId: string): Promise<
       .order('sku', { ascending: true }),
     supabase
       .from('rentals')
-      .select('id, order_code, customer_id, stock_item_sku, pickup_date, return_date, rental_price, deposit_amount, collected_amount, status, notes, created_at, updated_at')
+      .select('id, order_code, customer_id, stock_item_sku, pickup_date, return_date, rental_price, deposit_amount, collected_amount, status, deposit_status, deposit_forfeited_amount, deposit_resolution_note, deposit_resolved_at, notes, created_at, updated_at')
       .eq('shop_id', shopId)
       .order('pickup_date', { ascending: false }),
   ])

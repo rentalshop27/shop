@@ -43,6 +43,10 @@ export type RentalRow = {
   deposit_amount: number | string
   collected_amount: number | string
   status: string
+  deposit_status: string | null
+  deposit_forfeited_amount: number | string | null
+  deposit_resolution_note: string | null
+  deposit_resolved_at: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -89,6 +93,10 @@ export function buildReportValues(data: SheetData): Record<string, unknown[][]> 
         'Brand',
         'Rental Price',
         'Deposit',
+        'Deposit Status',
+        'Deposit Forfeited',
+        'Deposit Resolution Note',
+        'Deposit Resolved At',
         'Collected',
         'Net Revenue',
         'Notes',
@@ -112,6 +120,10 @@ export function buildReportValues(data: SheetData): Record<string, unknown[][]> 
           stock?.brand ?? '',
           numberValue(rental.rental_price),
           numberValue(rental.deposit_amount),
+          rental.deposit_status ?? '',
+          numberValue(rental.deposit_forfeited_amount ?? 0),
+          rental.deposit_resolution_note ?? '',
+          rental.deposit_resolved_at ?? '',
           numberValue(rental.collected_amount),
           calculateNetRevenue(rental),
           rental.notes ?? '',
@@ -193,7 +205,8 @@ export function quoteSheetName(title: string) {
 }
 
 function calculateNetRevenue(rental: RentalRow) {
-  return Math.max(0, numberValue(rental.collected_amount) - numberValue(rental.deposit_amount))
+  return Math.max(0, numberValue(rental.collected_amount) - numberValue(rental.deposit_amount)) +
+    numberValue(rental.deposit_forfeited_amount ?? 0)
 }
 
 function numberValue(value: number | string) {

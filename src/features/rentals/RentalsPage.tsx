@@ -11,7 +11,9 @@ import {
   Pencil,
   Printer
 } from 'lucide-react'
-import type { RentalOrder, RentalShippingUpdate, RentalStatus, DepositStatus } from './rentalTypes'
+import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './rentalTypes'
+import type { DepositResolutionDraft } from './depositResolution'
+import { normalizeCurrencyAmount, toCents } from './depositResolution'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import { findOpenRentalConflict, resolveRentalPrice, calculateReturnDate } from './rentalRules'
@@ -39,8 +41,8 @@ interface RentalsPageProps {
   onDeleteRental?: (rentalId: string | string[]) => void
   /** ยกเลิกออเดอร์ — ปล่อยคิวปฏิทินของชุดทันที */
   onCancelRental?: (rentalId: string | string[]) => void
-  /** อัปเดต deposit_status ของออเดอร์หลังคืนชุด */
-  onUpdateDepositStatus?: (rentalId: string | string[], depositStatus: DepositStatus) => void
+  /** ปิดเคสเงินมัดจำของออเดอร์หลังคืนชุด */
+  onResolveDeposit?: (rentalId: string | string[], resolution: DepositResolutionDraft) => void
   /** แก้ไข field ของออเดอร์ตาม status-aware rules */
   onEditRentalFields?: (rentalId: string, patch: Record<string, unknown>, skipConflictCheck?: boolean) => Promise<boolean | void>
 
@@ -86,7 +88,7 @@ export function RentalsPage({
   onUpdateRentalStatus,
   onDeleteRental,
   onCancelRental,
-  onUpdateDepositStatus,
+  onResolveDeposit,
   onEditRentalFields,
 
   // Optional external controls
@@ -111,6 +113,11 @@ export function RentalsPage({
 
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false)
   const [isDeliveryMethodModalOpen, setIsDeliveryMethodModalOpen] = useState(false)
+  const [isForfeitDepositOpen, setIsForfeitDepositOpen] = useState(false)
+  const [forfeitMode, setForfeitMode] = useState<'full' | 'partial'>('full')
+  const [forfeitAmount, setForfeitAmount] = useState('')
+  const [forfeitNote, setForfeitNote] = useState('')
+  const [forfeitError, setForfeitError] = useState('')
 
   // Auto-open detail panel on mobile if an external selected rental is provided
   useEffect(() => {
@@ -343,7 +350,7 @@ export function RentalsPage({
     if (/^PR-ORD-\d{6}-\d{3}$/.test(orderCode)) {
       return orderCode
     }
-    if (/^PR-ORD-\d+-\d+$/.test(orderCode)) {
+    if (/^PR-ORD-(?!\d{6}-\d{3}$)\d+-\d+$/.test(orderCode)) {
       return orderCode.replace(/-\d+$/, '')
     }
     return orderCode
@@ -510,7 +517,30 @@ export function RentalsPage({
     return calculateCustomerInsights(selectedRental.customer, rentals, todayStr)
   }, [selectedRental, rentals, todayStr])
 
+  const selectedDepositRows = useMemo(() => {
+    return selectedRental?.rentals.filter((rental) => rental.depositAmount > 0) ?? []
+  }, [selectedRental])
+  const selectedDepositTotal = useMemo(() => {
+    return selectedDepositRows.reduce((sum, rental) => sum + rental.depositAmount, 0)
+  }, [selectedDepositRows])
+  const selectedDepositResolved = selectedDepositRows.length > 0 && selectedDepositRows.every(
+    (rental) => rental.depositStatus === 'returned' || rental.depositStatus === 'forfeited'
+  )
+  const selectedDepositForfeitedTotal = selectedDepositRows.reduce(
+    (sum, rental) => sum + (rental.depositForfeitedAmount ?? 0),
+    0
+  )
+  const selectedDepositWasForfeited = selectedDepositRows.some((rental) => rental.depositStatus === 'forfeited')
+
   const selectedShippingMethod = selectedRental?.rentals.find((rental) => rental.shippingMethod)?.shippingMethod
+
+  useEffect(() => {
+    setIsForfeitDepositOpen(false)
+    setForfeitMode('full')
+    setForfeitAmount(selectedDepositTotal ? String(selectedDepositTotal) : '')
+    setForfeitNote('')
+    setForfeitError('')
+  }, [selectedRental?.orderCode, selectedDepositTotal])
 
   const closeDeliveryMethodModal = () => setIsDeliveryMethodModalOpen(false)
 
@@ -526,6 +556,49 @@ export function RentalsPage({
     } else {
       window.alert('กรุณากรอกเลขพัสดุก่อนบันทึกการส่งไปรษณีย์ไทย')
     }
+  }
+
+  const handleRefundDeposit = () => {
+    if (!selectedRental || !onResolveDeposit) return
+    if (window.confirm('ยืนยันว่าคืนเงินมัดจำให้ลูกค้าแล้ว?')) {
+      onResolveDeposit(selectedDepositRows.map((rental) => rental.id), { depositStatus: 'returned' })
+    }
+  }
+
+  const openForfeitDeposit = () => {
+    setForfeitMode('full')
+    setForfeitAmount(selectedDepositTotal ? String(selectedDepositTotal) : '')
+    setForfeitNote('')
+    setForfeitError('')
+    setIsForfeitDepositOpen(true)
+  }
+
+  const handleSubmitForfeitDeposit = () => {
+    if (!selectedRental || !onResolveDeposit) return
+    const rawAmount = Number(forfeitAmount)
+    const amountCents = toCents(rawAmount)
+    const amount = normalizeCurrencyAmount(rawAmount)
+    const note = forfeitNote.trim()
+
+    if (!Number.isFinite(rawAmount) || amountCents <= 0) {
+      setForfeitError('กรุณากรอกจำนวนเงินที่ยึดมากกว่า 0')
+      return
+    }
+    if (amount > selectedDepositTotal) {
+      setForfeitError('จำนวนเงินที่ยึดต้องไม่เกินยอดมัดจำทั้งหมด')
+      return
+    }
+    if (!note) {
+      setForfeitError('กรุณาระบุเหตุผลการยึดมัดจำ')
+      return
+    }
+
+    onResolveDeposit(selectedDepositRows.map((rental) => rental.id), {
+      depositStatus: 'forfeited',
+      forfeitedAmount: amount,
+      note,
+    })
+    setIsForfeitDepositOpen(false)
   }
 
   const handleConfirmStorefrontPickup = () => {
@@ -1118,43 +1191,145 @@ export function RentalsPage({
                   </div>
                   )}
                   {/* Deposit return controls */}
-                  {selectedRental.status === 'returned' && selectedRental.rentals.some(r => r.depositAmount > 0) && onUpdateDepositStatus && (
+                  {selectedRental.status === 'returned' && selectedDepositRows.length > 0 && onResolveDeposit && (
                     <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
                       <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
                         💰 จัดการเงินมัดจำ
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm('ยืนยันว่าคืนเงินมัดจำให้ลูกค้าแล้ว?')) {
-                              onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'returned')
-                            }
-                          }}
+                      {selectedDepositResolved ? (
+                        <div
+                          role="status"
                           style={{
-                            padding: '8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.4)',
-                            background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success-color)',
-                            cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                            padding: '9px 10px',
+                            borderRadius: '6px',
+                            border: selectedDepositWasForfeited ? '1px solid rgba(249, 115, 22, 0.55)' : '1px solid rgba(16, 185, 129, 0.45)',
+                            background: selectedDepositWasForfeited ? 'rgba(249, 115, 22, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+                            color: selectedDepositWasForfeited ? '#fb923c' : 'var(--success-color)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            textAlign: 'center'
                           }}
                         >
-                          💸 คืนมัดจำแล้ว
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm('ยืนยันการยึดมัดจำ?')) {
-                              onUpdateDepositStatus(selectedRental.rentals.map(r => r.id), 'forfeited')
-                            }
-                          }}
-                          style={{
-                            padding: '8px', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.4)',
-                            background: 'rgba(249, 115, 22, 0.08)', color: '#f97316',
-                            cursor: 'pointer', fontSize: '12px', fontWeight: 600
-                          }}
-                        >
-                          ⚠️ ยึดมัดจำ
-                        </button>
-                      </div>
+                          {selectedDepositWasForfeited
+                            ? `🚫 ยึดมัดจำ (${formatBaht(selectedDepositForfeitedTotal)})`
+                            : '✅ คืนมัดจำแล้ว'}
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={handleRefundDeposit}
+                              style={{
+                                padding: '8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.4)',
+                                background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success-color)',
+                                cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                              }}
+                            >
+                              💸 คืนมัดจำแล้ว
+                            </button>
+                            <button
+                              type="button"
+                              onClick={openForfeitDeposit}
+                              style={{
+                                padding: '8px', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.4)',
+                                background: 'rgba(249, 115, 22, 0.08)', color: '#f97316',
+                                cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                              }}
+                            >
+                              ⚠️ ยึดมัดจำ
+                            </button>
+                          </div>
+                          {isForfeitDepositOpen && (
+                            <div style={{ marginTop: '10px', padding: '10px', borderRadius: '8px', border: '1px solid rgba(249, 115, 22, 0.35)', background: 'rgba(249, 115, 22, 0.06)' }}>
+                              <div style={{ fontSize: '12px', color: 'var(--text-bright)', fontWeight: 700, marginBottom: '8px' }}>
+                                ต้องการยึดมัดจำเต็มจำนวน หรือยึดบางส่วน?
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setForfeitMode('full')
+                                    setForfeitAmount(String(selectedDepositTotal))
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '7px',
+                                    borderRadius: '6px',
+                                    border: forfeitMode === 'full' ? '1px solid #fb923c' : '1px solid var(--border-color)',
+                                    background: forfeitMode === 'full' ? 'rgba(249, 115, 22, 0.18)' : 'rgba(255,255,255,0.03)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  เต็มจำนวน
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setForfeitMode('partial')}
+                                  style={{
+                                    flex: 1,
+                                    padding: '7px',
+                                    borderRadius: '6px',
+                                    border: forfeitMode === 'partial' ? '1px solid #fb923c' : '1px solid var(--border-color)',
+                                    background: forfeitMode === 'partial' ? 'rgba(249, 115, 22, 0.18)' : 'rgba(255,255,255,0.03)',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  บางส่วน
+                                </button>
+                              </div>
+                              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                จำนวนเงินที่ยึด/ปรับ
+                              </label>
+                              <input
+                                aria-label="จำนวนเงินที่ยึด/ปรับ"
+                                type="number"
+                                min="0"
+                                max={selectedDepositTotal}
+                                step="0.01"
+                                value={forfeitAmount}
+                                onChange={(event) => {
+                                  setForfeitMode('partial')
+                                  setForfeitAmount(event.target.value)
+                                }}
+                                style={{ width: '100%', marginBottom: '8px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#fff' }}
+                              />
+                              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                หมายเหตุเหตุผลการยึด
+                              </label>
+                              <textarea
+                                aria-label="หมายเหตุเหตุผลการยึด"
+                                value={forfeitNote}
+                                onChange={(event) => setForfeitNote(event.target.value)}
+                                rows={2}
+                                placeholder="เช่น ชุดขาด, คราบไวนิล"
+                                style={{ width: '100%', resize: 'vertical', marginBottom: '8px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#fff' }}
+                              />
+                              {forfeitError && <div role="alert" style={{ color: '#fca5a5', fontSize: '11px', marginBottom: '8px' }}>{forfeitError}</div>}
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={handleSubmitForfeitDeposit}
+                                  style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.5)', background: 'rgba(249, 115, 22, 0.18)', color: '#fb923c', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                                >
+                                  บันทึกยึดมัดจำ
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsForfeitDepositOpen(false)}
+                                  style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '12px' }}
+                                >
+                                  ยกเลิก
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </section>

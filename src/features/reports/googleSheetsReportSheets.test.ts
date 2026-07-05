@@ -49,6 +49,10 @@ const sheetData: SheetData = {
       deposit_amount: '500',
       collected_amount: '2000',
       status: 'returned',
+      deposit_status: 'forfeited',
+      deposit_forfeited_amount: '200',
+      deposit_resolution_note: 'ชุดขาด',
+      deposit_resolved_at: '2026-06-22T12:00:00.000Z',
       notes: 'paid',
       created_at: '2026-06-18T00:00:00.000Z',
       updated_at: '2026-06-22T00:00:00.000Z',
@@ -62,7 +66,7 @@ describe('Google Sheets report sheet helpers', () => {
 
     expect(values.Summary[1]).toEqual(['Shop', 'Precious Siam'])
     expect(values.Summary).toContainEqual(['Total Rentals', 1])
-    expect(values.Summary).toContainEqual(['Net Rental Revenue', 1500])
+    expect(values.Summary).toContainEqual(['Net Rental Revenue', 1700])
     expect(values.Rentals[1]).toEqual([
       'PR-ORD-001',
       '2026-06-20',
@@ -77,13 +81,17 @@ describe('Google Sheets report sheet helpers', () => {
       'Precious',
       1500,
       500,
+      'forfeited',
+      200,
+      'ชุดขาด',
+      '2026-06-22T12:00:00.000Z',
       2000,
-      1500,
+      1700,
       'paid',
       '2026-06-18T00:00:00.000Z',
       '2026-06-22T00:00:00.000Z',
     ])
-    expect(values['Dress Metrics'][1]).toContain(1500)
+    expect(values['Dress Metrics'][1]).toContain(1700)
     expect(values.Customers[1]).toContain('Jane Customer')
   })
 
