@@ -29,7 +29,7 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
 
   if (stockError) throw stockError
 
-  const products: ProductWithStockSummary[] = await Promise.all((productsData ?? []).map(async row => ({
+  const products: ProductWithStockSummary[] = (productsData ?? []).map(row => ({
     id: row.id,
     baseSku: row.base_sku,
     productName: row.product_name,
@@ -40,13 +40,13 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
     rentalTiers: Array.isArray(row.rental_tiers) ? row.rental_tiers : [],
     lateFeeRule: row.late_fee_rule ?? '',
     depositAmount: Number(row.deposit_amount) || 0,
-    imageUrls: await Promise.all((row.image_urls ?? []).map((imageRef: string) => createProductImageDisplayUrl(supabase, imageRef))),
+    imageUrls: (row.image_urls ?? []).map((imageRef: string) => createProductImageDisplayUrl(supabase, imageRef)),
     publicVisible: row.public_visible,
     isFeatured: row.is_featured,
     displayOrder: row.display_order,
     createdAt: row.created_at,
     stockItems: []
-  })))
+  }))
 
   const productMap = new Map(products.map(p => [p.id, p]))
 
@@ -68,19 +68,12 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
   return products
 }
 
-async function createProductImageDisplayUrl(supabase: SupabaseClient, imageRef: string) {
+export function createProductImageDisplayUrl(supabase: SupabaseClient, imageRef: string) {
   const storageRef = extractProductImageRef(imageRef)
   if (!storageRef) return imageRef
 
-  const bucketsToTry = storageRef.bucket ? [storageRef.bucket] : PRODUCT_IMAGE_BUCKETS
-  for (const bucket of bucketsToTry) {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(storageRef.path, PRODUCT_IMAGE_SIGNED_URL_TTL_SECONDS)
-
-    if (!error && data?.signedUrl) return data.signedUrl
-  }
-
+  // The buckets ('costumes', 'stock-images') are configured as PUBLIC in Supabase.
+  // We can just use getPublicUrl which is synchronous and requires 0 API calls.
   return supabase.storage.from(storageRef.bucket ?? COSTUMES_BUCKET).getPublicUrl(storageRef.path).data.publicUrl
 }
 
