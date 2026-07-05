@@ -52,7 +52,7 @@ type CustomerCatalogPageProps = {
   onBackToInventory?: () => void
   isAdminMode?: boolean
   onToggleFeatured?: (id: string, isFeatured: boolean) => void
-  onSaveOrder?: (orderedIds: string[]) => void
+  onSaveOrder?: (orderedIds: string[]) => void | Promise<void>
 }
 
 export function CustomerCatalogPage({
@@ -90,6 +90,7 @@ export function CustomerCatalogPage({
   const [isEditModeActive, setIsEditModeActive] = useState(false)
   const [orderedItemIds, setOrderedItemIds] = useState<string[]>([])
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
 
   // Sync orderedItemIds when items change (e.g. initial load, after save)
   useEffect(() => {
@@ -121,10 +122,18 @@ export function CustomerCatalogPage({
     setHasOrderChanged(true)
   }
 
-  function handleSaveOrder() {
-    if (!onSaveOrder) return
-    onSaveOrder(orderedItemIds)
-    setHasOrderChanged(false)
+  async function handleSaveOrder() {
+    if (!onSaveOrder || isSavingOrder) return
+
+    setIsSavingOrder(true)
+    try {
+      await onSaveOrder(orderedItemIds)
+      setHasOrderChanged(false)
+    } catch {
+      // Keep the order marked dirty when persistence fails.
+    } finally {
+      setIsSavingOrder(false)
+    }
   }
 
   const today = getTodayString()
@@ -535,17 +544,18 @@ export function CustomerCatalogPage({
 
       {isAdminMode && (
         <div className="prc-admin-toolbar">
-          <button 
+          <button
             className={`prc-edit-mode-btn ${isEditModeActive ? 'active' : ''}`}
             onClick={() => setIsEditModeActive(!isEditModeActive)}
+            disabled={isSavingOrder}
           >
             <Pencil size={16} />
             {isEditModeActive ? 'ปิดโหมดจัดเรียง' : 'โหมดจัดเรียง (Edit Mode)'}
           </button>
           {isEditModeActive && hasOrderChanged && (
-            <button className="prc-save-order-btn" onClick={handleSaveOrder}>
+            <button className="prc-save-order-btn" onClick={handleSaveOrder} disabled={isSavingOrder}>
               <Save size={16} />
-              บันทึกลำดับใหม่
+              {isSavingOrder ? 'กำลังบันทึก...' : 'บันทึกลำดับใหม่'}
             </button>
           )}
         </div>

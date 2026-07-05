@@ -335,10 +335,14 @@ export async function updateRemoteProductFeatured(supabase: SupabaseClient, shop
 
 export async function bulkUpdateRemoteDisplayOrder(
   supabase: SupabaseClient,
+  shopId: string,
   updates: { id: string; displayOrder: number }[]
 ) {
   const payload = updates.map(u => ({ id: u.id, display_order: u.displayOrder }))
-  const { error } = await supabase.rpc('bulk_update_display_order', { p_updates: payload })
+  const { error } = await supabase.rpc('bulk_update_display_order', {
+    p_shop_id: shopId,
+    p_updates: payload,
+  })
   if (error) throw error
 }
 

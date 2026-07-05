@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  bulkUpdateRemoteDisplayOrder,
   countRemoteRentalsForProduct,
   createProductWithVariants,
   deleteRemoteProduct,
@@ -413,5 +414,25 @@ describe('stockRemote', () => {
       ['shop_id', 'shop_1'],
     ])
     expect(removedPaths).toEqual([['shop_1/ruby-front.webp']])
+  })
+
+  it('passes shop scope into the bulk display order rpc', async () => {
+    const rpc = vi.fn(async () => ({ error: null }))
+    const supabase = {
+      rpc,
+    } as unknown as SupabaseClient
+
+    await bulkUpdateRemoteDisplayOrder(supabase, 'shop_1', [
+      { id: 'product_1', displayOrder: 0 },
+      { id: 'product_2', displayOrder: 1 },
+    ])
+
+    expect(rpc).toHaveBeenCalledWith('bulk_update_display_order', {
+      p_shop_id: 'shop_1',
+      p_updates: [
+        { id: 'product_1', display_order: 0 },
+        { id: 'product_2', display_order: 1 },
+      ],
+    })
   })
 })

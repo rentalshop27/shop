@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import './index.css'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
+import { getLocalDateString } from './features/dashboard/dashboardMetrics'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals } from './features/rentals/rentalSeed'
@@ -77,6 +78,7 @@ import {
   validateThaiPhone,
 } from './features/customers/customerRules'
 import { TextField } from './components/TextField'
+import { buildCatalogSizeSummary } from './features/catalog/catalogAvailability'
 
 const emptyDraft: CustomerDraft = {
   fullName: '',
@@ -621,6 +623,7 @@ function PrivateApp() {
 
   const handleSaveDisplayOrder = async (orderedIds: string[]) => {
     if (!currentShop || !supabase) return
+    const previousProducts = products
     try {
       const updates = orderedIds.map((id, index) => ({ id, displayOrder: index }))
       // Optimistic update
@@ -631,12 +634,13 @@ function PrivateApp() {
           displayOrder: orderMap.has(p.id) ? orderMap.get(p.id)! : p.displayOrder
         }))
       })
-      await bulkUpdateRemoteDisplayOrder(supabase, updates)
+      await bulkUpdateRemoteDisplayOrder(supabase, currentShop.id, updates)
       alert('บันทึกลำดับชุดสำเร็จ')
     } catch (err) {
+      setProducts(previousProducts)
       console.error(err)
       alert('เกิดข้อผิดพลาดในการบันทึกลำดับชุด')
-      // Ideal: reload products from server on error
+      throw err
     }
   }
 
@@ -1847,6 +1851,7 @@ function PrivateApp() {
     incomplete: activeCustomers.filter((customer) => customer.profileStatus === 'incomplete').length,
     risk: activeCustomers.filter((customer) => customer.riskFlag === 'has_risk').length,
   }
+  const catalogToday = getLocalDateString(new Date())
 
   if (!sessionReady) {
     return <LoadingScreen />
@@ -1995,16 +2000,11 @@ function PrivateApp() {
                 isFeatured: p.isFeatured,
                 displayOrder: p.displayOrder,
                 createdAt: p.createdAt,
-                sizeSummary: Object.values(
-                  p.stockItems.reduce((acc, si) => {
-                    if (!acc[si.size]) acc[si.size] = { size: si.size, total: 0, available: 0 }
-                    acc[si.size].total += 1
-                    if (si.status === 'available' && !rentals.some(r => r.costume.sku === si.sku && ['booked', 'active'].includes(r.status))) {
-                      acc[si.size].available += 1
-                    }
-                    return acc
-                  }, {} as Record<string, { size: string, total: number, available: number }>)
-                )
+                sizeSummary: buildCatalogSizeSummary(
+                  p.stockItems,
+                  rentals,
+                  catalogToday,
+                ),
               }))}
               rentals={rentals}
               shopName={currentShop?.name}
