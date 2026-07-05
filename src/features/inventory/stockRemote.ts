@@ -4,7 +4,6 @@ import type { ProductWithStockSummary, StockItemStatus, ProductDraft } from './i
 const COSTUMES_BUCKET = 'costumes'
 const LEGACY_STOCK_IMAGES_BUCKET = 'stock-images'
 const PRODUCT_IMAGE_BUCKETS = [COSTUMES_BUCKET, LEGACY_STOCK_IMAGES_BUCKET] as const
-const PRODUCT_IMAGE_SIGNED_URL_TTL_SECONDS = 60 * 60
 
 type ProductImageBucket = typeof PRODUCT_IMAGE_BUCKETS[number]
 type ProductImageRef = {
