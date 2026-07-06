@@ -538,7 +538,7 @@ export function RentalsPage({
     return selectedDepositRows.reduce((sum, rental) => sum + rental.depositAmount, 0)
   }, [selectedDepositRows])
   const selectedDepositResolved = selectedDepositRows.length > 0 && selectedDepositRows.every(
-    (rental) => rental.depositStatus === 'returned' || rental.depositStatus === 'forfeited'
+    (rental) => rental.depositAmount === 0 || rental.depositStatus === 'returned' || rental.depositStatus === 'forfeited'
   )
   const selectedDepositForfeitedTotal = selectedDepositRows.reduce(
     (sum, rental) => sum + (rental.depositForfeitedAmount ?? 0),
@@ -1529,8 +1529,8 @@ export function RentalsPage({
                         <div className="timeline-date">{selectedRental.returnDate}</div>
                       </div>
                     </div>
-                    <div className={`timeline-item ${selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? 'active' : ''}`}>
-                      <div className="timeline-icon">{selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? '●' : '○'}</div>
+                    <div className={`timeline-item ${selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositAmount === 0 || r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? 'active' : ''}`}>
+                      <div className="timeline-icon">{selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositAmount === 0 || r.depositStatus === 'returned' || r.depositStatus === 'forfeited') ? '●' : '○'}</div>
                       <div className="timeline-content">
                         <div className="timeline-title">
                           {selectedRental.rentals.reduce((sum, r) => sum + r.depositAmount, 0) === 0
@@ -1538,7 +1538,7 @@ export function RentalsPage({
                             : 'ซัก & ปิดงาน (เคลียร์มัดจำ)'}
                         </div>
                         <div className="timeline-date">
-                          {selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositStatus === 'returned' || r.depositStatus === 'forfeited')
+                          {selectedRental.status === 'returned' && selectedRental.rentals.every(r => r.depositAmount === 0 || r.depositStatus === 'returned' || r.depositStatus === 'forfeited')
                             ? (selectedRental.rentals[0]?.depositResolvedAt ? selectedRental.rentals[0].depositResolvedAt.split('T')[0] : getTodayString())
                             : '-'}
                         </div>
