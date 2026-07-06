@@ -27,7 +27,7 @@ export function getShopPermissions(role: string | null | undefined): ShopPermiss
     canViewAuditLogs: normalizedRole !== 'staff',
     canAccessSettings: normalizedRole !== 'staff',
     canManageShopSettings: normalizedRole === 'owner',
-    canManageStaff: normalizedRole === 'owner' || normalizedRole === 'manager',
+    canManageStaff: normalizedRole === 'owner',
     canManageMoney: normalizedRole === 'owner' || normalizedRole === 'manager',
     canManageDestructiveActions: normalizedRole === 'owner' || normalizedRole === 'manager',
   }

@@ -20,5 +20,6 @@ describe('shopPermissions', () => {
     expect(permissions.canManageMoney).toBe(true)
     expect(permissions.canManageDestructiveActions).toBe(true)
     expect(permissions.canManageShopSettings).toBe(false)
+    expect(permissions.canManageStaff).toBe(false)
   })
 })

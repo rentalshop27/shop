@@ -91,12 +91,62 @@ function getLocalDateString(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function isDateInRange(dateStr: string, range: DateRange) {
+export function isDateInRange(dateStr: string, range: DateRange) {
   return dateStr >= range.start && dateStr <= range.end
 }
 
-function calculateNetRentalRevenue(rental: RentalOrder) {
-  return Math.max(0, rental.collectedAmount - rental.depositAmount) + (rental.depositForfeitedAmount ?? 0)
+export function calculateNetRentalRevenue(rental: RentalOrder) {
+  return Math.max(0, rental.collectedAmount - rental.depositAmount)
+    + (rental.depositForfeitedAmount ?? 0)
+    + (rental.fineAmount ?? 0)
+}
+
+export function buildDateRangeFromDates({
+  mode,
+  customStartDate,
+  customEndDate,
+  todayStr,
+  candidateDates,
+}: {
+  mode: DateRangeMode
+  customStartDate: string
+  customEndDate: string
+  todayStr: string
+  candidateDates: string[]
+}): DateRange {
+  const end = todayStr
+  let start = '2020-01-01'
+
+  if (mode === '30days') {
+    const d = new Date(`${todayStr}T00:00:00`)
+    d.setDate(d.getDate() - 30)
+    return { start: getLocalDateString(d), end }
+  }
+
+  if (mode === 'this_month') {
+    const [year, month] = todayStr.split('-')
+    return { start: `${year}-${month}-01`, end }
+  }
+
+  if (mode === '90days') {
+    const d = new Date(`${todayStr}T00:00:00`)
+    d.setDate(d.getDate() - 90)
+    return { start: getLocalDateString(d), end }
+  }
+
+  if (mode === 'custom') {
+    if (customStartDate) start = customStartDate
+    return { start, end: customEndDate || end }
+  }
+
+  const allDates = candidateDates.filter(Boolean).sort()
+  if (allDates.length > 0) {
+    start = allDates[0]
+    return { start, end: [end, allDates[allDates.length - 1]].sort()[1] }
+  }
+
+  start = getLocalDateString(new Date(toUtcDay(todayStr) - 365 * 24 * 60 * 60 * 1000))
+  return { start, end }
 }
 
 function getMonthKey(dateStr: string) {
@@ -221,35 +271,18 @@ export function buildReportsDateRange({
   rentals: RentalOrder[]
   todayStr: string
 }): DateRange {
-  const end = todayStr
-  let start = '2020-01-01'
+  const creationDates = stockItems
+    .map((item) => (item.createdAt ? item.createdAt.substring(0, 10) : ''))
+    .filter(Boolean)
+  const rentalDates = rentals.flatMap((rental) => [rental.pickupDate, rental.returnDate].filter(Boolean))
 
-  if (mode === '30days') {
-    const d = new Date(`${todayStr}T00:00:00`)
-    d.setDate(d.getDate() - 30)
-    start = getLocalDateString(d)
-  } else if (mode === 'this_month') {
-    const [year, month] = todayStr.split('-')
-    start = `${year}-${month}-01`
-  } else if (mode === '90days') {
-    const d = new Date(`${todayStr}T00:00:00`)
-    d.setDate(d.getDate() - 90)
-    start = getLocalDateString(d)
-  } else if (mode === 'custom') {
-    if (customStartDate) start = customStartDate
-    return { start, end: customEndDate || end }
-  } else {
-    const creationDates = stockItems.map(item => item.createdAt ? item.createdAt.substring(0, 10) : '').filter(Boolean)
-    const rentalDates = rentals.flatMap(rental => [rental.pickupDate, rental.returnDate].filter(Boolean))
-    const allDates = [...creationDates, ...rentalDates].sort()
-    if (allDates.length > 0) {
-      start = allDates[0]
-      return { start, end: [end, allDates[allDates.length - 1]].sort()[1] }
-    }
-    start = getLocalDateString(new Date(toUtcDay(todayStr) - 365 * 24 * 60 * 60 * 1000))
-  }
-
-  return { start, end }
+  return buildDateRangeFromDates({
+    mode,
+    customStartDate,
+    customEndDate,
+    todayStr,
+    candidateDates: [...creationDates, ...rentalDates],
+  })
 }
 
 export function buildDressReportsData(

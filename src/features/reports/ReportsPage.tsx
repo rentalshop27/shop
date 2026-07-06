@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   TrendingUp,
   Wallet,
@@ -299,7 +299,7 @@ export function ReportsPage({
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null
     return sortOrder === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />
-  };
+  }
 
   const handleSyncGoogleSheets = async () => {
     if (!supabase || !shopId || isGoogleReportSyncing) return

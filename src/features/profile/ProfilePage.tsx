@@ -1,7 +1,13 @@
 import { useState } from 'react'
-import { Building2, Check, KeyRound, Link2, LogOut, Mail, Store, UserRound } from 'lucide-react'
+import { Building2, Check, KeyRound, Link2, LogOut, Mail, Store, UserRound, Shield } from 'lucide-react'
 import type { ShopSummary } from '../customers/customerRemote'
 import { getGoogleOAuthSetupState } from '../google/googleOAuth'
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'เจ้าของร้าน (Owner)',
+  manager: 'ผู้จัดการ (Manager)',
+  staff: 'พนักงาน (Staff)',
+}
 
 interface ProfilePageProps {
   email: string | null
@@ -88,13 +94,22 @@ export function ProfilePage({
           </div>
 
           {currentShop && (
-            <div className="profile-account-row">
-              <Store size={20} />
-              <div>
-                <span>ร้านที่กำลังใช้งาน</span>
-                <strong>{currentShop.name}</strong>
+            <>
+              <div className="profile-account-row">
+                <Store size={20} />
+                <div>
+                  <span>ร้านที่กำลังใช้งาน</span>
+                  <strong>{currentShop.name}</strong>
+                </div>
               </div>
-            </div>
+              <div className="profile-account-row">
+                <Shield size={20} />
+                <div>
+                  <span>ตำแหน่ง (Role)</span>
+                  <strong>{ROLE_LABELS[currentShop.role] || currentShop.role}</strong>
+                </div>
+              </div>
+            </>
           )}
         </section>
 
@@ -144,68 +159,70 @@ export function ProfilePage({
           )}
         </section>
 
-        <section className="panel profile-panel" aria-labelledby="google-title">
-          <div className="profile-panel-heading">
-            <span className="profile-icon"><Link2 size={22} /></span>
-            <div>
-              <h2 id="google-title">Google OAuth</h2>
-              <p>เตรียมค่าเชื่อม Google Sheets ของร้านที่เลือกอยู่</p>
-            </div>
-          </div>
-
-          <div className="profile-oauth-stack">
-            <div className="profile-account-row">
-              <KeyRound size={20} />
+        {(!currentShop || currentShop.role !== 'staff') && (
+          <section className="panel profile-panel" aria-labelledby="google-title">
+            <div className="profile-panel-heading">
+              <span className="profile-icon"><Link2 size={22} /></span>
               <div>
-                <span>OAuth Client ID</span>
-                <strong>{googleOAuth.clientId || 'ยังไม่ได้ตั้งค่า VITE_GOOGLE_OAUTH_CLIENT_ID'}</strong>
+                <h2 id="google-title">Google OAuth</h2>
+                <p>เตรียมค่าเชื่อม Google Sheets และ Google Drive ของร้านที่เลือกอยู่</p>
               </div>
             </div>
 
-            <div className="profile-oauth-field">
-              <span>Authorized redirect URI</span>
-              <code>{googleOAuth.callbackUrl || 'ตั้งค่า VITE_SUPABASE_URL เพื่อสร้าง callback URL'}</code>
-            </div>
+            <div className="profile-oauth-stack">
+              <div className="profile-account-row">
+                <KeyRound size={20} />
+                <div>
+                  <span>OAuth Client ID</span>
+                  <strong>{googleOAuth.clientId || 'ยังไม่ได้ตั้งค่า VITE_GOOGLE_OAUTH_CLIENT_ID'}</strong>
+                </div>
+              </div>
 
-            <div className="profile-oauth-field">
-              <span>App return URL</span>
-              <code>{googleOAuth.returnUrl || 'ตั้งค่า VITE_PUBLIC_APP_URL หรือเปิดแอปผ่านโดเมนจริง'}</code>
-            </div>
+              <div className="profile-oauth-field">
+                <span>Authorized redirect URI</span>
+                <code>{googleOAuth.callbackUrl || 'ตั้งค่า VITE_SUPABASE_URL เพื่อสร้าง callback URL'}</code>
+              </div>
 
-            <div className="profile-oauth-actions">
-              <a
-                className={`primary-button profile-connect-button ${!googleOAuth.canStartOAuth ? 'disabled' : ''}`}
-                href={googleOAuth.startUrl || undefined}
-                aria-disabled={!googleOAuth.canStartOAuth}
-                onClick={(event) => {
-                  if (!googleOAuth.canStartOAuth) {
-                    event.preventDefault()
-                  }
-                }}
+              <div className="profile-oauth-field">
+                <span>App return URL</span>
+                <code>{googleOAuth.returnUrl || 'ตั้งค่า VITE_PUBLIC_APP_URL หรือเปิดแอปผ่านโดเมนจริง'}</code>
+              </div>
+
+              <div className="profile-oauth-actions">
+                <a
+                  className={`primary-button profile-connect-button ${!googleOAuth.canStartOAuth ? 'disabled' : ''}`}
+                  href={googleOAuth.startUrl || undefined}
+                  aria-disabled={!googleOAuth.canStartOAuth}
+                  onClick={(event) => {
+                    if (!googleOAuth.canStartOAuth) {
+                      event.preventDefault()
+                    }
+                  }}
+                >
+                  <Link2 size={18} />
+                  เชื่อม Google
+                </a>
+              </div>
+
+              <div
+                className={`profile-oauth-note ${googleOAuth.canStartOAuth ? 'ready' : 'warning'}`}
+                role="status"
               >
-                <Link2 size={18} />
-                เชื่อม Google
-              </a>
-            </div>
-
-            <div
-              className={`profile-oauth-note ${googleOAuth.canStartOAuth ? 'ready' : 'warning'}`}
-              role="status"
-            >
-              {googleOAuth.canStartOAuth
-                ? `พร้อมเชื่อม Google สำหรับร้าน ${currentShop?.name || ''}`.trim()
-                : !googleOAuth.hasSelectedShop
-                  ? 'เลือกร้านก่อน แล้วค่อยใช้ค่าชุดนี้สำหรับปุ่มเชื่อม Google ของร้านนั้น'
-                  : 'ตั้งค่า env ให้ครบก่อน แล้วค่อยนำ callback URL นี้ไปใส่ใน Google Cloud'}
-            </div>
-
-            {googleOAuthResult && (
-              <div className={`profile-oauth-note ${googleOAuthResult.tone}`} role="status">
-                {googleOAuthResult.message}
+                {googleOAuth.canStartOAuth
+                  ? `พร้อมเชื่อม Google สำหรับร้าน ${currentShop?.name || ''}`.trim()
+                  : !googleOAuth.hasSelectedShop
+                    ? 'เลือกร้านก่อน แล้วค่อยใช้ค่าชุดนี้สำหรับปุ่มเชื่อม Google ของร้านนั้น'
+                    : 'ตั้งค่า env ให้ครบก่อน แล้วค่อยนำ callback URL นี้ไปใส่ใน Google Cloud'}
               </div>
-            )}
-          </div>
-        </section>
+
+              {googleOAuthResult && (
+                <div className={`profile-oauth-note ${googleOAuthResult.tone}`} role="status">
+                  {googleOAuthResult.message}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {onLogout && (
           <section className="panel profile-panel profile-logout-panel" aria-labelledby="logout-title">

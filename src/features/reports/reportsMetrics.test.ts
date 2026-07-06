@@ -91,6 +91,21 @@ describe('buildGeneralStoreMetrics', () => {
     }))
   })
 
+  it('includes extra fines in report revenue totals', () => {
+    const metrics = buildGeneralStoreMetrics([
+      makeRental({
+        depositStatus: 'returned',
+        fineAmount: 250,
+      }),
+    ])
+
+    expect(metrics.totalRevenue).toBe(1450)
+    expect(metrics.avgOrderValue).toBe(1450)
+    expect(metrics.monthlyRevenueTrends[0]).toEqual(expect.objectContaining({
+      revenue: 1450,
+    }))
+  })
+
   it('keeps returned but unresolved deposits in held totals', () => {
     const metrics = buildGeneralStoreMetrics([makeRental()])
 

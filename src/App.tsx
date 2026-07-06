@@ -2348,6 +2348,7 @@ function PrivateApp() {
 
           {activeTab === 'settings' && (
             <LazySettingsPage
+              shopId={shopId}
               activeTab={activeSettingsSubTab}
               onTabChange={setSettingsSubTab}
               canManageShopSettings={currentPermissions.canManageShopSettings}

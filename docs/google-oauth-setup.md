@@ -1,6 +1,6 @@
 # Google OAuth Setup
 
-ใช้เอกสารนี้ตอนสร้าง Google OAuth app สำหรับเชื่อม Google Sheets ต่อร้าน
+ใช้เอกสารนี้ตอนสร้าง Google OAuth app สำหรับเชื่อม Google Sheets ต่อร้าน และใช้ Google Drive สำหรับเก็บรูป/เอกสารลูกค้า
 
 ## 1. สร้าง Google Cloud Project
 
@@ -54,4 +54,5 @@ GOOGLE_OAUTH_CLIENT_SECRET=your-google-oauth-client-secret
 
 - `VITE_GOOGLE_OAUTH_CLIENT_ID` เป็นค่าที่ frontend มองเห็นได้
 - `GOOGLE_OAUTH_CLIENT_SECRET` ต้องอยู่เฉพาะใน Edge Function secrets เท่านั้น
+- สิทธิ์ชุดนี้ใช้ทั้ง Google Sheets และ Google Drive
 - ถ้า callback URL ใน Google Cloud ไม่ตรงเป๊ะ ปุ่มเชื่อม Google จะใช้งานไม่ได้

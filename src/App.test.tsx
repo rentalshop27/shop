@@ -416,7 +416,7 @@ describe('App shop selection', () => {
     expect(tabList.querySelectorAll('[role="tab"]')).toHaveLength(3)
 
     fireEvent.click(screen.getByRole('tab', { name: 'สิทธิ์พนักงาน' }))
-    expect(screen.getByText('ระบบจัดการรายชื่อทีมงาน (กำลังพัฒนาสำหรับเฟสถัดไป)')).toBeTruthy()
+    expect(screen.getByText('เพิ่มพนักงานใหม่')).toBeTruthy()
 
     for (const label of ['การแจ้งเตือน', 'เชื่อมต่อระบบ']) {
       const matchingButtons = screen.getAllByRole('button', { name: new RegExp(label) })

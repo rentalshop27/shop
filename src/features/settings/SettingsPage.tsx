@@ -1,6 +1,9 @@
-import { useState } from 'react'
-import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette, Globe2, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette, Globe2, Users, Copy } from 'lucide-react'
+import { getUserFacingErrorMessage } from '../../lib/errorMessages'
 import { sanitizeNumericInput } from '../../lib/numericInput'
+import { supabase } from '../../lib/supabase'
+import { getShopMembers, createShopMember, removeShopMember, type ShopMember } from './shopMembersRemote'
 
 interface SettingsPageProps {
   canManageShopSettings: boolean
@@ -24,6 +27,7 @@ interface SettingsPageProps {
   onUpdateDefaultLateFinePerDay: (fine: number) => void
   activeTab: 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations'
   onTabChange: (tab: 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations') => void
+  shopId: string | null
 }
 
 function cloneRentalTiers(tiers: {days: number; price: number}[]) {
@@ -229,7 +233,7 @@ export function SettingsPage(props: SettingsPageProps) {
         />
       )}
 
-      {activeTab === 'staff' && <StaffPermissionsPlaceholder />}
+      {activeTab === 'staff' && <StaffSettingsTab shopId={props.shopId} />}
     </>
   )
 }
@@ -616,7 +620,116 @@ function InventorySettingsTab(props: InventorySettingsTabProps) {
   )
 }
 
-function StaffPermissionsPlaceholder() {
+function StaffSettingsTab({ shopId }: { shopId: string | null }) {
+  const [members, setMembers] = useState<ShopMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'manager' | 'staff'>('staff')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [createdMemberInfo, setCreatedMemberInfo] = useState<{email: string, password: string} | null>(null)
+
+  useEffect(() => {
+    if (!shopId || !supabase) {
+      setMembers([])
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    setError('')
+
+    void getShopMembers(supabase, shopId)
+      .then((data) => {
+        if (!cancelled) {
+          setMembers(data)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setError(getUserFacingErrorMessage(error))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [shopId])
+
+  async function refreshMembers() {
+    if (!shopId || !supabase) return
+    setLoading(true)
+    setError('')
+    try {
+      const data = await getShopMembers(supabase, shopId)
+      setMembers(data)
+    } catch (error: unknown) {
+      setError(getUserFacingErrorMessage(error))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleAddSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!shopId || !supabase) return
+    if (!email || !password) {
+      setError('กรุณากรอกอีเมลและรหัสผ่านชั่วคราว')
+      return
+    }
+
+    setError('')
+    setSuccess('')
+    setIsSubmitting(true)
+    try {
+      await createShopMember(supabase, shopId, email, password, role)
+      setCreatedMemberInfo({ email, password })
+      setEmail('')
+      setPassword('')
+      setRole('staff')
+      await refreshMembers()
+    } catch (error: unknown) {
+      setError(getUserFacingErrorMessage(error))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleRemoveMember(userId: string) {
+    if (!shopId || !supabase) return
+    const confirmed = window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบพนักงานคนนี้?')
+    if (!confirmed) return
+
+    setError('')
+    setSuccess('')
+    try {
+      await removeShopMember(supabase, shopId, userId)
+      setSuccess('ลบพนักงานเรียบร้อยแล้ว')
+      await refreshMembers()
+    } catch (error: unknown) {
+      setError(getUserFacingErrorMessage(error))
+    }
+  }
+
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert('คัดลอกลงคลิปบอร์ดแล้ว')
+    } catch (err) {
+      console.error('Failed to copy', err)
+    }
+  }
+
   return (
     <section
       id="settings-panel-staff"
@@ -625,14 +738,152 @@ function StaffPermissionsPlaceholder() {
       className="settings-grid"
       style={{ marginTop: 0 }}
     >
-      <section className="panel settings-panel settings-placeholder-panel">
-        <div className="settings-placeholder-icon" aria-hidden="true">
-          <Users size={28} />
+      {createdMemberInfo && (
+        <div className="settings-alert success" style={{ display: 'block', padding: '16px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '8px', marginBottom: '24px' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '8px', color: 'var(--success-glow)' }}>🎉 สร้างบัญชีพนักงานสำเร็จ!</h3>
+          <p style={{ margin: '4px 0', fontSize: '0.9rem' }}><strong>ลิงก์เข้าระบบ:</strong> {window.location.origin}</p>
+          <p style={{ margin: '4px 0', fontSize: '0.9rem' }}><strong>อีเมล:</strong> {createdMemberInfo.email}</p>
+          <p style={{ margin: '4px 0', fontSize: '0.9rem' }}><strong>รหัสผ่านชั่วคราว:</strong> {createdMemberInfo.password}</p>
+          <p style={{ margin: '8px 0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>(คำแนะนำ: กรุณาแจ้งให้พนักงานทำการเปลี่ยนรหัสผ่านใหม่ทันทีในหน้าโปรไฟล์หลังเข้าสู่ระบบครั้งแรก)</p>
+          
+          <div style={{ display: 'flex', gap: '8px' }}>
+             <button 
+                type="button" 
+                className="secondary-button"
+                onClick={() => {
+                  const text = `ลิงก์เข้าระบบ: ${window.location.origin}\nอีเมล: ${createdMemberInfo.email}\nรหัสผ่านชั่วคราว: ${createdMemberInfo.password}\n\n(กรุณาเปลี่ยนรหัสผ่านหลังเข้าสู่ระบบครั้งแรก)`
+                  copyToClipboard(text)
+                }}
+              >
+                <Copy size={16} /> คัดลอกข้อความเพื่อส่ง
+             </button>
+             <button 
+                type="button" 
+                className="ghost-button"
+                onClick={() => setCreatedMemberInfo(null)}
+              >
+                ปิดหน้าต่าง
+             </button>
+          </div>
         </div>
-        <div className="settings-placeholder-copy">
-          <h2>สิทธิ์พนักงาน</h2>
-          <p>ระบบจัดการรายชื่อทีมงาน (กำลังพัฒนาสำหรับเฟสถัดไป)</p>
+      )}
+
+      <section className="panel settings-panel" aria-labelledby="staff-add-title">
+        <div className="panel-header-row">
+          <div className="title-icon-wrapper" style={{ color: 'var(--text-color)', background: 'var(--surface-light)' }}>
+            <Users size={22} />
+          </div>
+          <div>
+            <h2 id="staff-add-title" className="panel-section-title">เพิ่มพนักงานใหม่</h2>
+            <p className="panel-section-subtitle">ระบบจะสร้างบัญชีให้และพนักงานสามารถล็อกอินด้วยอีเมลและรหัสผ่านชั่วคราวได้ทันที</p>
+          </div>
         </div>
+
+        <form onSubmit={handleAddSubmit} className="settings-form" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="form-grid">
+            <label className="field">
+              <span>อีเมลพนักงาน</span>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                disabled={isSubmitting}
+              />
+            </label>
+            <label className="field">
+              <span>รหัสผ่านชั่วคราว</span>
+              <input
+                type="text"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="อย่างน้อย 6 ตัวอักษร"
+                disabled={isSubmitting}
+              />
+            </label>
+          </div>
+          <div className="field">
+            <span>ระดับสิทธิ์การเข้าถึง</span>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input 
+                  type="radio" 
+                  name="role" 
+                  value="staff" 
+                  checked={role === 'staff'} 
+                  onChange={() => setRole('staff')} 
+                  disabled={isSubmitting}
+                />
+                <span>พนักงานทั่วไป (Staff)</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input 
+                  type="radio" 
+                  name="role" 
+                  value="manager" 
+                  checked={role === 'manager'} 
+                  onChange={() => setRole('manager')} 
+                  disabled={isSubmitting}
+                />
+                <span>ผู้จัดการ (Manager)</span>
+              </label>
+            </div>
+          </div>
+          <button className="primary-button" type="submit" disabled={isSubmitting} style={{ alignSelf: 'flex-start' }}>
+            {isSubmitting ? 'กำลังสร้างบัญชี...' : <><Plus size={18} /> เพิ่มพนักงาน</>}
+          </button>
+        </form>
+
+        {error && (
+          <div className="settings-alert error" style={{ marginTop: '16px' }}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+        
+        {success && (
+          <div className="settings-alert success" style={{ marginTop: '16px' }}>
+            <CheckCircle size={16} />
+            <span>{success}</span>
+          </div>
+        )}
+      </section>
+
+      <section className="panel settings-panel">
+         <div className="list-header">
+            <span>รายชื่อทีมงานทั้งหมด ({members.length})</span>
+          </div>
+          <div className="settings-list">
+            {loading ? (
+               <div className="settings-empty-state">กำลังโหลดรายชื่อ...</div>
+            ) : members.length === 0 ? (
+              <div className="settings-empty-state">ไม่มีรายชื่อพนักงาน</div>
+            ) : (
+              members.map((member) => (
+                <div key={member.user_id} className="settings-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                     <span className="item-text" style={{ fontWeight: 600 }}>{member.email}</span>
+                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '8px', padding: '2px 6px', background: 'var(--surface-light)', borderRadius: '4px' }}>
+                        {member.role === 'owner' ? 'เจ้าของร้าน' : member.role === 'manager' ? 'ผู้จัดการ' : 'พนักงาน'}
+                     </span>
+                  </div>
+                  {member.role !== 'owner' && (
+                     <button
+                        className="delete-item-btn"
+                        type="button"
+                        title="ลบพนักงาน"
+                        onClick={() => handleRemoveMember(member.user_id)}
+                     >
+                        <Trash2 size={16} />
+                     </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
       </section>
     </section>
   )

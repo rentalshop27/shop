@@ -7,6 +7,7 @@ import { SettingsPage } from './SettingsPage'
 function renderSettingsPage(canManageShopSettings: boolean, canManageStaff: boolean, activeTab: 'general' | 'inventory' | 'staff') {
   return render(
     <SettingsPage
+      shopId={null}
       canManageShopSettings={canManageShopSettings}
       canManageStaff={canManageStaff}
       brands={['Precious']}
@@ -33,11 +34,12 @@ function renderSettingsPage(canManageShopSettings: boolean, canManageStaff: bool
 }
 
 describe('SettingsPage', () => {
-  it('renders the staff placeholder when only team permissions are available', () => {
+  it('renders the staff management panel when only team permissions are available', () => {
     renderSettingsPage(false, true, 'staff')
 
     expect(screen.getByRole('tab', { name: 'สิทธิ์พนักงาน' })).toBeTruthy()
-    expect(screen.getByText('ระบบจัดการรายชื่อทีมงาน (กำลังพัฒนาสำหรับเฟสถัดไป)')).toBeTruthy()
+    expect(screen.getByText('เพิ่มพนักงานใหม่')).toBeTruthy()
+    expect(screen.getByText('ไม่มีรายชื่อพนักงาน')).toBeTruthy()
     expect(screen.queryByText('ตั้งค่าทั่วไป')).toBeNull()
   })
 })
