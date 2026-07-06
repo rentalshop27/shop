@@ -28,6 +28,7 @@ interface MultiShopDashboardPageProps {
   onEnterShop: (shopId: string) => void
   preferredShopId: string | null
   onLogout?: () => Promise<void>
+  showFinancials?: boolean
 }
 
 interface ScheduleTableProps {
@@ -142,6 +143,7 @@ export function MultiShopDashboardPage({
   onEnterShop,
   preferredShopId,
   onLogout,
+  showFinancials = true,
 }: MultiShopDashboardPageProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
@@ -237,9 +239,11 @@ export function MultiShopDashboardPage({
       {!isLoading && (
         <>
           <h2 className="multi-shop-section-title">สถิติสะสมรวมทุกสาขา</h2>
-          <section className="multi-shop-summary-grid" aria-label="สถิติหลัก">
+          <section className={`multi-shop-summary-grid ${showFinancials ? '' : 'multi-shop-summary-grid--staff'}`.trim()} aria-label="สถิติหลัก">
             <SummaryCard icon={<FileText size={18} />} label="ใบเช่าทั้งหมด" value={allRentals.length.toLocaleString('th-TH')} theme="blue" />
-            <SummaryCard icon={<Wallet size={18} />} label="รายรับสะสมรวม" value={`฿${Math.round(aggregatedMetrics.totalRevenue).toLocaleString('th-TH')}`} theme="green" />
+            {showFinancials && (
+              <SummaryCard icon={<Wallet size={18} />} label="รายรับสะสมรวม" value={`฿${Math.round(aggregatedMetrics.totalRevenue).toLocaleString('th-TH')}`} theme="green" />
+            )}
             <SummaryCard icon={<Shirt size={18} />} label="กำลังเช่าขณะนี้" value={aggregatedMetrics.currentlyRented.toLocaleString('th-TH')} theme="blue" />
             <SummaryCard icon={<Clock size={18} />} label="คืนชุดเกินกำหนด" value={aggregatedMetrics.overdues.length.toLocaleString('th-TH')} theme="purple" danger={aggregatedMetrics.overdues.length > 0} />
             <SummaryCard icon={<ClipboardList size={18} />} label="งานวันนี้นัดรับ/นัดคืน" value={`${aggregatedMetrics.pickups.length} / ${aggregatedMetrics.returns.length}`} theme="yellow" />
@@ -273,8 +277,10 @@ export function MultiShopDashboardPage({
                   </div>
                 )}
                 {status === 'ready' && (
-                  <div className="metric-mini-grid">
-                    <MiniMetric label="รายรับสะสม" value={`฿${Math.round(metrics.totalRevenue).toLocaleString('th-TH')}`} accent />
+                  <div className={`metric-mini-grid ${showFinancials ? '' : 'metric-mini-grid--staff'}`.trim()}>
+                    {showFinancials && (
+                      <MiniMetric label="รายรับสะสม" value={`฿${Math.round(metrics.totalRevenue).toLocaleString('th-TH')}`} accent />
+                    )}
                     <MiniMetric label="กำลังเช่าอยู่" value={metrics.currentlyRented.toLocaleString('th-TH')} />
                     <MiniMetric label="เกินกำหนด" value={metrics.overdues.length.toLocaleString('th-TH')} danger={metrics.overdues.length > 0} />
                     <MiniMetric label="นัดรับ/คืนวันนี้" value={`${metrics.pickups.length} รับ / ${metrics.returns.length} คืน`} compact />
