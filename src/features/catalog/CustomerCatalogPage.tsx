@@ -1,5 +1,5 @@
 import { type CSSProperties, type ChangeEvent, useMemo, useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, ExternalLink, Heart, ImagePlus, LayoutGrid, LayoutList, Search, SlidersHorizontal, Trash2, X, Pin, GripVertical, Save, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, Heart, ImagePlus, Search, SlidersHorizontal, Trash2, X, Pin, GripVertical, Save, Pencil } from 'lucide-react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -33,7 +33,6 @@ export type CatalogDisplayItem = {
 type CatalogAvailabilityFilter = 'all' | 'available' | 'unavailable'
 type CatalogAvailabilityStatus = 'available' | 'unavailable'
 type SortKey = 'recommended' | 'price_asc' | 'price_desc' | 'newest'
-type ViewMode = 'grid' | 'list'
 
 type CustomerCatalogPageProps = {
   items: CatalogDisplayItem[]
@@ -81,7 +80,6 @@ export function CustomerCatalogPage({
   const [sizeFilter, setSizeFilter] = useState('all')
   const [availabilityFilter, setAvailabilityFilter] = useState<CatalogAvailabilityFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('recommended')
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [selectedItem, setSelectedItem] = useState<CatalogDisplayItem | null>(null)
   const [wishlist, setWishlist] = useState<Set<string>>(new Set())
   const [imageIndex, setImageIndex] = useState(0)
@@ -521,24 +519,6 @@ export function CustomerCatalogPage({
             <option value="price_desc">ราคา: มาก → น้อย</option>
             <option value="newest">ใหม่ล่าสุด</option>
           </select>
-          <div className="prc-view-toggle">
-            <button
-              type="button"
-              className={`prc-view-btn ${viewMode === 'grid' ? 'prc-view-btn--active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              aria-label="แบบตาราง"
-            >
-              <LayoutGrid size={16} />
-            </button>
-            <button
-              type="button"
-              className={`prc-view-btn ${viewMode === 'list' ? 'prc-view-btn--active' : ''}`}
-              onClick={() => setViewMode('list')}
-              aria-label="แบบรายการ"
-            >
-              <LayoutList size={16} />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -562,7 +542,7 @@ export function CustomerCatalogPage({
       )}
 
       <section
-        className={`prc-grid ${viewMode === 'list' ? 'prc-grid--list' : ''}`}
+        className="prc-grid"
         aria-label="รายการชุดสำหรับลูกค้า"
       >
 
