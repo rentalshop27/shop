@@ -110,7 +110,7 @@ const DEFAULT_BRANDS = ['Precious', 'Chanel', 'Dior', 'Gucci']
 const DEFAULT_CATEGORIES = ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
 const DEFAULT_COLORS = ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
 const DEFAULT_PUBLIC_CATALOG_ENABLED = false
-const DEFAULT_RENTAL_PRICE_TIERS: ShopSettings['defaultRentalPrices'] = [{ days: 1, price: 100 }]
+
 const LAST_SELECTED_SHOP_KEY_PREFIX = 'precious_last_shop:'
 const LOCAL_CATALOG_HERO_IMAGE_KEY = 'precious_catalog_hero_image_url'
 const LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY = 'precious_catalog_mobile_hero_image_url'
