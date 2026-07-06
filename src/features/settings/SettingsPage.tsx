@@ -13,6 +13,16 @@ interface SettingsPageProps {
   onAddColor: (color: string) => void
   onDeleteColor: (color: string) => void
   onPublicCatalogEnabledChange: (enabled: boolean) => void
+  defaultRentalPrices: {days: number; price: number}[]
+  onUpdateDefaultRentalPrices: (prices: {days: number; price: number}[]) => void
+  defaultDeposit: number
+  onUpdateDefaultDeposit: (deposit: number) => void
+  defaultLateFinePerDay: number
+  onUpdateDefaultLateFinePerDay: (fine: number) => void
+}
+
+function cloneRentalTiers(tiers: {days: number; price: number}[]) {
+  return tiers.map((tier) => ({ ...tier }))
 }
 
 export function SettingsPage({
@@ -27,6 +37,12 @@ export function SettingsPage({
   onAddColor,
   onDeleteColor,
   onPublicCatalogEnabledChange,
+  defaultRentalPrices,
+  onUpdateDefaultRentalPrices,
+  defaultDeposit,
+  onUpdateDefaultDeposit,
+  defaultLateFinePerDay,
+  onUpdateDefaultLateFinePerDay,
 }: SettingsPageProps) {
   const [newBrand, setNewBrand] = useState('')
   const [newCategory, setNewCategory] = useState('')
@@ -142,6 +158,99 @@ export function SettingsPage({
       </header>
 
       <div className="settings-grid">
+        {/* Global Rental Defaults Section */}
+        <section className="panel settings-panel" aria-labelledby="global-defaults-title">
+          <div className="section-header">
+            <h2 id="global-defaults-title">
+              ⚙️ ตั้งค่าระบบราคาและค่าปรับเริ่มต้น (Global Rental Defaults)
+            </h2>
+            <p className="section-subtitle">
+              บันทึกราคาแพ็กเกจและเกณฑ์ค่าปรับมาตรฐาน เพื่อให้ระบบดึงไปใช้เวลาเพิ่มชุดใหม่ทันที
+            </p>
+          </div>
+
+          <div style={{ marginTop: '24px', padding: '16px', background: 'var(--surface-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--text-color)' }}>กำหนดแพ็กเกจราคาเช่าเริ่มต้นของร้าน</h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {defaultRentalPrices.map((tier, index) => (
+                <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '12px', alignItems: 'flex-end' }}>
+                  <label className="field">
+                    <span>ระยะเวลา (วัน)</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tier.days}
+                      onChange={(e) => {
+                        const newPrices = cloneRentalTiers(defaultRentalPrices)
+                        newPrices[index].days = parseInt(e.target.value) || 1
+                        onUpdateDefaultRentalPrices(newPrices)
+                      }}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>ราคารวม (บาท)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={tier.price}
+                      onChange={(e) => {
+                        const newPrices = cloneRentalTiers(defaultRentalPrices)
+                        newPrices[index].price = parseInt(e.target.value) || 0
+                        onUpdateDefaultRentalPrices(newPrices)
+                      }}
+                    />
+                  </label>
+                  {defaultRentalPrices.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newPrices = defaultRentalPrices.filter((_, i) => i !== index)
+                        onUpdateDefaultRentalPrices(newPrices)
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--danger-glow)', cursor: 'pointer', padding: '8px', marginBottom: '4px' }}
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => onUpdateDefaultRentalPrices([...cloneRentalTiers(defaultRentalPrices), { days: 1, price: 0 }])}
+                style={{ marginTop: '8px', padding: '10px', width: '100%', background: 'none', border: '1px dashed rgba(218, 165, 32, 0.4)', borderRadius: '8px', color: 'var(--text-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
+              >
+                <Plus size={18} /> เพิ่มแพ็กเกจวันใหม่
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px', padding: '16px', background: 'var(--surface-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--text-color)' }}>ค่าประกัน & ค่าปรับเริ่มต้น</h3>
+            <div className="form-grid">
+              <label className="field">
+                <span>เงินประกัน (มัดจำ) เริ่มต้น (บาท)</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={defaultDeposit}
+                  onChange={(e) => onUpdateDefaultDeposit(parseInt(e.target.value) || 0)}
+                />
+              </label>
+              <label className="field">
+                <span>เกณฑ์ค่าปรับล่าช้าเริ่มต้น (บาท / วัน)</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={defaultLateFinePerDay}
+                  onChange={(e) => onUpdateDefaultLateFinePerDay(parseInt(e.target.value) || 0)}
+                />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        {/* Public Catalog Settings Section */}
         <section className="panel settings-panel settings-public-panel" aria-labelledby="public-catalog-title">
           <div className="panel-header-row">
             <div className="title-icon-wrapper brand-theme">

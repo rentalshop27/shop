@@ -110,6 +110,7 @@ const DEFAULT_BRANDS = ['Precious', 'Chanel', 'Dior', 'Gucci']
 const DEFAULT_CATEGORIES = ['ชุดราตรี', 'ชุดไทย', 'ชุดสูท', 'ชุดแต่งงาน']
 const DEFAULT_COLORS = ['น้ำเงินมิดไนต์', 'แดงไวน์', 'ชมพูโรส', 'ทองแชมเปญ', 'ขาวมุก', 'ดำคลาสสิก']
 const DEFAULT_PUBLIC_CATALOG_ENABLED = false
+const DEFAULT_RENTAL_PRICE_TIERS: ShopSettings['defaultRentalPrices'] = [{ days: 1, price: 100 }]
 const LAST_SELECTED_SHOP_KEY_PREFIX = 'precious_last_shop:'
 const LOCAL_CATALOG_HERO_IMAGE_KEY = 'precious_catalog_hero_image_url'
 const LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY = 'precious_catalog_mobile_hero_image_url'
@@ -122,6 +123,10 @@ const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; 
   { value: 'suspended', label: profileStatusLabel.suspended },
   { value: 'has_risk', label: 'มีสัญญาณความเสี่ยง' },
 ]
+
+function cloneRentalPriceTiers(tiers: ShopSettings['defaultRentalPrices']): ShopSettings['defaultRentalPrices'] {
+  return tiers.map((tier) => ({ ...tier }))
+}
 
 const LazyDashboardPage = lazy(async () => {
   const module = await import('./features/dashboard/DashboardPage')
@@ -465,6 +470,11 @@ function PrivateApp() {
   const [publicCatalogEnabled, setPublicCatalogEnabled] = useState(DEFAULT_PUBLIC_CATALOG_ENABLED)
   const [catalogHeroImageUrl, setCatalogHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_HERO_IMAGE_KEY))
   const [catalogMobileHeroImageUrl, setCatalogMobileHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY))
+  const [defaultRentalPrices, setDefaultRentalPrices] = useState<ShopSettings['defaultRentalPrices']>(() =>
+    cloneRentalPriceTiers(DEFAULT_RENTAL_PRICE_TIERS),
+  )
+  const [defaultDeposit, setDefaultDeposit] = useState<number>(0)
+  const [defaultLateFinePerDay, setDefaultLateFinePerDay] = useState<number>(200)
   const [isCatalogHeroUploading, setIsCatalogHeroUploading] = useState(false)
   const [isCatalogMobileHeroUploading, setIsCatalogMobileHeroUploading] = useState(false)
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
@@ -548,6 +558,9 @@ function PrivateApp() {
       publicCatalogEnabled,
       catalogHeroImageUrl,
       catalogMobileHeroImageUrl,
+      defaultRentalPrices,
+      defaultDeposit,
+      defaultLateFinePerDay,
       ...overrides,
     }
   }
@@ -638,6 +651,49 @@ function PrivateApp() {
       setPublicCatalogEnabled(!enabled)
       console.error('Failed to save public catalog setting:', err)
       window.alert('บันทึกการตั้งค่า public catalog ล้มเหลว: ' + getErrorMessage(err))
+    }
+  }
+
+  const handleUpdateDefaultRentalPrices = async (prices: {days: number; price: number}[]) => {
+    const previousPrices = cloneRentalPriceTiers(defaultRentalPrices)
+    const nextPrices = cloneRentalPriceTiers(prices)
+    setDefaultRentalPrices(nextPrices)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await saveShopSettings(getShopSettings({ defaultRentalPrices: nextPrices }))
+      } catch (err) {
+        setDefaultRentalPrices(previousPrices)
+        console.error('Failed to save default rental prices:', err)
+        window.alert('บันทึกราคาเช่าเริ่มต้นล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
+  }
+
+  const handleUpdateDefaultDeposit = async (deposit: number) => {
+    const previousDeposit = defaultDeposit
+    setDefaultDeposit(deposit)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await saveShopSettings(getShopSettings({ defaultDeposit: deposit }))
+      } catch (err) {
+        setDefaultDeposit(previousDeposit)
+        console.error('Failed to save default deposit:', err)
+        window.alert('บันทึกเงินประกันเริ่มต้นล้มเหลว: ' + getErrorMessage(err))
+      }
+    }
+  }
+
+  const handleUpdateDefaultLateFinePerDay = async (fine: number) => {
+    const previousLateFinePerDay = defaultLateFinePerDay
+    setDefaultLateFinePerDay(fine)
+    if (supabase && isAuthenticated && shopId) {
+      try {
+        await saveShopSettings(getShopSettings({ defaultLateFinePerDay: fine }))
+      } catch (err) {
+        setDefaultLateFinePerDay(previousLateFinePerDay)
+        console.error('Failed to save default late fine:', err)
+        window.alert('บันทึกค่าปรับล่าช้าเริ่มต้นล้มเหลว: ' + getErrorMessage(err))
+      }
     }
   }
 
@@ -1384,6 +1440,9 @@ function PrivateApp() {
     setPublicCatalogEnabled(DEFAULT_PUBLIC_CATALOG_ENABLED)
     setCatalogHeroImageUrl(null)
     setCatalogMobileHeroImageUrl(null)
+    setDefaultRentalPrices(cloneRentalPriceTiers(DEFAULT_RENTAL_PRICE_TIERS))
+    setDefaultDeposit(0)
+    setDefaultLateFinePerDay(200)
 
     Promise.all([
       loadCustomers(client, shopId),
@@ -1398,6 +1457,9 @@ function PrivateApp() {
         setProducts(loadedProducts)
         if (settings) {
           setPublicCatalogEnabled(settings.publicCatalogEnabled)
+          setDefaultRentalPrices(cloneRentalPriceTiers(settings.defaultRentalPrices ?? DEFAULT_RENTAL_PRICE_TIERS))
+          setDefaultDeposit(settings.defaultDeposit ?? 0)
+          setDefaultLateFinePerDay(settings.defaultLateFinePerDay ?? 200)
         }
         setAuditLogs(loadedAuditLogs)
         setSelectedCustomerId(loadedCustomers[0]?.id ?? '')
@@ -1462,6 +1524,9 @@ function PrivateApp() {
     shopId,
     supabase,
     onLoadAuditLogs: handleLoadAuditLogs,
+    defaultRentalPrices,
+    defaultDeposit,
+    defaultLateFinePerDay,
   })
 
   const activeCustomers = customers.filter((customer) => !customer.archivedAt)
@@ -2221,6 +2286,12 @@ function PrivateApp() {
               onAddColor={handleAddColor}
               onDeleteColor={handleDeleteColor}
               onPublicCatalogEnabledChange={handlePublicCatalogEnabledChange}
+              defaultRentalPrices={defaultRentalPrices}
+              onUpdateDefaultRentalPrices={handleUpdateDefaultRentalPrices}
+              defaultDeposit={defaultDeposit}
+              onUpdateDefaultDeposit={handleUpdateDefaultDeposit}
+              defaultLateFinePerDay={defaultLateFinePerDay}
+              onUpdateDefaultLateFinePerDay={handleUpdateDefaultLateFinePerDay}
             />
           )}
 

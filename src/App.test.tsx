@@ -13,6 +13,7 @@ const {
   loadRentals,
   loadAuditLogs,
   loadPublicCatalog,
+  updateShopSettings,
   authStateChange,
   supabase,
 } = vi.hoisted(() => {
@@ -20,16 +21,17 @@ const {
     callback: null as null | ((event: string, session: { user: { id: string; email?: string } } | null) => void),
   }
 
-    return {
-      loadAccessibleShops: vi.fn(),
-      loadCustomerSummaries: vi.fn(),
-      loadCustomers: vi.fn(),
-      loadStockItemsForRentalMapping: vi.fn(),
-      loadProductsWithStock: vi.fn(),
-      loadShopSettings: vi.fn(),
-      loadRentals: vi.fn(),
-      loadAuditLogs: vi.fn(),
+  return {
+    loadAccessibleShops: vi.fn(),
+    loadCustomerSummaries: vi.fn(),
+    loadCustomers: vi.fn(),
+    loadStockItemsForRentalMapping: vi.fn(),
+    loadProductsWithStock: vi.fn(),
+    loadShopSettings: vi.fn(),
+    loadRentals: vi.fn(),
+    loadAuditLogs: vi.fn(),
     loadPublicCatalog: vi.fn(),
+    updateShopSettings: vi.fn(),
     authStateChange,
     supabase: {
       auth: {
@@ -84,11 +86,11 @@ vi.mock('./features/inventory/stockRemote', () => ({
   deleteRemoteProduct: vi.fn(),
   deleteRemoteStockItem: vi.fn(),
   updateRemoteProduct: vi.fn(),
-  updateRemoteProductPublicVisibility: vi.fn(),
-  updateRemoteStockItemStatus: vi.fn(),
-  updateShopSettings: vi.fn(),
-  loadShopSettings,
-}))
+    updateRemoteProductPublicVisibility: vi.fn(),
+    updateRemoteStockItemStatus: vi.fn(),
+    updateShopSettings,
+    loadShopSettings,
+  }))
 
 vi.mock('./features/rentals/rentalRemote', () => ({
   createRemoteRentals: vi.fn(),
@@ -103,6 +105,25 @@ vi.mock('./features/audit/auditRemote', () => ({
 }))
 
 import App from './App'
+
+function makeShopSettings(overrides: Partial<{
+  defaultRentalPrices: Array<{ days: number; price: number }>
+  defaultDeposit: number
+  defaultLateFinePerDay: number
+}> = {}) {
+  return {
+    brands: ['Precious'],
+    categories: ['ชุดราตรี'],
+    colors: ['แดง'],
+    publicCatalogEnabled: false,
+    catalogHeroImageUrl: null,
+    catalogMobileHeroImageUrl: null,
+    defaultRentalPrices: [{ days: 1, price: 100 }],
+    defaultDeposit: 500,
+    defaultLateFinePerDay: 200,
+    ...overrides,
+  }
+}
 
 describe('App shop selection', () => {
   beforeEach(() => {
@@ -150,6 +171,7 @@ describe('App shop selection', () => {
         },
       ],
     })
+    updateShopSettings.mockResolvedValue(undefined)
     supabase.auth.signOut.mockResolvedValue({ error: null })
   })
 
@@ -316,6 +338,60 @@ describe('App shop selection', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
 
     expect((screen.getByPlaceholderText(/ค้นหาด้วยรหัสหลัก/) as HTMLInputElement).value).toBe('emerald')
+  })
+
+  it('keeps shop rental defaults unchanged when editing a new inventory draft', async () => {
+    loadShopSettings.mockResolvedValue(makeShopSettings({
+      defaultRentalPrices: [
+        { days: 1, price: 100 },
+        { days: 3, price: 250 },
+      ],
+    }))
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'เพิ่มชุดหลัก' }))
+
+    fireEvent.change(screen.getByDisplayValue('250'), { target: { value: '999' } })
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'ตั้งค่า' })[0])
+
+    expect(await screen.findByDisplayValue('250')).toBeTruthy()
+    expect(screen.queryByDisplayValue('999')).toBeNull()
+  })
+
+  it('reverts default deposit when saving shop settings fails', async () => {
+    loadShopSettings.mockResolvedValue(makeShopSettings({ defaultDeposit: 500 }))
+    updateShopSettings.mockRejectedValueOnce(new Error('save failed'))
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    try {
+      render(<App />)
+
+      const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+      fireEvent.click(enterButtons[0])
+      await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+      fireEvent.click(screen.getAllByRole('button', { name: 'ตั้งค่า' })[0])
+
+      const depositInput = await screen.findByLabelText('เงินประกัน (มัดจำ) เริ่มต้น (บาท)') as HTMLInputElement
+      fireEvent.change(depositInput, { target: { value: '999' } })
+
+      await waitFor(() => {
+        expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('save failed'))
+      })
+
+      await waitFor(() => {
+        expect(depositInput.value).toBe('500')
+      })
+    } finally {
+      alertSpy.mockRestore()
+    }
   })
 
   it('allows an authenticated user without shop access to retry a failed logout', async () => {

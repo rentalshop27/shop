@@ -66,10 +66,17 @@ export type InventoryControllerPageProps = {
   rentals: RentalOrder[]
   onUpdateStatus: (productId: string, stockId: string, status: StockItemStatus) => void
   onTogglePublicVisibility: (productId: string, publicVisible: boolean) => void
+  defaultRentalPrices: {days: number; price: number}[]
+  defaultDeposit: number
+  defaultLateFinePerDay: number
 }
 
 export type InventoryPageProps = InventoryControllerPageProps & {
   onOpenCatalog: () => void
+}
+
+function cloneRentalTiers(tiers: {days: number; price: number}[]) {
+  return tiers.map((tier) => ({ ...tier }))
 }
 
 export function InventoryPage({
@@ -105,6 +112,9 @@ export function InventoryPage({
   onUpdateStatus,
   onTogglePublicVisibility,
   onOpenCatalog,
+  defaultRentalPrices,
+  defaultDeposit,
+  defaultLateFinePerDay,
 }: InventoryPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
@@ -506,9 +516,24 @@ export function InventoryPage({
                 </label>
               </div>
               <div style={{ marginTop: '24px', background: 'rgba(218, 165, 32, 0.05)', borderColor: 'rgba(218, 165, 32, 0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(218, 165, 32, 0.2)' }}>
-                <div className="section-title-row" style={{ marginBottom: '16px' }}>
-                  <h3 style={{ color: 'var(--text-gold)', margin: 0 }}>💰 กำหนดแพ็กเกจราคาเช่า</h3>
-                  <span style={{ fontSize: '0.85rem' }}>กำหนดราคาแยกตามจำนวนวัน</span>
+                <div className="section-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ color: 'var(--text-gold)', margin: 0 }}>💸 กำหนดแพ็กเกจราคาเช่า</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isEditing) {
+                        if (!window.confirm('คุณกำลังอยู่ในโหมดแก้ไขชุด การดึงค่ามาตรฐานจะเขียนทับราคาเดิมทั้งหมด ยืนยันการดำเนินการ?')) {
+                          return;
+                        }
+                      }
+                      onDraftChange('rentalTiers', cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 100 }]));
+                      onDraftChange('depositAmount', defaultDeposit > 0 ? defaultDeposit.toString() : '');
+                      onDraftChange('lateFeeRule', defaultLateFinePerDay > 0 ? `${defaultLateFinePerDay} บาท/วัน` : '');
+                    }}
+                    style={{ background: 'none', border: '1px solid rgba(218, 165, 32, 0.4)', borderRadius: '6px', padding: '6px 12px', fontSize: '0.85rem', color: 'var(--text-gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    ✨ <span style={{ fontSize: '1rem' }}>🔄</span> ดึงราคามาตรฐาน
+                  </button>
                 </div>
                 <div className="tier-builder" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '12px', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '0 8px', fontWeight: 600 }}>
@@ -523,8 +548,11 @@ export function InventoryPage({
                         min="1" 
                         value={tier.days || ''} 
                         onChange={(e) => {
-                          const newTiers = [...draft.rentalTiers]
-                          newTiers[index].days = parseInt(e.target.value) || 0
+                          const newTiers = draft.rentalTiers.map((currentTier, currentIndex) => (
+                            currentIndex === index
+                              ? { ...currentTier, days: parseInt(e.target.value) || 0 }
+                              : currentTier
+                          ))
                           onDraftChange('rentalTiers', newTiers)
                         }}
                         placeholder="วัน"
@@ -538,8 +566,11 @@ export function InventoryPage({
                           min="0"
                           value={tier.price || ''} 
                           onChange={(e) => {
-                            const newTiers = [...draft.rentalTiers]
-                            newTiers[index].price = parseInt(e.target.value) || 0
+                            const newTiers = draft.rentalTiers.map((currentTier, currentIndex) => (
+                              currentIndex === index
+                                ? { ...currentTier, price: parseInt(e.target.value) || 0 }
+                                : currentTier
+                            ))
                             onDraftChange('rentalTiers', newTiers)
                           }}
                           placeholder="0"

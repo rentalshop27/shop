@@ -34,6 +34,10 @@ const emptyProductDraft: ProductDraft = {
   variants: [],
 }
 
+function cloneRentalTiers(tiers: ProductDraft['rentalTiers']): ProductDraft['rentalTiers'] {
+  return tiers.map((tier) => ({ ...tier }))
+}
+
 type InventoryControllerOptions = {
   products: ProductWithStockSummary[]
   setProducts: Dispatch<SetStateAction<ProductWithStockSummary[]>>
@@ -47,6 +51,9 @@ type InventoryControllerOptions = {
   shopId: string | null
   supabase: SupabaseClient | null
   onLoadAuditLogs: () => Promise<void> | void
+  defaultRentalPrices: {days: number; price: number}[]
+  defaultDeposit: number
+  defaultLateFinePerDay: number
 }
 
 export function useInventoryController({
@@ -62,6 +69,9 @@ export function useInventoryController({
   shopId,
   supabase,
   onLoadAuditLogs,
+  defaultRentalPrices,
+  defaultDeposit,
+  defaultLateFinePerDay,
 }: InventoryControllerOptions) {
   const [query, setQuery] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -123,7 +133,12 @@ export function useInventoryController({
 
   function openCreateForm() {
     setEditingProductId(null)
-    setDraft(emptyProductDraft)
+    setDraft({
+      ...emptyProductDraft,
+      rentalTiers: cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 100 }]),
+      depositAmount: defaultDeposit > 0 ? defaultDeposit.toString() : '',
+      lateFeeRule: defaultLateFinePerDay > 0 ? `${defaultLateFinePerDay} บาท/วัน` : '',
+    })
     setFormError('')
     setIsFormOpen(true)
   }
@@ -419,6 +434,9 @@ export function useInventoryController({
     rentals,
     onUpdateStatus: handleUpdateStatus,
     onTogglePublicVisibility: handleTogglePublicVisibility,
+    defaultRentalPrices,
+    defaultDeposit,
+    defaultLateFinePerDay,
   }
 
   return { pageProps }

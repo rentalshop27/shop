@@ -386,6 +386,9 @@ export type ShopSettings = {
   publicCatalogEnabled: boolean
   catalogHeroImageUrl: string | null
   catalogMobileHeroImageUrl: string | null
+  defaultRentalPrices: {days: number; price: number}[]
+  defaultDeposit: number
+  defaultLateFinePerDay: number
 }
 
 const SHOP_HERO_BUCKET = 'shop-assets'
@@ -393,7 +396,7 @@ const SHOP_HERO_BUCKET = 'shop-assets'
 export async function loadShopSettings(supabase: SupabaseClient, shopId: string): Promise<ShopSettings | null> {
   const { data, error } = await supabase
     .from('shops')
-    .select('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path, catalog_mobile_hero_image_path')
+    .select('brands, categories, colors, public_catalog_enabled, catalog_hero_image_path, catalog_mobile_hero_image_path, default_rental_prices, default_deposit, default_late_fine_per_day')
     .eq('id', shopId)
     .maybeSingle()
 
@@ -415,6 +418,11 @@ export async function loadShopSettings(supabase: SupabaseClient, shopId: string)
     publicCatalogEnabled: Boolean(data.public_catalog_enabled),
     catalogHeroImageUrl,
     catalogMobileHeroImageUrl,
+    defaultRentalPrices: Array.isArray(data.default_rental_prices) && data.default_rental_prices.length > 0
+      ? data.default_rental_prices
+      : [{ days: 1, price: 100 }],
+    defaultDeposit: Number(data.default_deposit) || 0,
+    defaultLateFinePerDay: Number(data.default_late_fine_per_day) || 200,
   }
 }
 
@@ -434,6 +442,9 @@ export async function updateShopSettings(supabase: SupabaseClient, shopId: strin
     public_catalog_enabled: settings.publicCatalogEnabled,
     catalog_hero_image_path: extractPath(settings.catalogHeroImageUrl),
     catalog_mobile_hero_image_path: extractPath(settings.catalogMobileHeroImageUrl),
+    default_rental_prices: settings.defaultRentalPrices,
+    default_deposit: settings.defaultDeposit,
+    default_late_fine_per_day: settings.defaultLateFinePerDay,
     updated_at: new Date().toISOString()
   }).eq('id', shopId)
   if (error) throw error

@@ -1,49 +1,55 @@
-# Handoff: ระบบ Auto-Pass สรุปเคสไร้มัดจำ และ Extra Fine Workflow
+# Handoff: สรุปฟีเจอร์ล่าสุด (Global Rental Defaults, Auto-Pass และ Extra Fine)
 
-เอกสารนี้สรุปสิ่งที่ได้พัฒนาและปรับปรุงในระบบเกี่ยวกับการจัดการเงินมัดจำ (Deposit) และการปรับยอดเรียกเก็บค่าปรับย้อนหลัง (Extra Fine) ในโปรเจกต์ **Precious Shop**
+เอกสารนี้สรุปสิ่งที่ได้พัฒนาและปรับปรุงในระบบโปรเจกต์ **Precious Shop** ในรอบการพัฒนาล่าสุด โดยครอบคลุมระบบการจัดการเงินมัดจำ, ค่าปรับย้อนหลัง และการตั้งค่าเริ่มต้นส่วนกลางสำหรับคลังสินค้า
 
 ---
 
-## 📂 1. Database & Schema
-- **สร้าง Migration:** เพิ่มไฟล์ `0028_add_fine_to_rentals.sql` 
-  - เพิ่มคอลัมน์ `fine_amount` (numeric), `fine_reason` (text), `fine_created_at` (timestamptz) เข้าไปในตาราง `rentals`
-  
-- **ปรับปรุง Types:** อัปเดต `RentalOrder` และ `RentalItem` ในไฟล์ `src/features/rentals/rentalTypes.ts` ให้รองรับฟิลด์ `fineAmount`, `fineReason`, `fineCreatedAt`
+## 🌟 1. ฟีเจอร์ใหม่: ตั้งค่าระบบราคาและค่าปรับเริ่มต้นส่วนกลาง (Global Rental Defaults)
+ช่วยให้ร้านค้าสามารถตั้งค่าแพ็กเกจราคาเช่า เงินประกัน และค่าปรับล่าช้าเป็นค่าเริ่มต้น เพื่อความสะดวกรวดเร็วในการเพิ่มคลังสินค้า
 
-## 📡 2. Data Access Layer (Remote)
-- **อัปเดต Mapping:** ใน `src/features/rentals/rentalRemote.ts` ทำการ map ค่าจากแถวในฐานข้อมูล (`fine_amount` ฯลฯ) กลับไปเป็น Object ใน Frontend
-- **ฟังก์ชัน `saveExtraFine`:** เพิ่มฟังก์ชันสำหรับอัปเดตยอดค่าปรับและเหตุผลลงใน Supabase โดยลักษณะการบันทึกจะเป็นแบบ **Idempotent** (Overwrite ค่าเก่าด้วยค่าใหม่เสมอ)
+### Database & Schema
+- **สร้าง Migration `0031_global_rental_defaults.sql`**: เพิ่มคอลัมน์ `default_rental_prices` (JSONB), `default_deposit` (numeric), `default_late_fine_per_day` (numeric) ในตาราง `shops`
 
-## 🖥️ 3. Application State & Business Logic
-- **`App.tsx`**: 
-  - เพิ่ม logic ใน `handleUpdateRentalStatus` สำหรับ **Auto-Pass มัดจำ**: หากแอดมินปรับสถานะออเดอร์เป็น `returned` ระบบจะสแกนหา `rentals` ภายในออเดอร์นั้นที่มียอดมัดจำเท่ากับ `0` (ไม่มีมัดจำ) และทำการส่ง request แจ้งเคลียร์มัดจำเป็น `returned` (คืนมัดจำแล้ว) ทันที
-  - เพิ่ม `handleSaveExtraFine` สำหรับอัปเดตค่าปรับผ่าน UI กลับไปยัง API และ State ของ React
+### Application State & Data Access
+- **`stockRemote.ts`**: ขยาย Type `ShopSettings` ให้รองรับฟิลด์ใหม่ และจัดการ Null-Safety/Fallback กรณีฐานข้อมูลเป็นค่าว่าง (ให้ใช้ 1 วัน 100 บาท, ประกัน 0, ค่าปรับ 200)
+- **`App.tsx`**: ดึงค่า Global Defaults มาเก็บใน State (`defaultRentalPrices`, `defaultDeposit`, `defaultLateFinePerDay`) และส่ง Props ต่อไปยัง `SettingsPage` และ `useInventoryController`
 
-- **`dashboardMetrics.ts`**:
-  - สร้างตัวแปรยอดรวมค่าปรับ `totalFines` โดยดึงค่าผลรวมของ `fineAmount` จากออเดอร์ทั้งหมด
-  - นำยอด `totalFines` ไปบวกเข้ากับ `netRevenue` (รายรับสุทธิ) ของร้านค้าเพื่อการคำนวณที่ถูกต้อง
+### User Interface (UI / UX)
+- **หน้าตั้งค่า (`SettingsPage.tsx`)**: เพิ่มกล่อง **"⚙️ ตั้งค่าระบบราคาและค่าปรับเริ่มต้น"** สำหรับแก้ไขแพ็กเกจราคาเริ่มต้นของร้าน
+- **หน้าคลังสินค้า (`InventoryPage.tsx` & `useInventoryController.ts`)**:
+  - **Auto Pre-fill**: ดึงค่า Global Defaults ไปกรอกรอไว้ล่วงหน้าเมื่อกด `+ เพิ่มชุดหลัก`
+  - **Apply Defaults Button**: เพิ่มปุ่มวิเศษ `✨ 🔄 ดึงราคามาตรฐาน` ข้างกล่องราคาเพื่อดึงค่าส่วนกลางกลับมา
+  - **Safe Edit Mode**: หากกดปุ่มวิเศษขณะแก้ไขชุดเก่า ระบบจะขึ้นหน้าต่างยืนยัน (Confirmation) เพื่อป้องกันราคาพรีเมียมเดิมถูกเขียนทับ
 
-- **`customerInsights.ts` (พฤติกรรมลูกค้า)**:
-  - เพิ่มเงื่อนไขการหักดาว: หากลูกค้าเคยมียอดค่าปรับย้อนหลัง (`fineAmount > 0`) ระบบจะหักลบ **2.0 ดาว แบบ Flat Rate** ในฟังก์ชันคำนวณ Credit Score ($F_{penalty}$)
-  - บวกยอด `fineAmount` เข้าไปรวมใน `totalSpent` (ยอดใช้จ่ายรวมของลูกค้า)
+---
 
-## 🎨 4. User Interface (UI / UX)
-- **Dashboard (`DashboardPage.tsx`)**:
-  - ปรับปรุง Financial Widget โดยแบ่งคอลัมน์เพิ่ม เพื่อแสดงป้าย **"รายได้อื่นๆ / ค่าปรับประจำเดือน"** ทำให้ร้านค้าสามารถแทร็กรายได้ส่วนนี้แยกต่างหากได้อย่างชัดเจน
+## 💰 2. ระบบ Auto-Pass สรุปเคสไร้มัดจำ และ Extra Fine Workflow
+ปรับปรุงการจัดการมัดจำและการเรียกเก็บค่าปรับย้อนหลังแบบเจาะลึก
 
+### Database & Schema
+- **สร้าง Migration `0028_add_fine_to_rentals.sql`**: เพิ่มคอลัมน์ `fine_amount`, `fine_reason`, `fine_created_at` ลงในตาราง `rentals`
+- ปรับปรุง `RentalOrder` และ `RentalItem` ใน `rentalTypes.ts`
+
+### Data Access Layer (Remote)
+- แมปค่าจากแถวในฐานข้อมูล กลับมาเป็น Object ใน `rentalRemote.ts`
+- เพิ่มฟังก์ชัน `saveExtraFine` สำหรับอัปเดตยอดค่าปรับแบบ Idempotent (เขียนทับค่าใหม่เสมอ)
+
+### Application State & Business Logic
+- **`App.tsx` (Auto-Pass มัดจำ)**: หากปิดออเดอร์ (`returned`) และไม่มีมัดจำ (มัดจำ = 0) ระบบจะปรับสถานะเคลียร์มัดจำเป็น `returned` โดยอัตโนมัติ
+- **`dashboardMetrics.ts`**: รวม `totalFines` เข้ากับ `netRevenue` (รายรับสุทธิ)
+- **`customerInsights.ts` (พฤติกรรมลูกค้า)**: ลูกค้าที่มีค่าปรับย้อนหลังจะถูกหัก 2.0 ดาวแบบ Flat Rate และบวกยอดค่าปรับเข้า `totalSpent`
+
+### User Interface (UI / UX)
+- **Dashboard (`DashboardPage.tsx`)**: เพิ่มป้าย "รายได้อื่นๆ / ค่าปรับประจำเดือน"
 - **หน้า Rentals (`RentalsPage.tsx`)**:
-  - **ไทม์ไลน์ขั้นที่ 4**: อัปเดตเงื่อนไขให้รองรับกรณี `depositAmount === 0` โดยถ้าปิดงานแล้วจะขึ้นชื่อสถานะว่า **"● ปิดงานสำเร็จ (ไม่มีมัดจำ)"** โดยอัตโนมัติ
-  - **แจ้งเตือนค่าปรับ**: หากออเดอร์ไหนมีค่าปรับย้อนหลัง จะมี Footnote ตัวอักษรสีส้มโผล่ขึ้นมาใต้ไทม์ไลน์ระบุว่า *(⚠️ มีค่าปรับเพิ่มเติม ฿X - [เหตุผล])*
-  - **Deposit Control Panel (แผงควบคุมมัดจำ)**: 
-    - ปรับเงื่อนไขการเรนเดอร์ให้แสดงแผงนี้เสมอ แม้ว่ายอดมัดจำจะเป็น 0 เพื่อให้เห็นป้ายสถานะปิดงานสำเร็จ
-    - กรณีปกติที่ไม่มีค่าปรับ ป้ายจะเขียนว่า "✅ ปิดงานสำเร็จ (ไม่มีมัดจำ)"
-    - กรณีที่มีค่าปรับ ป้ายจะเปลี่ยนเป็นกล่องสีส้มแจ้งเตือนภัย "🚫 ปิดงาน (มีค่าปรับ ฿...)"
-    - เพิ่มปุ่มรอง (Secondary Button) **"⚠️ เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง"** เป็นปุ่มเส้นขอบ/สีส้ม 
-  - **Extra Fine Modal**: เมื่อกดปุ่ม Secondary จะแสดงแบบฟอร์มให้กรอกยอดเงินปรับ และเหตุผลเพิ่มเติม และปุ่ม Save ซึ่งการกด Save ซ้ำจะเป็นการแก้ยอดเก่า (Idempotent update)
+  - **ไทม์ไลน์ขั้นที่ 4**: อัปเดตสถานะเป็น "● ปิดงานสำเร็จ (ไม่มีมัดจำ)" กรณีมัดจำ 0
+  - **แจ้งเตือนค่าปรับ**: แสดงข้อความสีส้มใต้ไทม์ไลน์ และในแผงควบคุมมัดจำหากออเดอร์มีค่าปรับ
+  - **Deposit Control Panel**: สามารถกดปุ่ม **"⚠️ เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง"** (Extra Fine Modal) เพื่ออัปเดตยอดค่าปรับและเหตุผลได้
 
 ---
 
 ## 🚀 ถัดไป (Next Steps & Actions Required)
-- [ ] รันคำสั่ง `supabase migration up` บน Database ของจริงเพื่อ Apply คอลัมน์ `fine_amount`
-- [ ] ทดสอบสร้างออเดอร์ไม่มีมัดจำ และคืนออเดอร์ เพื่อดูพฤติกรรม Auto-Pass
-- [ ] ทดสอบแก้ไขค่าปรับย้อนหลังในออเดอร์ที่ปิดไปแล้ว และตรวจสอบผลกระทบใน Dashboard / Customer Profile
+- [ ] รันคำสั่ง `supabase migration up` หรือ `supabase db push` บน Database ของจริงเพื่อ Apply คอลัมน์ใหม่จาก Migration `0028` และ `0031`
+- [ ] ตรวจสอบความถูกต้องของการตั้งค่าในหน้า Settings หลังจากรัน Migration แล้ว (ว่า Default Fallback ทำงานถูกต้องหรือไม่)
+- [ ] ทดสอบสร้างออเดอร์ไร้มัดจำ เพื่อดูพฤติกรรม Auto-Pass
+- [ ] ทดสอบแก้ไขค่าปรับย้อนหลังในออเดอร์ที่ปิดไปแล้ว และตรวจสอบผลกระทบในหน้า Dashboard / Customer Profile
