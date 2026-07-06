@@ -12,7 +12,7 @@ export type StockManagementDrawerProps = {
   isSaving: boolean
   onClose: () => void
   onAddStock: (productId: string, size: string, quantity: number) => void
-  onDeleteVariant: (productId: string, stockId: string) => void
+  onDeleteVariant?: (productId: string, stockId: string) => void
   onUpdateStatus: (productId: string, stockId: string, status: StockItemStatus) => void
 }
 
@@ -175,15 +175,17 @@ export function StockManagementDrawer({
                         </select>
                         {primaryStatus === 'rented' && <span className="status-pill warning" style={{ zoom: 0.85 }}>ถูกเช่า</span>}
                         {primaryStatus === 'booked' && <span className="status-pill success" style={{ zoom: 0.85 }}>มีคิวจอง</span>}
-                        <button 
-                          type="button" 
-                          onClick={() => onDeleteVariant(product.id, si.id)} 
-                          disabled={isSaving}
-                          style={{ background: 'none', border: 'none', color: 'var(--danger-glow)', cursor: 'pointer', padding: '4px', marginLeft: '4px' }}
-                          title="ลบตัวชุดนี้"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {onDeleteVariant && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteVariant(product.id, si.id)}
+                            disabled={isSaving}
+                            style={{ background: 'none', border: 'none', color: 'var(--danger-glow)', cursor: 'pointer', padding: '4px', marginLeft: '4px' }}
+                            title="ลบตัวชุดนี้"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )

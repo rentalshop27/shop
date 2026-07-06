@@ -144,8 +144,8 @@ describe('App shop selection', () => {
     })
 
     loadAccessibleShops.mockResolvedValue([
-      { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam' },
-      { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: 'precious-silom' },
+      { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam', role: 'owner' },
+      { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: 'precious-silom', role: 'owner' },
     ])
     loadCustomerSummaries.mockResolvedValue([])
     loadCustomers.mockResolvedValue([])
@@ -412,10 +412,13 @@ describe('App shop selection', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'ตั้งค่า' })[0])
 
     const tabList = await screen.findByRole('tablist', { name: 'Settings tabs' })
-    expect(screen.getAllByRole('tab')).toHaveLength(2)
-    expect(tabList.querySelectorAll('[role="tab"]')).toHaveLength(2)
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
+    expect(tabList.querySelectorAll('[role="tab"]')).toHaveLength(3)
 
-    for (const label of ['สิทธิ์พนักงาน', 'การแจ้งเตือน', 'เชื่อมต่อระบบ']) {
+    fireEvent.click(screen.getByRole('tab', { name: 'สิทธิ์พนักงาน' }))
+    expect(screen.getByText('ระบบจัดการรายชื่อทีมงาน (กำลังพัฒนาสำหรับเฟสถัดไป)')).toBeTruthy()
+
+    for (const label of ['การแจ้งเตือน', 'เชื่อมต่อระบบ']) {
       const matchingButtons = screen.getAllByRole('button', { name: new RegExp(label) })
       expect(matchingButtons.length).toBeGreaterThan(0)
       matchingButtons.forEach((button) => {

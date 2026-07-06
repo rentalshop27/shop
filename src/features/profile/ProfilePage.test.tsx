@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ProfilePage } from './ProfilePage'
 
 const shops = [
-  { id: 'shop_1', name: 'Precious Siam' },
-  { id: 'shop_2', name: 'Precious Silom' },
+  { id: 'shop_1', name: 'Precious Siam', role: 'owner' as const },
+  { id: 'shop_2', name: 'Precious Silom', role: 'owner' as const },
 ]
 
 afterEach(cleanup)

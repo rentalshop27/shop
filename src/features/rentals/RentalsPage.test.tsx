@@ -547,6 +547,54 @@ describe('RentalsPage', () => {
     expect((screen.getByLabelText('จำนวนเงินค่าปรับ (฿)') as HTMLInputElement).value).toBe('')
   })
 
+  it('renders money actions as disabled for staff viewers', () => {
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 500 })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={vi.fn()}
+        onSaveExtraFine={vi.fn(async () => {})}
+        canManageMoney={false}
+      />
+    )
+
+    const forfeitButton = screen.getByRole('button', { name: /ยึดมัดจำ/ })
+    const refundButton = screen.getByRole('button', { name: /คืนมัดจำแล้ว/ })
+
+    expect(forfeitButton.getAttribute('aria-disabled')).toBe('true')
+    expect(refundButton.getAttribute('aria-disabled')).toBe('true')
+    expect(forfeitButton.getAttribute('title')).toContain('เฉพาะผู้จัดการเท่านั้นที่มีสิทธิ์จัดการยอดเงิน')
+
+    fireEvent.click(forfeitButton)
+
+    expect(screen.queryByLabelText('จำนวนเงินที่ยึด/ปรับ')).toBeNull()
+  })
+
+  it('renders the extra fine action as disabled for staff viewers', () => {
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 0, depositStatus: 'returned' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={vi.fn()}
+        onSaveExtraFine={vi.fn(async () => {})}
+        canManageMoney={false}
+      />
+    )
+
+    const extraFineButton = screen.getByRole('button', { name: /เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง/ })
+    expect(extraFineButton.getAttribute('aria-disabled')).toBe('true')
+    expect(extraFineButton.getAttribute('title')).toContain('เฉพาะผู้จัดการเท่านั้นที่มีสิทธิ์จัดการยอดเงิน')
+
+    fireEvent.click(extraFineButton)
+    expect(screen.queryByLabelText('จำนวนเงินค่าปรับ (฿)')).toBeNull()
+  })
+
   it('submits only limited edit fields for active rentals', async () => {
     const onEditRentalFields = vi.fn(async () => true)
 
@@ -609,5 +657,31 @@ describe('RentalsPage', () => {
     )
 
     expect(screen.getByRole('button', { name: 'ลบใบเช่านี้' })).toBeTruthy()
+  })
+
+  it('hides destructive actions when their handlers are not provided', () => {
+    const { rerender } = render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'booked' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'ยกเลิกออเดอร์' })).toBeNull()
+
+    rerender(
+      <RentalsPage
+        rentals={[makeRental({ status: 'cancelled' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: 'ลบใบเช่านี้' })).toBeNull()
   })
 })

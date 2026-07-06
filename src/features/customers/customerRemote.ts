@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Customer, CustomerDocument, CustomerDraft } from './customerTypes'
 import { normalizeThaiPhone } from './customerRules'
+import { normalizeShopRole, type ShopRole } from '../auth/shopPermissions'
 
 type CustomerDocumentRow = {
   id: string
@@ -41,6 +42,22 @@ export type ShopSummary = {
   id: string
   name: string
   publicCatalogSlug?: string | null
+  role: ShopRole
+}
+
+type ShopMembershipRow = {
+  role: string | null
+  shops: {
+    id: string
+    name: string
+    public_catalog_slug: string | null
+    created_at: string
+  } | Array<{
+    id: string
+    name: string
+    public_catalog_slug: string | null
+    created_at: string
+  }>
 }
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
@@ -73,16 +90,33 @@ function getFunctionUrl(name: string) {
 
 export async function loadAccessibleShops(supabase: SupabaseClient): Promise<ShopSummary[]> {
   const { data, error } = await supabase
-    .from('shops')
-    .select('id, name, public_catalog_slug')
-    .order('created_at', { ascending: true })
+    .from('shop_members')
+    .select('role, shops!inner(id, name, public_catalog_slug, created_at)')
 
   if (error) throw error
-  return (data ?? []).map((shop) => ({
-    id: shop.id,
-    name: shop.name,
-    publicCatalogSlug: shop.public_catalog_slug,
-  }))
+
+  const shopsWithCreatedAt: Array<ShopSummary & { createdAt: string }> = ((data ?? []) as ShopMembershipRow[])
+    .flatMap((membership) => {
+      const shop = Array.isArray(membership.shops) ? membership.shops[0] : membership.shops
+      if (!shop) return []
+
+      return [{
+        id: shop.id,
+        name: shop.name,
+        publicCatalogSlug: shop.public_catalog_slug ?? null,
+        role: normalizeShopRole(membership.role),
+        createdAt: shop.created_at,
+      }]
+    })
+
+  return shopsWithCreatedAt
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
+    .map((shop) => ({
+      id: shop.id,
+      name: shop.name,
+      publicCatalogSlug: shop.publicCatalogSlug,
+      role: shop.role,
+    }))
 }
 
 export async function loadCustomers(supabase: SupabaseClient, shopId: string) {

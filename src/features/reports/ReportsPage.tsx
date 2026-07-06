@@ -31,6 +31,7 @@ import {
   syncGoogleSheetsReport,
   type GoogleSheetsReportStatus,
 } from './googleSheetsReportRemote'
+import { getUserFacingErrorMessage } from '../../lib/errorMessages'
 import './ReportsPage.css'
 
 // Helper to format currency
@@ -61,7 +62,7 @@ function formatMonthLabel(month: string) {
 }
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+  return getUserFacingErrorMessage(error)
 }
 
 const categoryChartColors = ['#81c784', '#ead483', '#64b5f6', '#ce93d8', '#ffb74d', '#f06292']

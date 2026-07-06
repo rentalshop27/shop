@@ -104,4 +104,20 @@ describe('StockManagementDrawer', () => {
     expect(screen.getByRole('combobox', { name: 'สถานะของ oommm-S-01' })).toHaveValue('rented')
     expect(screen.getByRole('option', { name: 'ถูกเช่า' })).toBeDisabled()
   })
+
+  it('hides the delete control when no destructive handler is provided', () => {
+    render(
+      <StockManagementDrawer
+        product={product}
+        rentals={[]}
+        today="2026-07-04"
+        isSaving={false}
+        onClose={vi.fn()}
+        onAddStock={vi.fn()}
+        onUpdateStatus={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByTitle('ลบตัวชุดนี้')).toBeNull()
+  })
 })

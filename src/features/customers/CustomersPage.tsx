@@ -75,7 +75,7 @@ type CustomersPageProps = {
   onMobileDetailOpenChange: Dispatch<SetStateAction<boolean>>
   onStatusChange: (status: CustomerProfileStatus) => void
   onRiskChange: (riskFlag: RiskFlag) => void
-  onArchiveSelectedCustomer: () => void
+  onArchiveSelectedCustomer?: () => void
   onDocumentUpload: (files: FileList | null) => void
   onDocumentPreviewError: (customerId: string) => void
   onEditCustomer: (customer: Customer) => void
@@ -605,7 +605,7 @@ function CustomerDetail({
   customer: Customer
   onStatusChange: (status: CustomerProfileStatus) => void
   onRiskChange: (riskFlag: RiskFlag) => void
-  onArchive: () => void
+  onArchive?: () => void
   onDocumentUpload: (files: FileList | null) => void
   onDocumentPreviewError: (customerId: string) => void
   onEdit: () => void
@@ -756,15 +756,25 @@ function CustomerDetail({
           ))}
         </div>
       </section>
-      <div className="detail-action-buttons" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px' }}>
+      <div
+        className="detail-action-buttons"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: onArchive ? '1fr 1fr' : '1fr',
+          gap: '12px',
+          marginTop: '24px',
+        }}
+      >
         <button className="secondary-button" type="button" onClick={onEdit} style={{ minHeight: '44px', width: '100%', gap: '8px' }}>
           <Pencil size={18} />
           แก้ไขข้อมูล
         </button>
-        <button className="archive-button" type="button" onClick={onArchive} style={{ minHeight: '44px', width: '100%', gap: '8px', marginTop: 0 }}>
-          <Trash2 size={18} />
-          ลบลูกค้า
-        </button>
+        {onArchive && (
+          <button className="archive-button" type="button" onClick={onArchive} style={{ minHeight: '44px', width: '100%', gap: '8px', marginTop: 0 }}>
+            <Trash2 size={18} />
+            ลบลูกค้า
+          </button>
+        )}
       </div>
     </aside>
   )

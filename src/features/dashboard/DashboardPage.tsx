@@ -23,12 +23,14 @@ export function DashboardPage({
   rentals,
   onUpdateRentalStatus,
   onNavigateToCustomers,
-  onNavigateToRentals
+  onNavigateToRentals,
+  showFinancials = true,
 }: {
   rentals: RentalOrder[]
   onUpdateRentalStatus: (id: string, status: RentalStatus) => void
   onNavigateToCustomers: () => void
   onNavigateToRentals: () => void
+  showFinancials?: boolean
 }) {
   // --- DYNAMIC CALCULATIONS FROM SHARED STATE ---
   const today = getLocalDateString(new Date())
@@ -60,7 +62,11 @@ export function DashboardPage({
         <div>
           <p className="eyebrow">PRECIOUS SHOP</p>
           <h1>หน้าแดชบอร์ด</h1>
-          <p className="subtitle">ภาพรวมร้านเช่าชุด ข้อมูลการเงิน และงานที่รอดำเนินการประจำวัน</p>
+          <p className="subtitle">
+            {showFinancials
+              ? 'ภาพรวมร้านเช่าชุด ข้อมูลการเงิน และงานที่รอดำเนินการประจำวัน'
+              : 'ภาพรวมงานประจำวัน สถานะการเช่า และรายการที่ต้องติดตามของพนักงานหน้าร้าน'}
+          </p>
         </div>
         
         {/* Desktop Header Actions */}
@@ -113,9 +119,9 @@ export function DashboardPage({
       </header>
 
       {/* --- TOP SUMMARY STATS WIDGETS --- */}
-      <section className="dashboard-top-grid" aria-label="สถิติหลัก">
+      <section className={`dashboard-top-grid ${showFinancials ? '' : 'dashboard-top-grid--staff'}`.trim()} aria-label="สถิติหลัก">
         {/* Left Side: Danger Alerts Group */}
-        <div className="dashboard-group-panel">
+        <div className={`dashboard-group-panel ${showFinancials ? '' : 'dashboard-group-panel--staff'}`.trim()}>
           <div
             className="dashboard-card"
             style={{ cursor: overdues.length > 0 ? 'pointer' : 'default' }}
@@ -150,58 +156,59 @@ export function DashboardPage({
         </div>
 
         {/* Right Side: Financial & Rental Summary Group */}
-        <div className="dashboard-group-panel premium-gradient-bg" style={{ display: 'flex', padding: '16px' }}>
-          {/* New Financial Widget */}
-          <div className="dashboard-card gradient-card" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div className="dashboard-card-icon green-theme" style={{ display: 'flex', margin: 0 }}>
-                  <Wallet size={24} />
+        {showFinancials && (
+          <div className="dashboard-group-panel premium-gradient-bg" style={{ display: 'flex', padding: '16px' }}>
+            <div className="dashboard-card gradient-card" style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div className="dashboard-card-icon green-theme" style={{ display: 'flex', margin: 0 }}>
+                    <Wallet size={24} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span className="dashboard-card-label" style={{ fontSize: '1.05rem', color: '#e2e8f0', marginBottom: '2px' }}>รายรับสุทธิประจำเดือน</span>
+                    <span className="dashboard-card-subtext" style={{ fontSize: '0.8rem' }}>(รายได้จริงหลังหักมัดจำรอคืนแล้ว)</span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span className="dashboard-card-label" style={{ fontSize: '1.05rem', color: '#e2e8f0', marginBottom: '2px' }}>รายรับสุทธิประจำเดือน</span>
-                  <span className="dashboard-card-subtext" style={{ fontSize: '0.8rem' }}>(รายได้จริงหลังหักมัดจำรอคืนแล้ว)</span>
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '24px', paddingLeft: '48px' }}>
-                <span className="dashboard-card-value" style={{ fontSize: '2.5rem', color: '#34d399', lineHeight: '1', display: 'block' }}>
-                  ฿{Math.round(netRevenue).toLocaleString('th-TH')}
-                </span>
-              </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
-              <div>
-                <span className="dashboard-card-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', marginBottom: '6px', color: '#fbbf24' }}>
-                  <Clock size={16} /> เงินมัดจำที่ถืออยู่ขณะนี้
-                </span>
-                <span className="dashboard-card-value" style={{ fontSize: '1.25rem', display: 'block', marginBottom: '2px' }}>
-                  ฿{Math.round(activeHeldDeposits).toLocaleString('th-TH')}
-                </span>
-                <span className="dashboard-card-subtext" style={{ fontSize: '0.75rem' }}>(ภาระที่ต้องโอนคืนลูกค้า)</span>
+                <div style={{ marginBottom: '24px', paddingLeft: '48px' }}>
+                  <span className="dashboard-card-value" style={{ fontSize: '2.5rem', color: '#34d399', lineHeight: '1', display: 'block' }}>
+                    ฿{Math.round(netRevenue).toLocaleString('th-TH')}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="dashboard-card-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', marginBottom: '6px', color: '#60a5fa' }}>
-                  <BadgeCheck size={16} /> เงินสดในมือรวมทั้งหมด
-                </span>
-                <span className="dashboard-card-value" style={{ fontSize: '1.25rem', display: 'block', marginBottom: '2px' }}>
-                  ฿{Math.round(totalCashFlow).toLocaleString('th-TH')}
-                </span>
-                <span className="dashboard-card-subtext" style={{ fontSize: '0.75rem' }}>(ยอดเงินโอนเข้าแบงก์จริง)</span>
-              </div>
-              <div>
-                <span className="dashboard-card-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', marginBottom: '6px', color: '#f87171' }}>
-                  <ShoppingBag size={16} /> รายได้อื่นๆ / ค่าปรับประจำเดือน
-                </span>
-                <span className="dashboard-card-value" style={{ fontSize: '1.25rem', display: 'block', marginBottom: '2px' }}>
-                  ฿{Math.round(totalFines).toLocaleString('th-TH')}
-                </span>
-                <span className="dashboard-card-subtext" style={{ fontSize: '0.75rem' }}>(ค่าปรับชุดเสียหาย, ฯลฯ)</span>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+                <div>
+                  <span className="dashboard-card-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', marginBottom: '6px', color: '#fbbf24' }}>
+                    <Clock size={16} /> เงินมัดจำที่ถืออยู่ขณะนี้
+                  </span>
+                  <span className="dashboard-card-value" style={{ fontSize: '1.25rem', display: 'block', marginBottom: '2px' }}>
+                    ฿{Math.round(activeHeldDeposits).toLocaleString('th-TH')}
+                  </span>
+                  <span className="dashboard-card-subtext" style={{ fontSize: '0.75rem' }}>(ภาระที่ต้องโอนคืนลูกค้า)</span>
+                </div>
+                <div>
+                  <span className="dashboard-card-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', marginBottom: '6px', color: '#60a5fa' }}>
+                    <BadgeCheck size={16} /> เงินสดในมือรวมทั้งหมด
+                  </span>
+                  <span className="dashboard-card-value" style={{ fontSize: '1.25rem', display: 'block', marginBottom: '2px' }}>
+                    ฿{Math.round(totalCashFlow).toLocaleString('th-TH')}
+                  </span>
+                  <span className="dashboard-card-subtext" style={{ fontSize: '0.75rem' }}>(ยอดเงินโอนเข้าแบงก์จริง)</span>
+                </div>
+                <div>
+                  <span className="dashboard-card-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', marginBottom: '6px', color: '#f87171' }}>
+                    <ShoppingBag size={16} /> รายได้อื่นๆ / ค่าปรับประจำเดือน
+                  </span>
+                  <span className="dashboard-card-value" style={{ fontSize: '1.25rem', display: 'block', marginBottom: '2px' }}>
+                    ฿{Math.round(totalFines).toLocaleString('th-TH')}
+                  </span>
+                  <span className="dashboard-card-subtext" style={{ fontSize: '0.75rem' }}>(ค่าปรับชุดเสียหาย, ฯลฯ)</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* --- MOBILE ONLY: งานวันนี้ (Today's Tasks Summary) --- */}

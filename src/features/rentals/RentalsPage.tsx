@@ -55,6 +55,7 @@ interface RentalsPageProps {
   onEditRentalFields?: (rentalId: string, patch: Record<string, unknown>, skipConflictCheck?: boolean) => Promise<boolean | void>
   /** เพิ่มค่าปรับย้อนหลังกรณีชุดพัง */
   onSaveExtraFine?: (rentalIdOrIds: string | string[], amount: number, reason: string) => Promise<void>
+  canManageMoney?: boolean
 
   // Optional external controls
   externalSelectedRentalId?: string
@@ -117,6 +118,7 @@ export function RentalsPage({
   onResolveDeposit,
   onEditRentalFields,
   onSaveExtraFine,
+  canManageMoney = true,
 
   // Optional external controls
   externalSelectedRentalId,
@@ -195,6 +197,7 @@ export function RentalsPage({
   const [formError, setFormError] = useState('')
 
   const [localIsFormOpen, setLocalIsFormOpen] = useState(false)
+  const moneyActionDisabledReason = 'เฉพาะผู้จัดการเท่านั้นที่มีสิทธิ์จัดการยอดเงิน'
   const isFormOpen = onFormOpenChange ? (externalIsFormOpen || false) : localIsFormOpen
   const setIsFormOpen = (open: boolean) => {
     if (onFormOpenChange) {
@@ -1291,6 +1294,7 @@ export function RentalsPage({
                               <button
                                 type="button"
                                 onClick={() => {
+                                  if (!canManageMoney) return
                                   const currentFine = selectedRental.rentals.reduce((sum, r) => sum + (r.fineAmount ?? 0), 0)
                                   const currentReason = selectedRental.rentals.find(r => (r.fineAmount ?? 0) > 0)?.fineReason ?? ''
                                   setExtraFineAmount(currentFine > 0 ? String(currentFine) : '')
@@ -1304,17 +1308,20 @@ export function RentalsPage({
                                   padding: '6px 12px',
                                   borderRadius: '6px',
                                   fontSize: '11px',
-                                  cursor: 'pointer',
+                                  cursor: canManageMoney ? 'pointer' : 'not-allowed',
+                                  opacity: canManageMoney ? 1 : 0.45,
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px'
                                 }}
+                                aria-disabled={!canManageMoney}
+                                title={!canManageMoney ? moneyActionDisabledReason : undefined}
                               >
                                 ⚠️ เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง
                               </button>
                             </div>
                           )}
-                          {isExtraFineOpen && (
+                          {canManageMoney && isExtraFineOpen && (
                             <div style={{ marginTop: '10px', padding: '10px', borderRadius: '8px', border: '1px solid rgba(249, 115, 22, 0.35)', background: 'rgba(249, 115, 22, 0.06)' }}>
                               {(() => {
                                 const returnDateObj = new Date(selectedRental.returnDate);
@@ -1394,28 +1401,42 @@ export function RentalsPage({
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                             <button
                               type="button"
-                              onClick={handleRefundDeposit}
+                              onClick={() => {
+                                if (!canManageMoney) return
+                                handleRefundDeposit()
+                              }}
                               style={{
                                 padding: '8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.4)',
                                 background: 'rgba(16, 185, 129, 0.08)', color: 'var(--success-color)',
-                                cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                                cursor: canManageMoney ? 'pointer' : 'not-allowed',
+                                opacity: canManageMoney ? 1 : 0.45,
+                                fontSize: '12px', fontWeight: 600
                               }}
+                              aria-disabled={!canManageMoney}
+                              title={!canManageMoney ? moneyActionDisabledReason : undefined}
                             >
                               💸 คืนมัดจำแล้ว
                             </button>
                             <button
                               type="button"
-                              onClick={openForfeitDeposit}
+                              onClick={() => {
+                                if (!canManageMoney) return
+                                openForfeitDeposit()
+                              }}
                               style={{
                                 padding: '8px', borderRadius: '6px', border: '1px solid rgba(249, 115, 22, 0.4)',
                                 background: 'rgba(249, 115, 22, 0.08)', color: '#f97316',
-                                cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                                cursor: canManageMoney ? 'pointer' : 'not-allowed',
+                                opacity: canManageMoney ? 1 : 0.45,
+                                fontSize: '12px', fontWeight: 600
                               }}
+                              aria-disabled={!canManageMoney}
+                              title={!canManageMoney ? moneyActionDisabledReason : undefined}
                             >
                               ⚠️ ยึดมัดจำ
                             </button>
                           </div>
-                          {isForfeitDepositOpen && (
+                          {canManageMoney && isForfeitDepositOpen && (
                             <div style={{ marginTop: '10px', padding: '10px', borderRadius: '8px', border: '1px solid rgba(249, 115, 22, 0.35)', background: 'rgba(249, 115, 22, 0.06)' }}>
                               <div style={{ fontSize: '12px', color: 'var(--text-bright)', fontWeight: 700, marginBottom: '8px' }}>
                                 ต้องการยึดมัดจำเต็มจำนวน หรือยึดบางส่วน?

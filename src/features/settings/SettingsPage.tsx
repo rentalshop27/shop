@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette, Globe2 } from 'lucide-react'
+import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette, Globe2, Users } from 'lucide-react'
 import { sanitizeNumericInput } from '../../lib/numericInput'
 
 interface SettingsPageProps {
+  canManageShopSettings: boolean
+  canManageStaff: boolean
   brands: string[]
   categories: string[]
   colors: string[]
@@ -27,11 +29,6 @@ interface SettingsPageProps {
 function cloneRentalTiers(tiers: {days: number; price: number}[]) {
   return tiers.map((tier) => ({ ...tier }))
 }
-
-const SETTINGS_READY_TABS = [
-  { id: 'general', label: 'ตั้งค่าทั่วไป' },
-  { id: 'inventory', label: 'ตัวเลือกสินค้า' },
-] as const
 
 const SETTINGS_COMING_SOON_TABS = [
   { id: 'staff', label: 'สิทธิ์พนักงาน' },
@@ -144,7 +141,27 @@ export function SettingsPage(props: SettingsPageProps) {
     }
   }
 
-  const activeTab = props.activeTab === 'inventory' ? 'inventory' : 'general'
+  const readyTabs: Array<{ id: 'general' | 'inventory' | 'staff'; label: string }> = [
+    ...(props.canManageShopSettings
+      ? [
+          { id: 'general' as const, label: 'ตั้งค่าทั่วไป' },
+          { id: 'inventory' as const, label: 'ตัวเลือกสินค้า' },
+        ]
+      : []),
+    ...(props.canManageStaff ? [{ id: 'staff' as const, label: 'สิทธิ์พนักงาน' }] : []),
+  ]
+
+  const comingSoonTabs = SETTINGS_COMING_SOON_TABS.filter((tab) => {
+    if (tab.id === 'staff') return false
+    if (tab.id === 'notifications' || tab.id === 'integrations') {
+      return props.canManageShopSettings
+    }
+    return true
+  })
+
+  const activeTab = readyTabs.some((tab) => tab.id === props.activeTab)
+    ? props.activeTab
+    : (readyTabs[0]?.id ?? 'general')
 
   return (
     <>
@@ -158,7 +175,7 @@ export function SettingsPage(props: SettingsPageProps) {
 
       <div className="settings-mobile-nav">
         <div className="settings-mobile-tablist" role="tablist" aria-label="Settings tabs">
-          {SETTINGS_READY_TABS.map(({ id, label }) => (
+          {readyTabs.map(({ id, label }) => (
             <button
               key={id}
               id={`settings-tab-${id}`}
@@ -175,7 +192,7 @@ export function SettingsPage(props: SettingsPageProps) {
         </div>
 
         <div className="settings-mobile-coming-soon" aria-label="Settings sections coming soon">
-          {SETTINGS_COMING_SOON_TABS.map(({ id, label }) => (
+          {comingSoonTabs.map(({ id, label }) => (
             <button key={id} type="button" disabled className="settings-tab-btn disabled">
               {label}
               <span className="settings-tab-badge">เร็ว ๆ นี้</span>
@@ -211,6 +228,8 @@ export function SettingsPage(props: SettingsPageProps) {
           handleDeleteColorClick={handleDeleteColorClick}
         />
       )}
+
+      {activeTab === 'staff' && <StaffPermissionsPlaceholder />}
     </>
   )
 }
@@ -591,6 +610,28 @@ function InventorySettingsTab(props: InventorySettingsTabProps) {
               </div>
             )}
           </div>
+        </div>
+      </section>
+    </section>
+  )
+}
+
+function StaffPermissionsPlaceholder() {
+  return (
+    <section
+      id="settings-panel-staff"
+      role="tabpanel"
+      aria-labelledby="settings-tab-staff"
+      className="settings-grid"
+      style={{ marginTop: 0 }}
+    >
+      <section className="panel settings-panel settings-placeholder-panel">
+        <div className="settings-placeholder-icon" aria-hidden="true">
+          <Users size={28} />
+        </div>
+        <div className="settings-placeholder-copy">
+          <h2>สิทธิ์พนักงาน</h2>
+          <p>ระบบจัดการรายชื่อทีมงาน (กำลังพัฒนาสำหรับเฟสถัดไป)</p>
         </div>
       </section>
     </section>

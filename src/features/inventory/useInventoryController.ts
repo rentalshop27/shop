@@ -17,6 +17,7 @@ import {
 } from './stockRemote'
 import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
+import { getUserFacingErrorMessage } from '../../lib/errorMessages'
 
 const emptyProductDraft: ProductDraft = {
   baseSku: '',
@@ -56,6 +57,7 @@ type InventoryControllerOptions = {
   shopId: string | null
   supabase: SupabaseClient | null
   onLoadAuditLogs: () => Promise<void> | void
+  canManageDestructiveActions: boolean
   defaultRentalPrices: {days: number; price: number}[]
   defaultDeposit: number
   defaultLateFinePerDay: number
@@ -74,6 +76,7 @@ export function useInventoryController({
   shopId,
   supabase,
   onLoadAuditLogs,
+  canManageDestructiveActions,
   defaultRentalPrices,
   defaultDeposit,
   defaultLateFinePerDay,
@@ -420,8 +423,8 @@ export function useInventoryController({
     onOpenForm: openCreateForm,
     onCloseForm: closeForm,
     onEdit: openEditForm,
-    onDeleteProduct: handleDeleteProduct,
-    onDeleteVariant: handleDeleteVariant,
+    onDeleteProduct: canManageDestructiveActions ? handleDeleteProduct : undefined,
+    onDeleteVariant: canManageDestructiveActions ? handleDeleteVariant : undefined,
     onAddStock: handleAddStock,
     onPreview: openPreview,
     onDraftChange: updateDraft,
@@ -641,15 +644,7 @@ function readFileAsDataUrl(file: File) {
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (error && typeof error === 'object') {
-    const maybeError = error as { message?: unknown; details?: unknown; hint?: unknown }
-    const parts = [maybeError.message, maybeError.details, maybeError.hint].filter(
-      (part): part is string => typeof part === 'string' && part.trim().length > 0,
-    )
-    if (parts.length > 0) return parts.join('\n')
-  }
-  return 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+  return getUserFacingErrorMessage(error)
 }
 
 export type { InventoryControllerOptions }

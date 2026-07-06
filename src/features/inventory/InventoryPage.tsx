@@ -48,8 +48,8 @@ export type InventoryControllerPageProps = {
   onOpenForm: () => void
   onCloseForm: () => void
   onEdit: (product: ProductWithStockSummary) => void
-  onDeleteProduct: (product: ProductWithStockSummary) => void
-  onDeleteVariant: (productId: string, stockId: string) => void
+  onDeleteProduct?: (product: ProductWithStockSummary) => void
+  onDeleteVariant?: (productId: string, stockId: string) => void
   onAddStock: (productId: string, size: string, quantity: number) => void
   onPreview: (product: ProductWithStockSummary, index?: number) => void
   onDraftChange: <Field extends keyof ProductDraft>(field: Field, value: ProductDraft[Field]) => void
@@ -271,9 +271,11 @@ export function InventoryPage({
                     <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไข" disabled={isSaving}>
                       <Pencil size={16} />
                     </button>
-                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุด" disabled={isSaving}>
-                      <Trash2 size={16} />
-                    </button>
+                    {onDeleteProduct && (
+                      <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุด" disabled={isSaving}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               )
@@ -387,9 +389,11 @@ export function InventoryPage({
                     <button className="icon-action-button compact" type="button" onClick={() => onEdit(product)} title="แก้ไขชุดหลัก" disabled={isSaving} style={{ flex: 'none' }}>
                       <Pencil size={15} />
                     </button>
-                    <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุดหลัก" disabled={isSaving} style={{ flex: 'none' }}>
-                      <Trash2 size={15} />
-                    </button>
+                    {onDeleteProduct && (
+                      <button className="icon-action-button compact danger" type="button" onClick={() => onDeleteProduct(product)} title="ลบชุดหลัก" disabled={isSaving} style={{ flex: 'none' }}>
+                        <Trash2 size={15} />
+                      </button>
+                    )}
                   </div>
                 </div>
               )

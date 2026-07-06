@@ -25,6 +25,7 @@ import './index.css'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
 import { getLocalDateString } from './features/dashboard/dashboardMetrics'
 import { UpdatePrompt } from './features/settings/UpdatePrompt'
+import { getShopPermissions, type ShopPermissions } from './features/auth/shopPermissions'
 import { useInventoryController } from './features/inventory/useInventoryController'
 import { demoRentals } from './features/rentals/rentalSeed'
 import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './features/rentals/rentalTypes'
@@ -97,6 +98,7 @@ import {
 import { TextField } from './components/TextField'
 import { buildCatalogSizeSummary } from './features/catalog/catalogAvailability'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
+import { getUserFacingErrorMessage } from './lib/errorMessages'
 
 const emptyDraft: CustomerDraft = {
   fullName: '',
@@ -113,7 +115,6 @@ const emptyDraft: CustomerDraft = {
 }
 
 export type SettingsSubTab = 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations'
-const READY_SETTINGS_SUB_TABS: SettingsSubTab[] = ['general', 'inventory']
 
 type ViewKey = 'dashboard' | 'inventory' | 'catalog' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
 
@@ -139,6 +140,31 @@ const statusOptions: Array<{ value: 'all' | CustomerProfileStatus | 'has_risk'; 
 
 function cloneRentalPriceTiers(tiers: ShopSettings['defaultRentalPrices']): ShopSettings['defaultRentalPrices'] {
   return tiers.map((tier) => ({ ...tier }))
+}
+
+function getFirstAccessibleSettingsSubTab(permissions: ShopPermissions): SettingsSubTab {
+  if (permissions.canManageShopSettings) return 'general'
+  if (permissions.canManageStaff) return 'staff'
+  return 'general'
+}
+
+function normalizeSettingsSubTabForPermissions(tab: SettingsSubTab, permissions: ShopPermissions): SettingsSubTab {
+  if ((tab === 'general' || tab === 'inventory') && permissions.canManageShopSettings) {
+    return tab
+  }
+
+  if (tab === 'staff' && permissions.canManageStaff) {
+    return tab
+  }
+
+  return getFirstAccessibleSettingsSubTab(permissions)
+}
+
+function canAccessTab(tab: ViewKey, permissions: ShopPermissions) {
+  if (tab === 'reports') return permissions.canViewReports
+  if (tab === 'audit') return permissions.canViewAuditLogs
+  if (tab === 'settings') return permissions.canAccessSettings
+  return true
 }
 
 const LazyDashboardPage = lazy(async () => {
@@ -368,7 +394,6 @@ function PrivateApp() {
   const [externalIsFormOpen, setExternalIsFormOpen] = useState<boolean>(false)
   const [externalPickupDate, setExternalPickupDate] = useState<string>('')
   const [externalReturnDate, setExternalReturnDate] = useState<string>('')
-  const activeSettingsSubTab = READY_SETTINGS_SUB_TABS.includes(settingsSubTab) ? settingsSubTab : 'general'
 
   function handleClearExternalDates() {
     setExternalPickupDate('')
@@ -389,8 +414,17 @@ function PrivateApp() {
   }
 
   function handleTabChange(tab: ViewKey) {
+    if (!canAccessTab(tab, currentPermissions)) {
+      resetDocumentScroll()
+      setActiveTab('dashboard')
+      return
+    }
+
     resetDocumentScroll()
     setActiveTab(tab)
+    if (tab === 'settings') {
+      setSettingsSubTab((current) => normalizeSettingsSubTabForPermissions(current, currentPermissions))
+    }
     if (tab !== 'rentals') {
       setExternalIsFormOpen(false)
       setExternalPickupDate('')
@@ -1245,6 +1279,20 @@ function PrivateApp() {
   const [overviewShopsData, setOverviewShopsData] = useState<OverviewShopData[]>([])
   const [remoteError, setRemoteError] = useState('')
   const currentShop = availableShops.find((shop) => shop.id === shopId) ?? null
+  const currentPermissions = getShopPermissions(currentShop?.role)
+  const activeSettingsSubTab = normalizeSettingsSubTabForPermissions(settingsSubTab, currentPermissions)
+
+  useEffect(() => {
+    if (!canAccessTab(activeTab, currentPermissions)) {
+      setActiveTab('dashboard')
+    }
+  }, [activeTab, currentPermissions])
+
+  useEffect(() => {
+    if (settingsSubTab !== activeSettingsSubTab) {
+      setSettingsSubTab(activeSettingsSubTab)
+    }
+  }, [activeSettingsSubTab, settingsSubTab])
 
   useEffect(() => {
     if (!supabase) return
@@ -1537,6 +1585,7 @@ function PrivateApp() {
     shopId,
     supabase,
     onLoadAuditLogs: handleLoadAuditLogs,
+    canManageDestructiveActions: currentPermissions.canManageDestructiveActions,
     defaultRentalPrices,
     defaultDeposit,
     defaultLateFinePerDay,
@@ -2079,22 +2128,26 @@ function PrivateApp() {
           <img src="/web-logo.png" alt="Precious Rental" />
         </div>
         <div className="mobile-top-actions">
-          <button
-            className={`mobile-action-btn ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => handleTabChange('reports')}
-            title="รายงาน"
-            type="button"
-          >
-            <BarChart3 size={20} />
-          </button>
-          <button
-            className={`mobile-action-btn ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => handleTabChange('settings')}
-            title="ตั้งค่า"
-            type="button"
-          >
-            <Settings size={20} />
-          </button>
+          {currentPermissions.canViewReports && (
+            <button
+              className={`mobile-action-btn ${activeTab === 'reports' ? 'active' : ''}`}
+              onClick={() => handleTabChange('reports')}
+              title="รายงาน"
+              type="button"
+            >
+              <BarChart3 size={20} />
+            </button>
+          )}
+          {currentPermissions.canAccessSettings && (
+            <button
+              className={`mobile-action-btn ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => handleTabChange('settings')}
+              title="ตั้งค่า"
+              type="button"
+            >
+              <Settings size={20} />
+            </button>
+          )}
           <button
             className={`mobile-action-btn ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => handleTabChange('profile')}
@@ -2103,14 +2156,16 @@ function PrivateApp() {
           >
             <CircleUserRound size={20} />
           </button>
-          <button
-            className={`mobile-action-btn ${activeTab === 'audit' ? 'active' : ''}`}
-            onClick={() => handleTabChange('audit')}
-            title="ประวัติระบบ"
-            type="button"
-          >
-            <History size={20} />
-          </button>
+          {currentPermissions.canViewAuditLogs && (
+            <button
+              className={`mobile-action-btn ${activeTab === 'audit' ? 'active' : ''}`}
+              onClick={() => handleTabChange('audit')}
+              title="ประวัติระบบ"
+              type="button"
+            >
+              <History size={20} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -2119,6 +2174,7 @@ function PrivateApp() {
         onTabChange={handleTabChange}
         settingsSubTab={activeSettingsSubTab}
         onSettingsSubTabChange={setSettingsSubTab}
+        permissions={currentPermissions}
       />
       <main className="app-shell">
         {currentShop && (
@@ -2143,6 +2199,7 @@ function PrivateApp() {
               onUpdateRentalStatus={handleUpdateRentalStatus}
               onNavigateToCustomers={() => setActiveTab('customers')}
               onNavigateToRentals={() => setActiveTab('rentals')}
+              showFinancials={currentPermissions.canViewFinancials}
             />
           )}
 
@@ -2153,8 +2210,8 @@ function PrivateApp() {
               stockItems={flatStockItems}
               onCreateRentals={handleCreateRentals}
               onUpdateRentalStatus={handleUpdateRentalStatus}
-              onDeleteRental={handleDeleteRental}
-              onCancelRental={handleCancelRental}
+              onDeleteRental={currentPermissions.canManageDestructiveActions ? handleDeleteRental : undefined}
+              onCancelRental={currentPermissions.canManageDestructiveActions ? handleCancelRental : undefined}
               onResolveDeposit={handleResolveRentalDeposit}
               onEditRentalFields={handleEditRentalFields}
               onSaveExtraFine={handleSaveExtraFine}
@@ -2165,6 +2222,7 @@ function PrivateApp() {
               externalPickupDate={externalPickupDate}
               externalReturnDate={externalReturnDate}
               onClearExternalDates={handleClearExternalDates}
+              canManageMoney={currentPermissions.canManageMoney}
             />
           )}
 
@@ -2258,7 +2316,7 @@ function PrivateApp() {
               onMobileDetailOpenChange={setIsMobileDetailOpen}
               onStatusChange={updateSelectedStatus}
               onRiskChange={updateSelectedRisk}
-              onArchiveSelectedCustomer={archiveSelectedCustomer}
+              onArchiveSelectedCustomer={currentPermissions.canManageDestructiveActions ? archiveSelectedCustomer : undefined}
               onDocumentUpload={addDocuments}
               onDocumentPreviewError={refreshCustomerDocumentUrls}
               onEditCustomer={openEditCustomerForm}
@@ -2292,6 +2350,8 @@ function PrivateApp() {
             <LazySettingsPage
               activeTab={activeSettingsSubTab}
               onTabChange={setSettingsSubTab}
+              canManageShopSettings={currentPermissions.canManageShopSettings}
+              canManageStaff={currentPermissions.canManageStaff}
               brands={brands}
               categories={categories}
               colors={colors}
@@ -2405,11 +2465,13 @@ function SideNav({
   onTabChange,
   settingsSubTab,
   onSettingsSubTabChange,
+  permissions,
 }: {
   activeTab: ViewKey
   onTabChange: (tab: ViewKey) => void
   settingsSubTab: SettingsSubTab
   onSettingsSubTabChange: (tab: SettingsSubTab) => void
+  permissions: ShopPermissions
 }) {
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(activeTab === 'settings')
 
@@ -2426,21 +2488,33 @@ function SideNav({
     { id: 'customers', label: 'ลูกค้า', icon: UserRound },
     { id: 'rentals', label: 'เช่า/คืน', icon: CalendarCheck },
     { id: 'calendar', label: 'ปฏิทิน', icon: CalendarDays },
-    { id: 'reports', label: 'รายงาน', icon: BarChart3 },
   ]
+  if (permissions.canViewReports) {
+    mainItems.push({ id: 'reports', label: 'รายงาน', icon: BarChart3 })
+  }
 
-  const bottomItems: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
-    { id: 'audit', label: 'ประวัติระบบ', icon: History },
-    { id: 'profile', label: 'โปรไฟล์', icon: CircleUserRound },
-  ]
+  const bottomItems: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = []
+  if (permissions.canViewAuditLogs) {
+    bottomItems.push({ id: 'audit', label: 'ประวัติระบบ', icon: History })
+  }
+  bottomItems.push({ id: 'profile', label: 'โปรไฟล์', icon: CircleUserRound })
 
-  const settingsSubItems: Array<{ id: SettingsSubTab; label: string; icon: typeof LayoutDashboard; disabled?: boolean }> = [
-    { id: 'general', label: 'ตั้งค่าทั่วไป', icon: Sliders },
-    { id: 'inventory', label: 'ตัวเลือกสินค้า', icon: Tag },
-    { id: 'staff', label: 'สิทธิ์พนักงาน', icon: Users, disabled: true },
-    { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell, disabled: true },
-    { id: 'integrations', label: 'เชื่อมต่อระบบ', icon: Link, disabled: true },
-  ]
+  const settingsSubItems: Array<{ id: SettingsSubTab; label: string; icon: typeof LayoutDashboard; disabled?: boolean }> = []
+  if (permissions.canManageShopSettings) {
+    settingsSubItems.push(
+      { id: 'general', label: 'ตั้งค่าทั่วไป', icon: Sliders },
+      { id: 'inventory', label: 'ตัวเลือกสินค้า', icon: Tag },
+    )
+  }
+  if (permissions.canManageStaff) {
+    settingsSubItems.push({ id: 'staff', label: 'สิทธิ์พนักงาน', icon: Users })
+  }
+  if (permissions.canManageShopSettings) {
+    settingsSubItems.push(
+      { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell, disabled: true },
+      { id: 'integrations', label: 'เชื่อมต่อระบบ', icon: Link, disabled: true },
+    )
+  }
 
   return (
     <aside className="side-nav" aria-label="เมนูหลัก">
@@ -2461,48 +2535,50 @@ function SideNav({
           </button>
         ))}
 
-        <div className="nav-accordion">
-          <button
-            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            type="button"
-            onClick={() => {
-              if (activeTab === 'settings') {
-                setIsSettingsExpanded(!isSettingsExpanded)
-              } else {
-                onTabChange('settings')
-                setIsSettingsExpanded(true)
-              }
-            }}
-            aria-expanded={isSettingsExpanded}
-          >
-            <Settings size={28} strokeWidth={2} />
-            <span style={{ flex: 1, textAlign: 'left' }}>ตั้งค่า</span>
-            {isSettingsExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-          </button>
+        {permissions.canAccessSettings && (
+          <div className="nav-accordion">
+            <button
+              className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+              type="button"
+              onClick={() => {
+                if (activeTab === 'settings') {
+                  setIsSettingsExpanded(!isSettingsExpanded)
+                } else {
+                  onTabChange('settings')
+                  setIsSettingsExpanded(true)
+                }
+              }}
+              aria-expanded={isSettingsExpanded}
+            >
+              <Settings size={28} strokeWidth={2} />
+              <span style={{ flex: 1, textAlign: 'left' }}>ตั้งค่า</span>
+              {isSettingsExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            </button>
 
-          {isSettingsExpanded && (
-            <div className="nav-sub-items">
-              {settingsSubItems.map(({ id, label, icon: SubIcon, disabled }) => (
-                <button
-                  key={id}
-                  className={`nav-sub-item ${activeTab === 'settings' && settingsSubTab === id ? 'active' : ''}`}
-                  type="button"
-                  disabled={disabled}
-                  aria-disabled={disabled ? 'true' : undefined}
-                  onClick={() => {
-                    if (disabled) return
-                    onSettingsSubTabChange(id)
-                    if (activeTab !== 'settings') onTabChange('settings')
-                  }}
-                >
-                  <SubIcon size={18} />
-                  <span>{label}</span>
-                  {disabled ? <span className="nav-sub-item-badge">เร็ว ๆ นี้</span> : null}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+            {isSettingsExpanded && (
+              <div className="nav-sub-items">
+                {settingsSubItems.map(({ id, label, icon: SubIcon, disabled }) => (
+                  <button
+                    key={id}
+                    className={`nav-sub-item ${activeTab === 'settings' && settingsSubTab === id ? 'active' : ''}`}
+                    type="button"
+                    disabled={disabled}
+                    aria-disabled={disabled ? 'true' : undefined}
+                    onClick={() => {
+                      if (disabled) return
+                      onSettingsSubTabChange(id)
+                      if (activeTab !== 'settings') onTabChange('settings')
+                    }}
+                  >
+                    <SubIcon size={18} />
+                    <span>{label}</span>
+                    {disabled ? <span className="nav-sub-item-badge">เร็ว ๆ นี้</span> : null}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {bottomItems.map(({ id, label, icon: Icon }) => (
           <button
@@ -2652,14 +2728,7 @@ function readFileAsDataUrl(file: File) {
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (error && typeof error === 'object') {
-    const maybeError = error as { message?: unknown; details?: unknown; hint?: unknown }
-    const parts = [maybeError.message, maybeError.details, maybeError.hint]
-      .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
-    if (parts.length > 0) return parts.join('\n')
-  }
-  return 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+  return getUserFacingErrorMessage(error)
 }
 
 export default App

@@ -40,26 +40,40 @@ afterEach(() => {
 
 describe('customer remote', () => {
   it('loads every accessible shop for the authenticated user', async () => {
-    const order = vi.fn(() => ({
+    const select = vi.fn(() => ({
       data: [
-        { id: 'shop_1', name: 'Precious Siam', public_catalog_slug: 'precious-siam' },
-        { id: 'shop_2', name: 'Precious Silom', public_catalog_slug: null },
+        {
+          role: 'manager',
+          shops: {
+            id: 'shop_1',
+            name: 'Precious Siam',
+            public_catalog_slug: 'precious-siam',
+            created_at: '2026-07-01T00:00:00.000Z',
+          },
+        },
+        {
+          role: 'staff',
+          shops: {
+            id: 'shop_2',
+            name: 'Precious Silom',
+            public_catalog_slug: null,
+            created_at: '2026-07-02T00:00:00.000Z',
+          },
+        },
       ],
       error: null,
     }))
-    const select = vi.fn(() => ({ order }))
     const supabase = {
       from: vi.fn(() => ({ select })),
     } as unknown as SupabaseClient
 
     const shops = await loadAccessibleShops(supabase)
 
-    expect(supabase.from).toHaveBeenCalledWith('shops')
-    expect(select).toHaveBeenCalledWith('id, name, public_catalog_slug')
-    expect(order).toHaveBeenCalledWith('created_at', { ascending: true })
+    expect(supabase.from).toHaveBeenCalledWith('shop_members')
+    expect(select).toHaveBeenCalledWith('role, shops!inner(id, name, public_catalog_slug, created_at)')
     expect(shops).toEqual([
-      { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam' },
-      { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: null },
+      { id: 'shop_1', name: 'Precious Siam', publicCatalogSlug: 'precious-siam', role: 'manager' },
+      { id: 'shop_2', name: 'Precious Silom', publicCatalogSlug: null, role: 'staff' },
     ])
   })
 
