@@ -1,55 +1,31 @@
-# Handoff: สรุปฟีเจอร์ล่าสุด (Global Rental Defaults, Auto-Pass และ Extra Fine)
+# Handoff: Settings Page Redesign
 
-เอกสารนี้สรุปสิ่งที่ได้พัฒนาและปรับปรุงในระบบโปรเจกต์ **Precious Shop** ในรอบการพัฒนาล่าสุด โดยครอบคลุมระบบการจัดการเงินมัดจำ, ค่าปรับย้อนหลัง และการตั้งค่าเริ่มต้นส่วนกลางสำหรับคลังสินค้า
-
----
-
-## 🌟 1. ฟีเจอร์ใหม่: ตั้งค่าระบบราคาและค่าปรับเริ่มต้นส่วนกลาง (Global Rental Defaults)
-ช่วยให้ร้านค้าสามารถตั้งค่าแพ็กเกจราคาเช่า เงินประกัน และค่าปรับล่าช้าเป็นค่าเริ่มต้น เพื่อความสะดวกรวดเร็วในการเพิ่มคลังสินค้า
-
-### Database & Schema
-- **สร้าง Migration `0031_global_rental_defaults.sql`**: เพิ่มคอลัมน์ `default_rental_prices` (JSONB), `default_deposit` (numeric), `default_late_fine_per_day` (numeric) ในตาราง `shops`
-
-### Application State & Data Access
-- **`stockRemote.ts`**: ขยาย Type `ShopSettings` ให้รองรับฟิลด์ใหม่ และจัดการ Null-Safety/Fallback กรณีฐานข้อมูลเป็นค่าว่าง (ให้ใช้ 1 วัน 100 บาท, ประกัน 0, ค่าปรับ 200)
-- **`App.tsx`**: ดึงค่า Global Defaults มาเก็บใน State (`defaultRentalPrices`, `defaultDeposit`, `defaultLateFinePerDay`) และส่ง Props ต่อไปยัง `SettingsPage` และ `useInventoryController`
-
-### User Interface (UI / UX)
-- **หน้าตั้งค่า (`SettingsPage.tsx`)**: เพิ่มกล่อง **"⚙️ ตั้งค่าระบบราคาและค่าปรับเริ่มต้น"** สำหรับแก้ไขแพ็กเกจราคาเริ่มต้นของร้าน
-- **หน้าคลังสินค้า (`InventoryPage.tsx` & `useInventoryController.ts`)**:
-  - **Auto Pre-fill**: ดึงค่า Global Defaults ไปกรอกรอไว้ล่วงหน้าเมื่อกด `+ เพิ่มชุดหลัก`
-  - **Apply Defaults Button**: เพิ่มปุ่มวิเศษ `✨ 🔄 ดึงราคามาตรฐาน` ข้างกล่องราคาเพื่อดึงค่าส่วนกลางกลับมา
-  - **Safe Edit Mode**: หากกดปุ่มวิเศษขณะแก้ไขชุดเก่า ระบบจะขึ้นหน้าต่างยืนยัน (Confirmation) เพื่อป้องกันราคาพรีเมียมเดิมถูกเขียนทับ
+เอกสารนี้สรุปการเปลี่ยนแปลงของแพตช์ล่าสุดที่โฟกัสเฉพาะการปรับหน้า **Settings** ให้ใช้งานง่ายขึ้นและรองรับการขยายระบบในอนาคต โดยไม่ได้เพิ่ม migration หรือเปลี่ยน business logic ของระบบเช่าในรอบนี้
 
 ---
 
-## 💰 2. ระบบ Auto-Pass สรุปเคสไร้มัดจำ และ Extra Fine Workflow
-ปรับปรุงการจัดการมัดจำและการเรียกเก็บค่าปรับย้อนหลังแบบเจาะลึก
+## 🎨 1. ฟีเจอร์ใหม่: Settings Page Redesign (Vertical Tabs Architecture)
+ปรับปรุงหน้าต่างการตั้งค่า (Settings) ให้ใช้รูปแบบโครงสร้าง **Vertical Tabs** (เมนูซ้าย / เนื้อหาขวา) เพื่อรองรับการขยายตัวของระบบตั้งค่าในอนาคต เช่น การจัดการสิทธิ์พนักงาน
 
-### Database & Schema
-- **สร้าง Migration `0028_add_fine_to_rentals.sql`**: เพิ่มคอลัมน์ `fine_amount`, `fine_reason`, `fine_created_at` ลงในตาราง `rentals`
-- ปรับปรุง `RentalOrder` และ `RentalItem` ใน `rentalTypes.ts`
+### โครงสร้าง UI/UX และ Accessibility
+- **Responsive Layout**: หน้าจอแบ่งสัดส่วน `280px` : `1fr` โดยใช้ Grid Layout (ในไฟล์ `src/index.css`) สำหรับหน้าจอเล็ก (< 900px) เมนูด้านซ้ายจะเปลี่ยนเป็น Horizontal Scroll ด้านบนโดยอัตโนมัติ
+- **State Management ป้องกัน Draft หาย**: ออกแบบโดยเก็บ Form State ทั้งหมดไว้ที่ตัวแม่ (`SettingsPage.tsx`) เพื่อให้การสลับแท็บไปมาระหว่าง "ตั้งค่าทั่วไป" และ "ตัวเลือกสินค้า" ไม่ทำให้ข้อความที่พิมพ์ค้างไว้สูญหาย
+- **Accessibility (a11y)**: ใช้ `role="tab"`, `role="tablist"`, `aria-controls`, และ `aria-selected` เฉพาะแท็บที่กดใช้งานได้จริง ส่วน "สิทธิ์พนักงาน" แสดงเป็นปุ่ม disabled แยกต่างหากเพื่อไม่ให้ screen reader เข้าใจว่าเป็น panel ที่เปิดได้แล้ว
+- **Staff Entry (Coming Soon)**: เตรียมตำแหน่งของเมนู "สิทธิ์พนักงาน" ไว้พร้อมป้าย Badge "เร็ว ๆ นี้" เพื่อบอกทิศทางของฟีเจอร์ถัดไปโดยไม่หลอกว่าเปิดใช้งานได้แล้ว
 
-### Data Access Layer (Remote)
-- แมปค่าจากแถวในฐานข้อมูล กลับมาเป็น Object ใน `rentalRemote.ts`
-- เพิ่มฟังก์ชัน `saveExtraFine` สำหรับอัปเดตยอดค่าปรับแบบ Idempotent (เขียนทับค่าใหม่เสมอ)
+---
 
-### Application State & Business Logic
-- **`App.tsx` (Auto-Pass มัดจำ)**: หากปิดออเดอร์ (`returned`) และไม่มีมัดจำ (มัดจำ = 0) ระบบจะปรับสถานะเคลียร์มัดจำเป็น `returned` โดยอัตโนมัติ
-- **`dashboardMetrics.ts`**: รวม `totalFines` เข้ากับ `netRevenue` (รายรับสุทธิ)
-- **`customerInsights.ts` (พฤติกรรมลูกค้า)**: ลูกค้าที่มีค่าปรับย้อนหลังจะถูกหัก 2.0 ดาวแบบ Flat Rate และบวกยอดค่าปรับเข้า `totalSpent`
+## 🌟 2. สิ่งที่หน้า Settings นี้ยังเชื่อมกับของเดิมในระบบ
+แพตช์นี้ไม่ได้เปลี่ยน schema หรือ business rule ของฟีเจอร์ด้านล่าง แต่หน้า Settings ใหม่ยังคงแสดงและเรียกใช้งานข้อมูลเดิมผ่าน flow เดิมของแอป
 
-### User Interface (UI / UX)
-- **Dashboard (`DashboardPage.tsx`)**: เพิ่มป้าย "รายได้อื่นๆ / ค่าปรับประจำเดือน"
-- **หน้า Rentals (`RentalsPage.tsx`)**:
-  - **ไทม์ไลน์ขั้นที่ 4**: อัปเดตสถานะเป็น "● ปิดงานสำเร็จ (ไม่มีมัดจำ)" กรณีมัดจำ 0
-  - **แจ้งเตือนค่าปรับ**: แสดงข้อความสีส้มใต้ไทม์ไลน์ และในแผงควบคุมมัดจำหากออเดอร์มีค่าปรับ
-  - **Deposit Control Panel**: สามารถกดปุ่ม **"⚠️ เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง"** (Extra Fine Modal) เพื่ออัปเดตยอดค่าปรับและเหตุผลได้
+- **Global Rental Defaults**: ค่ามาตรฐานเรื่องราคาเช่า มัดจำ และค่าปรับรายวันยังบันทึกผ่าน `ShopSettings` และ `updateShopSettings()` ตามเดิม
+- **Public Catalog Toggle**: สวิตช์เปิด/ปิด public catalog ยังใช้ callback เดิมและไม่ได้เปลี่ยน contract
+- **Inventory Option Lists**: การเพิ่ม/ลบแบรนด์ ประเภทชุด และสีหลักยังวิ่งผ่าน save path เดิมจาก `App.tsx` ไปยัง `stockRemote.ts`
 
 ---
 
 ## 🚀 ถัดไป (Next Steps & Actions Required)
-- [ ] รันคำสั่ง `supabase migration up` หรือ `supabase db push` บน Database ของจริงเพื่อ Apply คอลัมน์ใหม่จาก Migration `0028` และ `0031`
-- [ ] ตรวจสอบความถูกต้องของการตั้งค่าในหน้า Settings หลังจากรัน Migration แล้ว (ว่า Default Fallback ทำงานถูกต้องหรือไม่)
-- [ ] ทดสอบสร้างออเดอร์ไร้มัดจำ เพื่อดูพฤติกรรม Auto-Pass
-- [ ] ทดสอบแก้ไขค่าปรับย้อนหลังในออเดอร์ที่ปิดไปแล้ว และตรวจสอบผลกระทบในหน้า Dashboard / Customer Profile
+- [ ] ทดสอบ UI ในหน้า Settings (Desktop / Mobile) หลังจากปรับโครงสร้างใหม่เป็น Vertical Tabs เพื่อตรวจสอบความถูกต้องของการสลับ Panel
+- [ ] ทดสอบว่าการแก้ค่า default rental, public catalog และ inventory options ยังบันทึกได้ครบผ่าน save path เดิม
+- [ ] หากจะ deploy ไป environment ใหม่หรือฐานข้อมูลที่ยังไม่เคยตามฟีเจอร์เก่า ให้ตรวจสอบแยกอีกครั้งว่า migration ก่อนหน้านี้ของ `default_rental_prices`, `default_deposit`, `default_late_fine_per_day` และระบบ fine/deposit ถูก apply แล้ว
+- [ ] (Phase ถัดไป) เตรียมเริ่มพัฒนาหน้าและระบบจัดการ **สิทธิ์พนักงาน (Staff Management)** ตามโครงสร้างที่วางไว้ใน Settings Page

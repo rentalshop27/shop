@@ -400,6 +400,26 @@ describe('App shop selection', () => {
     expect(screen.getByDisplayValue('200')).toBeTruthy()
   })
 
+  it('keeps the coming-soon staff action out of the interactive tab list', async () => {
+    loadShopSettings.mockResolvedValue(makeShopSettings())
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'ตั้งค่า' })[0])
+
+    const tabList = await screen.findByRole('tablist', { name: 'Settings tabs' })
+    expect(screen.getAllByRole('tab')).toHaveLength(2)
+    expect(tabList.querySelectorAll('[role="tab"]')).toHaveLength(2)
+
+    const staffButton = screen.getByRole('button', { name: /สิทธิ์พนักงาน/ })
+    expect((staffButton as HTMLButtonElement).disabled).toBe(true)
+    expect(staffButton.getAttribute('role')).toBeNull()
+  })
+
   it('reverts default deposit when saving shop settings fails', async () => {
     loadShopSettings.mockResolvedValue(makeShopSettings({ defaultDeposit: 500 }))
     updateShopSettings.mockRejectedValueOnce(new Error('save failed'))
