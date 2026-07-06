@@ -264,6 +264,72 @@ button {
   flex-shrink: 0;
 }
 
+.nav-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-sub-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 20px;
+  position: relative;
+  margin-top: 4px;
+}
+
+.nav-sub-items::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 4px;
+  bottom: 12px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-sub-item {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #64748b;
+  display: flex;
+  font-size: 15px;
+  font-weight: 500;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 16px 0 28px;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.nav-sub-item:hover {
+  color: var(--text-bright);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.nav-sub-item.active {
+  color: var(--text-bright);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-sub-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.nav-sub-item-badge {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
 /* Profile */
 .profile-grid {
   display: grid;
@@ -4138,19 +4204,8 @@ select {
 }
 
 /* Settings Page Styles */
-.settings-page-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 32px;
-  align-items: start;
-}
-
-.settings-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: sticky;
-  top: 24px;
+.settings-mobile-nav {
+  display: none;
 }
 
 .settings-tab-btn {
@@ -4205,14 +4260,16 @@ select {
 }
 
 @media (max-width: 900px) {
-  .settings-page-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  .settings-mobile-nav {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
   }
 
-  .settings-sidebar {
-    position: static;
-    flex-direction: row;
+  .settings-mobile-tablist,
+  .settings-mobile-coming-soon {
+    display: flex;
+    gap: 8px;
     overflow-x: auto;
     padding-bottom: 4px;
   }

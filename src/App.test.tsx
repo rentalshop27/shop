@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor, fireEvent, cleanup, act } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, cleanup, act, within } from '@testing-library/react'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
@@ -400,7 +400,7 @@ describe('App shop selection', () => {
     expect(screen.getByDisplayValue('200')).toBeTruthy()
   })
 
-  it('keeps the coming-soon staff action out of the interactive tab list', async () => {
+  it('keeps only the ready settings sections interactive', async () => {
     loadShopSettings.mockResolvedValue(makeShopSettings())
 
     render(<App />)
@@ -415,9 +415,32 @@ describe('App shop selection', () => {
     expect(screen.getAllByRole('tab')).toHaveLength(2)
     expect(tabList.querySelectorAll('[role="tab"]')).toHaveLength(2)
 
-    const staffButton = screen.getByRole('button', { name: /สิทธิ์พนักงาน/ })
-    expect((staffButton as HTMLButtonElement).disabled).toBe(true)
-    expect(staffButton.getAttribute('role')).toBeNull()
+    for (const label of ['สิทธิ์พนักงาน', 'การแจ้งเตือน', 'เชื่อมต่อระบบ']) {
+      const matchingButtons = screen.getAllByRole('button', { name: new RegExp(label) })
+      expect(matchingButtons.length).toBeGreaterThan(0)
+      matchingButtons.forEach((button) => {
+        expect((button as HTMLButtonElement).disabled).toBe(true)
+        expect(button.getAttribute('role')).toBeNull()
+      })
+    }
+  })
+
+  it('lets settings switch to inventory from the in-page tab list', async () => {
+    loadShopSettings.mockResolvedValue(makeShopSettings())
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'ตั้งค่า' })[0])
+
+    const tabList = await screen.findByRole('tablist', { name: 'Settings tabs' })
+    fireEvent.click(within(tabList).getByRole('tab', { name: 'ตัวเลือกสินค้า' }))
+
+    expect(await screen.findByRole('button', { name: 'เพิ่มแบรนด์' })).toBeTruthy()
+    expect(screen.queryByLabelText('เงินประกัน (มัดจำ) เริ่มต้น (บาท)')).toBeNull()
   })
 
   it('reverts default deposit when saving shop settings fails', async () => {

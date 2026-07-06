@@ -20,17 +20,26 @@ interface SettingsPageProps {
   onUpdateDefaultDeposit: (deposit: number) => void
   defaultLateFinePerDay: number
   onUpdateDefaultLateFinePerDay: (fine: number) => void
+  activeTab: 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations'
+  onTabChange: (tab: 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations') => void
 }
 
 function cloneRentalTiers(tiers: {days: number; price: number}[]) {
   return tiers.map((tier) => ({ ...tier }))
 }
 
-type SettingsTab = 'general' | 'inventory' | 'staff'
+const SETTINGS_READY_TABS = [
+  { id: 'general', label: 'ตั้งค่าทั่วไป' },
+  { id: 'inventory', label: 'ตัวเลือกสินค้า' },
+] as const
+
+const SETTINGS_COMING_SOON_TABS = [
+  { id: 'staff', label: 'สิทธิ์พนักงาน' },
+  { id: 'notifications', label: 'การแจ้งเตือน' },
+  { id: 'integrations', label: 'เชื่อมต่อระบบ' },
+] as const
 
 export function SettingsPage(props: SettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
-
   // Form states kept in parent to prevent loss on unmount (Tab switching)
   const [newBrand, setNewBrand] = useState('')
   const [newCategory, setNewCategory] = useState('')
@@ -135,6 +144,8 @@ export function SettingsPage(props: SettingsPageProps) {
     }
   }
 
+  const activeTab = props.activeTab === 'inventory' ? 'inventory' : 'general'
+
   return (
     <>
       <header className="page-header">
@@ -145,41 +156,61 @@ export function SettingsPage(props: SettingsPageProps) {
         </div>
       </header>
 
-      <div className="settings-page-layout">
-        <SettingsSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <div className="settings-mobile-nav">
+        <div className="settings-mobile-tablist" role="tablist" aria-label="Settings tabs">
+          {SETTINGS_READY_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              id={`settings-tab-${id}`}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === id}
+              aria-controls={`settings-panel-${id}`}
+              onClick={() => props.onTabChange(id)}
+              className={`settings-tab-btn ${activeTab === id ? 'active' : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        <div className="settings-content-area">
-          {activeTab === 'general' && <GeneralSettingsTab {...props} />}
-
-          {activeTab === 'inventory' && (
-            <InventorySettingsTab
-              brands={props.brands}
-              categories={props.categories}
-              colors={props.colors}
-              newBrand={newBrand}
-              setNewBrand={setNewBrand}
-              brandError={brandError}
-              brandSuccess={brandSuccess}
-              handleAddBrandSubmit={handleAddBrandSubmit}
-              handleDeleteBrandClick={handleDeleteBrandClick}
-              newCategory={newCategory}
-              setNewCategory={setNewCategory}
-              categoryError={categoryError}
-              categorySuccess={categorySuccess}
-              handleAddCategorySubmit={handleAddCategorySubmit}
-              handleDeleteCategoryClick={handleDeleteCategoryClick}
-              newColor={newColor}
-              setNewColor={setNewColor}
-              colorError={colorError}
-              colorSuccess={colorSuccess}
-              handleAddColorSubmit={handleAddColorSubmit}
-              handleDeleteColorClick={handleDeleteColorClick}
-            />
-          )}
-
-          {activeTab === 'staff' && <StaffSettingsTab />}
+        <div className="settings-mobile-coming-soon" aria-label="Settings sections coming soon">
+          {SETTINGS_COMING_SOON_TABS.map(({ id, label }) => (
+            <button key={id} type="button" disabled className="settings-tab-btn disabled">
+              {label}
+              <span className="settings-tab-badge">เร็ว ๆ นี้</span>
+            </button>
+          ))}
         </div>
       </div>
+
+      {activeTab === 'general' && <GeneralSettingsTab {...props} />}
+
+      {activeTab === 'inventory' && (
+        <InventorySettingsTab
+          brands={props.brands}
+          categories={props.categories}
+          colors={props.colors}
+          newBrand={newBrand}
+          setNewBrand={setNewBrand}
+          brandError={brandError}
+          brandSuccess={brandSuccess}
+          handleAddBrandSubmit={handleAddBrandSubmit}
+          handleDeleteBrandClick={handleDeleteBrandClick}
+          newCategory={newCategory}
+          setNewCategory={setNewCategory}
+          categoryError={categoryError}
+          categorySuccess={categorySuccess}
+          handleAddCategorySubmit={handleAddCategorySubmit}
+          handleDeleteCategoryClick={handleDeleteCategoryClick}
+          newColor={newColor}
+          setNewColor={setNewColor}
+          colorError={colorError}
+          colorSuccess={colorSuccess}
+          handleAddColorSubmit={handleAddColorSubmit}
+          handleDeleteColorClick={handleDeleteColorClick}
+        />
+      )}
     </>
   )
 }
@@ -187,53 +218,6 @@ export function SettingsPage(props: SettingsPageProps) {
 // ----------------------------------------------------------------------
 // Sub-components
 // ----------------------------------------------------------------------
-
-interface SettingsSidebarProps {
-  activeTab: SettingsTab
-  onTabChange: (tab: SettingsTab) => void
-}
-
-function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps) {
-  return (
-    <aside className="settings-sidebar" aria-label="Settings sections">
-      <div role="tablist" aria-label="Settings tabs">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'general'}
-          aria-controls="settings-panel-general"
-          id="settings-tab-general"
-          onClick={() => onTabChange('general')}
-          className={`settings-tab-btn ${activeTab === 'general' ? 'active' : ''}`}
-        >
-          ⚙️ ตั้งค่าทั่วไป
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'inventory'}
-          aria-controls="settings-panel-inventory"
-          id="settings-tab-inventory"
-          onClick={() => onTabChange('inventory')}
-          className={`settings-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-        >
-          👗 ตัวเลือกสินค้า
-        </button>
-      </div>
-
-      <button
-        type="button"
-        aria-disabled="true"
-        disabled
-        className="settings-tab-btn disabled"
-      >
-        👥 สิทธิ์พนักงาน
-        <span className="settings-tab-badge">เร็ว ๆ นี้</span>
-      </button>
-    </aside>
-  )
-}
 
 function GeneralSettingsTab(props: SettingsPageProps) {
   return (
@@ -609,18 +593,6 @@ function InventorySettingsTab(props: InventorySettingsTabProps) {
           </div>
         </div>
       </section>
-    </section>
-  )
-}
-
-function StaffSettingsTab() {
-  return (
-    <section
-      id="settings-panel-staff"
-      role="tabpanel"
-      aria-labelledby="settings-tab-staff"
-    >
-      {/* Empty placeholder for now */}
     </section>
   )
 }

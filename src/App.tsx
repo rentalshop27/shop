@@ -13,6 +13,13 @@ import {
   BarChart3,
   CircleUserRound,
   Store,
+  ChevronDown,
+  ChevronRight,
+  Sliders,
+  Tag,
+  Users,
+  Bell,
+  Link,
 } from 'lucide-react'
 import './index.css'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
@@ -104,6 +111,9 @@ const emptyDraft: CustomerDraft = {
   hipIn: '',
   heightCm: '',
 }
+
+export type SettingsSubTab = 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations'
+const READY_SETTINGS_SUB_TABS: SettingsSubTab[] = ['general', 'inventory']
 
 type ViewKey = 'dashboard' | 'inventory' | 'catalog' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
 
@@ -353,10 +363,12 @@ function AuthShell({ children }: { children: ReactNode }) {
 
 function PrivateApp() {
   const [activeTab, setActiveTab] = useState<ViewKey>('dashboard')
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('general')
   const [externalSelectedRentalId, setExternalSelectedRentalId] = useState<string>('')
   const [externalIsFormOpen, setExternalIsFormOpen] = useState<boolean>(false)
   const [externalPickupDate, setExternalPickupDate] = useState<string>('')
   const [externalReturnDate, setExternalReturnDate] = useState<string>('')
+  const activeSettingsSubTab = READY_SETTINGS_SUB_TABS.includes(settingsSubTab) ? settingsSubTab : 'general'
 
   function handleClearExternalDates() {
     setExternalPickupDate('')
@@ -2105,6 +2117,8 @@ function PrivateApp() {
       <SideNav
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        settingsSubTab={activeSettingsSubTab}
+        onSettingsSubTabChange={setSettingsSubTab}
       />
       <main className="app-shell">
         {currentShop && (
@@ -2276,6 +2290,8 @@ function PrivateApp() {
 
           {activeTab === 'settings' && (
             <LazySettingsPage
+              activeTab={activeSettingsSubTab}
+              onTabChange={setSettingsSubTab}
               brands={brands}
               categories={categories}
               colors={colors}
@@ -2387,11 +2403,23 @@ function PrivateApp() {
 function SideNav({
   activeTab,
   onTabChange,
+  settingsSubTab,
+  onSettingsSubTabChange,
 }: {
   activeTab: ViewKey
   onTabChange: (tab: ViewKey) => void
+  settingsSubTab: SettingsSubTab
+  onSettingsSubTabChange: (tab: SettingsSubTab) => void
 }) {
-  const items: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(activeTab === 'settings')
+
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      setIsSettingsExpanded(true)
+    }
+  }, [activeTab])
+
+  const mainItems: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
     { id: 'inventory', label: 'คลังชุด', icon: Menu },
     { id: 'catalog', label: 'หน้าลูกค้า', icon: Store },
@@ -2399,9 +2427,19 @@ function SideNav({
     { id: 'rentals', label: 'เช่า/คืน', icon: CalendarCheck },
     { id: 'calendar', label: 'ปฏิทิน', icon: CalendarDays },
     { id: 'reports', label: 'รายงาน', icon: BarChart3 },
-    { id: 'settings', label: 'ตั้งค่า', icon: Settings },
+  ]
+
+  const bottomItems: Array<{ id: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'audit', label: 'ประวัติระบบ', icon: History },
     { id: 'profile', label: 'โปรไฟล์', icon: CircleUserRound },
+  ]
+
+  const settingsSubItems: Array<{ id: SettingsSubTab; label: string; icon: typeof LayoutDashboard; disabled?: boolean }> = [
+    { id: 'general', label: 'ตั้งค่าทั่วไป', icon: Sliders },
+    { id: 'inventory', label: 'ตัวเลือกสินค้า', icon: Tag },
+    { id: 'staff', label: 'สิทธิ์พนักงาน', icon: Users, disabled: true },
+    { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell, disabled: true },
+    { id: 'integrations', label: 'เชื่อมต่อระบบ', icon: Link, disabled: true },
   ]
 
   return (
@@ -2410,7 +2448,63 @@ function SideNav({
         <img src="/web-logo.png" alt="Precious Rental" style={{ width: '100%', maxWidth: '160px', height: 'auto', display: 'block', margin: '0 auto' }} />
       </div>
       <nav>
-        {items.map(({ id, label, icon: Icon }) => (
+        {mainItems.map(({ id, label, icon: Icon }) => (
+          <button
+            className={`nav-item ${activeTab === id ? 'active' : ''}`}
+            key={id}
+            type="button"
+            onClick={() => onTabChange(id)}
+            aria-current={activeTab === id ? 'page' : undefined}
+          >
+            <Icon size={28} strokeWidth={2} />
+            <span>{label}</span>
+          </button>
+        ))}
+
+        <div className="nav-accordion">
+          <button
+            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+            type="button"
+            onClick={() => {
+              if (activeTab === 'settings') {
+                setIsSettingsExpanded(!isSettingsExpanded)
+              } else {
+                onTabChange('settings')
+                setIsSettingsExpanded(true)
+              }
+            }}
+            aria-expanded={isSettingsExpanded}
+          >
+            <Settings size={28} strokeWidth={2} />
+            <span style={{ flex: 1, textAlign: 'left' }}>ตั้งค่า</span>
+            {isSettingsExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+          </button>
+
+          {isSettingsExpanded && (
+            <div className="nav-sub-items">
+              {settingsSubItems.map(({ id, label, icon: SubIcon, disabled }) => (
+                <button
+                  key={id}
+                  className={`nav-sub-item ${activeTab === 'settings' && settingsSubTab === id ? 'active' : ''}`}
+                  type="button"
+                  disabled={disabled}
+                  aria-disabled={disabled ? 'true' : undefined}
+                  onClick={() => {
+                    if (disabled) return
+                    onSettingsSubTabChange(id)
+                    if (activeTab !== 'settings') onTabChange('settings')
+                  }}
+                >
+                  <SubIcon size={18} />
+                  <span>{label}</span>
+                  {disabled ? <span className="nav-sub-item-badge">เร็ว ๆ นี้</span> : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {bottomItems.map(({ id, label, icon: Icon }) => (
           <button
             className={`nav-item ${activeTab === id ? 'active' : ''}`}
             key={id}
