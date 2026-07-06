@@ -88,10 +88,11 @@ function getFunctionUrl(name: string) {
   return `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/${name}`
 }
 
-export async function loadAccessibleShops(supabase: SupabaseClient): Promise<ShopSummary[]> {
+export async function loadAccessibleShops(supabase: SupabaseClient, userId: string): Promise<ShopSummary[]> {
   const { data, error } = await supabase
     .from('shop_members')
     .select('role, shops!inner(id, name, public_catalog_slug, created_at)')
+    .eq('user_id', userId)
 
   if (error) throw error
 

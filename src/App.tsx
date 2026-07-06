@@ -1358,7 +1358,7 @@ function PrivateApp() {
     setShopsReady(false)
     setRemoteError('')
 
-    loadAccessibleShops(supabase)
+    loadAccessibleShops(supabase, authUserId)
       .then((shops) => {
         if (cancelled) return
 
