@@ -526,7 +526,7 @@ export function InventoryPage({
                           return;
                         }
                       }
-                      onDraftChange('rentalTiers', cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 100 }]));
+                      onDraftChange('rentalTiers', cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 0 }]));
                       onDraftChange('depositAmount', defaultDeposit > 0 ? defaultDeposit.toString() : '');
                       onDraftChange('lateFeeRule', defaultLateFinePerDay > 0 ? `${defaultLateFinePerDay} บาท/วัน` : '');
                     }}

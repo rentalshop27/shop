@@ -135,7 +135,7 @@ export function useInventoryController({
     setEditingProductId(null)
     setDraft({
       ...emptyProductDraft,
-      rentalTiers: cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 100 }]),
+      rentalTiers: cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 0 }]),
       depositAmount: defaultDeposit > 0 ? defaultDeposit.toString() : '',
       lateFeeRule: defaultLateFinePerDay > 0 ? `${defaultLateFinePerDay} บาท/วัน` : '',
     })

@@ -420,9 +420,9 @@ export async function loadShopSettings(supabase: SupabaseClient, shopId: string)
     catalogMobileHeroImageUrl,
     defaultRentalPrices: Array.isArray(data.default_rental_prices) && data.default_rental_prices.length > 0
       ? data.default_rental_prices
-      : [{ days: 1, price: 100 }],
+      : [{ days: 1, price: 0 }],
     defaultDeposit: Number(data.default_deposit) || 0,
-    defaultLateFinePerDay: Number(data.default_late_fine_per_day) || 200,
+    defaultLateFinePerDay: Number(data.default_late_fine_per_day) || 0,
   }
 }
 

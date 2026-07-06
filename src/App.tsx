@@ -470,11 +470,9 @@ function PrivateApp() {
   const [publicCatalogEnabled, setPublicCatalogEnabled] = useState(DEFAULT_PUBLIC_CATALOG_ENABLED)
   const [catalogHeroImageUrl, setCatalogHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_HERO_IMAGE_KEY))
   const [catalogMobileHeroImageUrl, setCatalogMobileHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY))
-  const [defaultRentalPrices, setDefaultRentalPrices] = useState<ShopSettings['defaultRentalPrices']>(() =>
-    cloneRentalPriceTiers(DEFAULT_RENTAL_PRICE_TIERS),
-  )
+  const [defaultRentalPrices, setDefaultRentalPrices] = useState<{days: number; price: number}[]>([{days: 1, price: 0}])
   const [defaultDeposit, setDefaultDeposit] = useState<number>(0)
-  const [defaultLateFinePerDay, setDefaultLateFinePerDay] = useState<number>(200)
+  const [defaultLateFinePerDay, setDefaultLateFinePerDay] = useState<number>(0)
   const [isCatalogHeroUploading, setIsCatalogHeroUploading] = useState(false)
   const [isCatalogMobileHeroUploading, setIsCatalogMobileHeroUploading] = useState(false)
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
@@ -1440,9 +1438,9 @@ function PrivateApp() {
     setPublicCatalogEnabled(DEFAULT_PUBLIC_CATALOG_ENABLED)
     setCatalogHeroImageUrl(null)
     setCatalogMobileHeroImageUrl(null)
-    setDefaultRentalPrices(cloneRentalPriceTiers(DEFAULT_RENTAL_PRICE_TIERS))
+    setDefaultRentalPrices([{days: 1, price: 0}])
     setDefaultDeposit(0)
-    setDefaultLateFinePerDay(200)
+    setDefaultLateFinePerDay(0)
 
     Promise.all([
       loadCustomers(client, shopId),
@@ -1457,9 +1455,9 @@ function PrivateApp() {
         setProducts(loadedProducts)
         if (settings) {
           setPublicCatalogEnabled(settings.publicCatalogEnabled)
-          setDefaultRentalPrices(cloneRentalPriceTiers(settings.defaultRentalPrices ?? DEFAULT_RENTAL_PRICE_TIERS))
+          setDefaultRentalPrices(settings.defaultRentalPrices ?? [{days: 1, price: 0}])
           setDefaultDeposit(settings.defaultDeposit ?? 0)
-          setDefaultLateFinePerDay(settings.defaultLateFinePerDay ?? 200)
+          setDefaultLateFinePerDay(settings.defaultLateFinePerDay ?? 0)
         }
         setAuditLogs(loadedAuditLogs)
         setSelectedCustomerId(loadedCustomers[0]?.id ?? '')
