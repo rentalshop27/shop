@@ -97,7 +97,11 @@ export function calculateCustomerInsights(
   ).length
   const hasFines = customerRentals.some((rental) => (rental.fineAmount ?? 0) > 0)
   const totalSpent = customerRentals.reduce(
-    (sum, rental) => sum + Math.max(0, rental.collectedAmount - rental.depositAmount) + (rental.depositForfeitedAmount ?? 0),
+    (sum, rental) =>
+      sum
+      + Math.max(0, rental.collectedAmount - rental.depositAmount)
+      + (rental.depositForfeitedAmount ?? 0)
+      + (rental.fineAmount ?? 0),
     0
   )
   const metrics = {

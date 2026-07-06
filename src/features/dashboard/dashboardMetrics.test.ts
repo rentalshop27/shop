@@ -68,7 +68,7 @@ describe('buildDashboardMetrics', () => {
     expect(metrics.totalCashFlow).toBe(1700)
   })
 
-  it('tracks fines separately from net revenue until cash is actually collected', () => {
+  it('includes fines in net revenue while still exposing them separately', () => {
     const metrics = buildDashboardMetrics([
       makeRental({ fineAmount: 300 }),
       makeRental({
@@ -83,6 +83,6 @@ describe('buildDashboardMetrics', () => {
 
     expect(metrics.totalFines).toBe(300)
     expect(metrics.activeHeldDeposits).toBe(900)
-    expect(metrics.netRevenue).toBe(2200)
+    expect(metrics.netRevenue).toBe(2500)
   })
 })

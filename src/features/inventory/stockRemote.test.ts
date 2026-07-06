@@ -1,10 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  DEFAULT_SHOP_LATE_FINE_PER_DAY,
+  DEFAULT_SHOP_RENTAL_PRICES,
   bulkUpdateRemoteDisplayOrder,
   countRemoteRentalsForProduct,
   createProductWithVariants,
   deleteRemoteProduct,
+  loadShopSettings,
   loadProductsWithStock,
   loadStockItemsForRentalMapping,
   updateRemoteProduct,
@@ -192,6 +195,67 @@ describe('stockRemote', () => {
       displayOrder: 2,
     }])
     expect(storageFrom).not.toHaveBeenCalled()
+  })
+
+  it('uses shipped shop-setting defaults only when the database values are absent', async () => {
+    const getPublicUrl = vi.fn((path: string) => ({ data: { publicUrl: `https://cdn.example/${path}` } }))
+    const maybeSingle = vi.fn(async () => ({
+      data: {
+        brands: [],
+        categories: [],
+        colors: [],
+        public_catalog_enabled: false,
+        catalog_hero_image_path: null,
+        catalog_mobile_hero_image_path: null,
+        default_rental_prices: null,
+        default_deposit: null,
+        default_late_fine_per_day: null,
+      },
+      error: null,
+    }))
+    const eq = vi.fn(() => ({ maybeSingle }))
+    const supabase = {
+      storage: {
+        from: vi.fn(() => ({ getPublicUrl })),
+      },
+      from: vi.fn(() => ({ select: vi.fn(() => ({ eq })) })),
+    } as unknown as SupabaseClient
+
+    const settings = await loadShopSettings(supabase, 'shop_1')
+
+    expect(settings?.defaultRentalPrices).toEqual(DEFAULT_SHOP_RENTAL_PRICES)
+    expect(settings?.defaultDeposit).toBe(0)
+    expect(settings?.defaultLateFinePerDay).toBe(DEFAULT_SHOP_LATE_FINE_PER_DAY)
+  })
+
+  it('preserves an explicit zero late fine from the database', async () => {
+    const getPublicUrl = vi.fn((path: string) => ({ data: { publicUrl: `https://cdn.example/${path}` } }))
+    const maybeSingle = vi.fn(async () => ({
+      data: {
+        brands: [],
+        categories: [],
+        colors: [],
+        public_catalog_enabled: false,
+        catalog_hero_image_path: null,
+        catalog_mobile_hero_image_path: null,
+        default_rental_prices: [{ days: 1, price: 250 }],
+        default_deposit: 0,
+        default_late_fine_per_day: 0,
+      },
+      error: null,
+    }))
+    const eq = vi.fn(() => ({ maybeSingle }))
+    const supabase = {
+      storage: {
+        from: vi.fn(() => ({ getPublicUrl })),
+      },
+      from: vi.fn(() => ({ select: vi.fn(() => ({ eq })) })),
+    } as unknown as SupabaseClient
+
+    const settings = await loadShopSettings(supabase, 'shop_1')
+
+    expect(settings?.defaultRentalPrices).toEqual([{ days: 1, price: 250 }])
+    expect(settings?.defaultLateFinePerDay).toBe(0)
   })
 
   it('scopes product updates by shop id and removes deleted costume images after success', async () => {

@@ -16,6 +16,7 @@ import {
   Settings
 } from 'lucide-react'
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
+import { getOverduePenaltySummary } from '../rentals/overduePenalty'
 
 interface CalendarPageProps {
   rentals: RentalOrder[]
@@ -222,6 +223,10 @@ function getGroupShortLabel(group: GroupedRentalOrder) {
 
 function getGroupCostumeSummary(group: GroupedRentalOrder) {
   return group.rentals.map((rental) => rental.costume.sku).join(', ')
+}
+
+function getDisplayRentalStatus(status: RentalStatus, isOverdueReturn: boolean): RentalStatus {
+  return isOverdueReturn ? 'overdue' : status
 }
 
 export function CalendarPage({
@@ -591,6 +596,13 @@ export function CalendarPage({
     })}`
   }
 
+  const getGroupOverdueSummary = (group: GroupedRentalOrder | SelectedDayRentalGroup) => {
+    return getOverduePenaltySummary(group.rentals, todayStr, group.returnDate)
+  }
+  const selectedCalendarOverdueSummary = useMemo(() => (
+    selectedCalendarRental ? getGroupOverdueSummary(selectedCalendarRental) : null
+  ), [selectedCalendarRental, todayStr])
+
   const getDiscountAmount = (price: number, collected: number) => {
     return Math.max(0, Number((price - collected).toFixed(2)))
   }
@@ -626,7 +638,11 @@ export function CalendarPage({
   }
 
   // Get status tag mapping
-  const getStatusBadge = (status: RentalStatus) => {
+  const getStatusBadge = (status: RentalStatus, isOverdueReturn = false) => {
+    if (isOverdueReturn) {
+      return <span className="status-pill danger" style={{ fontSize: '12px', padding: '4px 10px' }}>เลยกำหนดคืน</span>
+    }
+
     switch (status) {
       case 'booked':
         return <span className="status-pill warning" style={{ fontSize: '12px', padding: '4px 10px' }}>รอส่งมอบ</span>
@@ -669,6 +685,8 @@ export function CalendarPage({
 
   // Mobile Render Helper Functions
   const renderMobileRentalCard = (group: SelectedDayRentalGroup) => {
+    const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
+
     return (
       <div
         key={group.orderCode}
@@ -693,7 +711,7 @@ export function CalendarPage({
           </div>
         </div>
         <div className="mobile-rental-right">
-          {getStatusBadge(group.status)}
+          {getStatusBadge(group.status, isOverdueReturn)}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
             <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{group.rentals.length} ชุด</span>
             <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
@@ -772,6 +790,8 @@ export function CalendarPage({
   }
 
   const renderMobileDetailContent = (group: SelectedDayRentalGroup) => {
+    const overdueSummary = getGroupOverdueSummary(group)
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
         {/* Customer Meta */}
@@ -788,6 +808,30 @@ export function CalendarPage({
             </p>
           </div>
         </div>
+
+        {overdueSummary && (
+          <section className="overdue-alert-card">
+            <div className="overdue-alert-header">
+              <strong>ออเดอร์เกินกำหนดคืน</strong>
+              <span>Overdue Alert</span>
+            </div>
+            <div className="overdue-alert-grid">
+              <div className="overdue-alert-item">
+                <span>เกินกำหนดมาแล้ว</span>
+                <strong>{overdueSummary.overdueDays} วัน</strong>
+                <small>กำหนดคืน {formatThaiDate(overdueSummary.dueDate)}</small>
+              </div>
+              <div className="overdue-alert-item">
+                <span>เกณฑ์ค่าปรับชุดนี้</span>
+                <strong>{formatBaht(overdueSummary.dailyRate)} / วัน</strong>
+              </div>
+              <div className="overdue-alert-item highlight">
+                <span>ยอดค่าปรับสะสมปัจจุบัน</span>
+                <strong>{formatBaht(overdueSummary.totalPenalty)}</strong>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Summary Cards Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -873,7 +917,7 @@ export function CalendarPage({
                       SKU: {rental.costume.sku} | สี: {rental.costume.primaryColor} | ไซส์: {rental.costume.size}
                     </p>
                   </div>
-                  {getStatusBadge(rental.status)}
+                  {getStatusBadge(rental.status, Boolean(overdueSummary) && rental.status === 'active' && rental.returnDate < todayStr)}
                 </div>
               </div>
             ))}
@@ -1223,7 +1267,13 @@ export function CalendarPage({
               ) : (
                 <div className="mobile-appointment-list">
                   {selectedDayRentalGroups.map((group) => {
-                    const statusClass = group.status === 'returned' || group.status === 'active' ? 'accent-green' : group.status === 'booked' ? 'accent-gold' : 'accent-red'
+                    const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
+                    const displayStatus = getDisplayRentalStatus(group.status, isOverdueReturn)
+                    const statusClass = displayStatus === 'returned' || displayStatus === 'active'
+                      ? 'accent-green'
+                      : displayStatus === 'booked'
+                        ? 'accent-gold'
+                        : 'accent-red'
                     
                     return (
                       <div
@@ -1242,8 +1292,8 @@ export function CalendarPage({
                           </div>
                         </div>
                         <div className="appointment-item-right">
-                          <span className={`appointment-status-badge ${group.status}`}>
-                            {group.status === 'returned' ? 'คืนแล้ว' : group.status === 'active' ? 'กำลังเช่า' : group.status === 'booked' ? 'รอส่งมอบ' : 'เกินกำหนด'}
+                          <span className={`appointment-status-badge ${displayStatus}`}>
+                            {displayStatus === 'returned' ? 'คืนแล้ว' : displayStatus === 'active' ? 'กำลังเช่า' : displayStatus === 'booked' ? 'รอส่งมอบ' : 'เลยกำหนดคืน'}
                           </span>
                           <span className="appointment-time-text">{getStableTime(group.orderCode)}</span>
                         </div>
@@ -1476,12 +1526,18 @@ export function CalendarPage({
                           
                           {/* Pickups */}
                           {filteredPickups.slice(0, 2).map((group) => {
+                            const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
                             let badgeBg = 'rgba(245, 158, 11, 0.08)'
                             let borderCol = 'var(--warning-color)'
                             let textCol = 'var(--warning-color)'
                             let icon = '📦'
 
-                            if (group.status === 'active') {
+                            if (isOverdueReturn || group.status === 'overdue') {
+                              badgeBg = 'rgba(239, 68, 68, 0.08)'
+                              borderCol = 'var(--danger-color)'
+                              textCol = 'var(--danger-color)'
+                              icon = '⚠️'
+                            } else if (group.status === 'active') {
                               badgeBg = 'rgba(218, 165, 32, 0.08)'
                               borderCol = 'rgba(218, 165, 32, 0.6)'
                               textCol = '#ead483'
@@ -1491,11 +1547,6 @@ export function CalendarPage({
                               borderCol = 'var(--success-color)'
                               textCol = 'var(--success-color)'
                               icon = '✅'
-                            } else if (group.status === 'overdue') {
-                              badgeBg = 'rgba(239, 68, 68, 0.08)'
-                              borderCol = 'var(--danger-color)'
-                              textCol = 'var(--danger-color)'
-                              icon = '⚠️'
                             }
 
                             return (
@@ -1521,12 +1572,13 @@ export function CalendarPage({
 
                           {/* Returns */}
                           {filteredReturns.slice(0, 2).map((group) => {
+                            const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
                             let badgeBg = 'rgba(16, 185, 129, 0.08)'
                             let borderCol = 'var(--success-color)'
                             let textCol = 'var(--success-color)'
                             let icon = '↩️'
 
-                            if (group.status === 'overdue') {
+                            if (isOverdueReturn || group.status === 'overdue') {
                               badgeBg = 'rgba(239, 68, 68, 0.08)'
                               borderCol = 'var(--danger-color)'
                               textCol = 'var(--danger-color)'
@@ -1638,12 +1690,18 @@ export function CalendarPage({
                           <>
                             {/* Pickups */}
                             {filteredPickups.map((group) => {
+                              const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
                               let badgeBg = 'rgba(245, 158, 11, 0.08)'
                               let borderCol = 'rgba(245, 158, 11, 0.2)'
                               let textCol = 'var(--warning-color)'
                               let label = '📦 รับ/ส่งชุด:'
 
-                              if (group.status === 'active') {
+                              if (isOverdueReturn || group.status === 'overdue') {
+                                badgeBg = 'rgba(239, 68, 68, 0.08)'
+                                borderCol = 'rgba(239, 68, 68, 0.2)'
+                                textCol = 'var(--danger-color)'
+                                label = '⚠️ เลยกำหนดคืน:'
+                              } else if (group.status === 'active') {
                                 badgeBg = 'rgba(218, 165, 32, 0.08)'
                                 borderCol = 'rgba(218, 165, 32, 0.3)'
                                 textCol = '#ead483'
@@ -1653,11 +1711,6 @@ export function CalendarPage({
                                 borderCol = 'rgba(16, 185, 129, 0.2)'
                                 textCol = 'var(--success-color)'
                                 label = '✅ รับมอบแล้ว:'
-                              } else if (group.status === 'overdue') {
-                                badgeBg = 'rgba(239, 68, 68, 0.08)'
-                                borderCol = 'rgba(239, 68, 68, 0.2)'
-                                textCol = 'var(--danger-color)'
-                                label = '⚠️ เลยกำหนดส่งมอบ:'
                               }
 
                               return (
@@ -1685,12 +1738,13 @@ export function CalendarPage({
 
                             {/* Returns */}
                             {filteredReturns.map((group) => {
+                              const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
                               let badgeBg = 'rgba(16, 185, 129, 0.08)'
                               let borderCol = 'rgba(16, 185, 129, 0.2)'
                               let textCol = 'var(--success-color)'
                               let label = '↩️ คืนชุด:'
 
-                              if (group.status === 'overdue') {
+                              if (isOverdueReturn || group.status === 'overdue') {
                                 badgeBg = 'rgba(239, 68, 68, 0.08)'
                                 borderCol = 'rgba(239, 68, 68, 0.2)'
                                 textCol = 'var(--danger-color)'
@@ -1794,6 +1848,7 @@ export function CalendarPage({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {selectedDayRentalGroups.map((group) => {
                         const isSelected = selectedCalendarRental?.orderCode === group.orderCode
+                        const isOverdueReturn = Boolean(getGroupOverdueSummary(group))
 
                         return (
                           <button
@@ -1850,7 +1905,7 @@ export function CalendarPage({
                             </div>
 
                             <div style={{ display: 'grid', gap: '8px', justifyItems: 'end' }}>
-                              {getStatusBadge(group.status)}
+                              {getStatusBadge(group.status, isOverdueReturn)}
                               <small style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{group.rentals.length} ชุด</small>
                             </div>
                           </button>
@@ -1875,8 +1930,32 @@ export function CalendarPage({
                               <p>LINE: {selectedCalendarRental.customer.lineAccount || '-'}</p>
                             </div>
                           </div>
-                          {getStatusBadge(selectedCalendarRental.status)}
+                          {getStatusBadge(selectedCalendarRental.status, Boolean(selectedCalendarOverdueSummary))}
                         </div>
+
+                        {selectedCalendarOverdueSummary && (
+                          <section className="overdue-alert-card" style={{ marginTop: '18px' }}>
+                            <div className="overdue-alert-header">
+                              <strong>ออเดอร์เกินกำหนดคืน</strong>
+                              <span>Overdue Alert</span>
+                            </div>
+                            <div className="overdue-alert-grid">
+                              <div className="overdue-alert-item">
+                                <span>เกินกำหนดมาแล้ว</span>
+                                <strong>{selectedCalendarOverdueSummary.overdueDays} วัน</strong>
+                                <small>กำหนดคืน {formatThaiDate(selectedCalendarOverdueSummary.dueDate)}</small>
+                              </div>
+                              <div className="overdue-alert-item">
+                                <span>เกณฑ์ค่าปรับชุดนี้</span>
+                                <strong>{formatBaht(selectedCalendarOverdueSummary.dailyRate)} / วัน</strong>
+                              </div>
+                              <div className="overdue-alert-item highlight">
+                                <span>ยอดค่าปรับสะสมปัจจุบัน</span>
+                                <strong>{formatBaht(selectedCalendarOverdueSummary.totalPenalty)}</strong>
+                              </div>
+                            </div>
+                          </section>
+                        )}
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '18px' }}>
                           <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px' }}>
@@ -1935,8 +2014,8 @@ export function CalendarPage({
                       <section className="detail-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
                         <h3 style={{ fontSize: '15px', color: '#fff', marginBottom: '12px' }}>รายการชุดในใบเช่า</h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {selectedCalendarRental.rentals.map((rental) => (
-                            <div
+                            {selectedCalendarRental.rentals.map((rental) => (
+                              <div
                               key={rental.id}
                               style={{
                                 display: 'grid',
@@ -1957,7 +2036,7 @@ export function CalendarPage({
                                     SKU: {rental.costume.sku} | สี: {rental.costume.primaryColor} | ไซส์: {rental.costume.size}
                                   </p>
                                 </div>
-                                {getStatusBadge(rental.status)}
+                                {getStatusBadge(rental.status, rental.status === 'active' && rental.returnDate < todayStr)}
                               </div>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                                 <div>
@@ -2097,7 +2176,7 @@ export function CalendarPage({
                   </span>
                   <span>{formatThaiDate(group.pickupDate)}</span>
                   <span>{formatThaiDate(group.returnDate)}</span>
-                  <span>{getStatusBadge(group.status)}</span>
+                  <span>{getStatusBadge(group.status, Boolean(getGroupOverdueSummary(group)))}</span>
                   <span>
                     <button
                       className="secondary-button"

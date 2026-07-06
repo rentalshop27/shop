@@ -45,6 +45,14 @@ const stockItem: FlatStockItem = {
   displayOrder: 0,
 }
 
+const stockItemTwo: FlatStockItem = {
+  ...stockItem,
+  id: 'stock_2',
+  sku: 'SKU-002',
+  productName: 'Ruby Dress',
+  lateFeeRule: '200/day',
+}
+
 function clickMetric(label: string) {
   const metric = screen
     .getAllByText(label)
@@ -159,6 +167,95 @@ describe('RentalsPage', () => {
 
     expect(screen.getByRole('row', { name: /#260704-OVR/ })).toBeTruthy()
     expect(screen.queryByRole('row', { name: /#260704-CUR/ })).toBeNull()
+  })
+
+  it('shows a live overdue alert for active rentals that are past return date', () => {
+    vi.setSystemTime(new Date('2026-07-06T10:00:00.000Z'))
+
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'active', returnDate: '2026-07-02' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('ออเดอร์เกินกำหนดคืน')).toBeTruthy()
+    expect(screen.getByText('4 วัน')).toBeTruthy()
+    expect(screen.getByText('฿100 / วัน')).toBeTruthy()
+    expect(screen.getByText('฿400')).toBeTruthy()
+  })
+
+  it('does not show the overdue alert for due-today, returned, or cancelled rentals', () => {
+    const { rerender } = render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'active', returnDate: '2026-07-05' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('ออเดอร์เกินกำหนดคืน')).toBeNull()
+
+    rerender(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', returnDate: '2026-07-02' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('ออเดอร์เกินกำหนดคืน')).toBeNull()
+
+    rerender(
+      <RentalsPage
+        rentals={[makeRental({ status: 'cancelled', returnDate: '2026-07-02' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('ออเดอร์เกินกำหนดคืน')).toBeNull()
+  })
+
+  it('sums late-fee rates across grouped overdue rentals', () => {
+    vi.setSystemTime(new Date('2026-07-06T10:00:00.000Z'))
+
+    render(
+      <RentalsPage
+        rentals={[
+          makeRental({
+            id: 'line_1',
+            orderCode: 'PR-ORD-260704-020-1',
+            status: 'active',
+            returnDate: '2026-07-02',
+            costume: stockItem,
+          }),
+          makeRental({
+            id: 'line_2',
+            orderCode: 'PR-ORD-260704-020-2',
+            status: 'active',
+            returnDate: '2026-07-02',
+            costume: stockItemTwo,
+          }),
+        ]}
+        customers={[customer]}
+        stockItems={[stockItem, stockItemTwo]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('฿300 / วัน')).toBeTruthy()
+    expect(screen.getByText('฿1,200')).toBeTruthy()
   })
 
   it('requires a non-empty Thailand Post tracking number before status update', () => {
@@ -429,6 +526,25 @@ describe('RentalsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'บันทึกค่าปรับ' }))
 
     expect(onSaveExtraFine).toHaveBeenCalledWith(['line_1', 'line_2'], 300, 'ซิปแตก')
+  })
+
+  it('keeps the extra fine input numeric-only', () => {
+    render(
+      <RentalsPage
+        rentals={[makeRental({ status: 'returned', depositAmount: 0, depositStatus: 'returned' })]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        onResolveDeposit={vi.fn()}
+        onSaveExtraFine={vi.fn(async () => {})}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /เปิดเคสเรียกเก็บค่าปรับเพิ่มย้อนหลัง/ }))
+    fireEvent.change(screen.getByLabelText('จำนวนเงินค่าปรับ (฿)'), { target: { value: '30บาท/วันabc' } })
+
+    expect((screen.getByLabelText('จำนวนเงินค่าปรับ (฿)') as HTMLInputElement).value).toBe('')
   })
 
   it('submits only limited edit fields for active rentals', async () => {

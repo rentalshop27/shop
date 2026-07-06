@@ -11,6 +11,7 @@ import {
   Pencil,
   Printer
 } from 'lucide-react'
+import { sanitizeNumericInput } from '../../lib/numericInput'
 import type { RentalOrder, RentalShippingUpdate, RentalStatus } from './rentalTypes'
 import type { DepositResolutionDraft } from './depositResolution'
 import { normalizeCurrencyAmount, toCents } from './depositResolution'
@@ -23,6 +24,7 @@ import {
   resolveRentalPrice,
   calculateReturnDate,
 } from './rentalRules'
+import { getOverduePenaltySummary } from './overduePenalty'
 import { canCreateRentalForCustomer } from '../customers/customerRules'
 import { calculateCustomerInsights } from './customerInsights'
 
@@ -86,6 +88,22 @@ function formatTierRange(tiers: { price: number }[]) {
   const max = Math.max(...prices)
   if (min === max) return formatBaht(min)
   return `${formatBaht(min)} – ${formatBaht(max)}`
+}
+
+const thaiMonthShortNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+
+function formatThaiShortDate(dateStr: string) {
+  if (!dateStr) return '-'
+  const [yearText, monthText, dayText] = dateStr.split('-')
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+
+  if (!year || !month || !day || !thaiMonthShortNames[month - 1]) {
+    return dateStr
+  }
+
+  return `${day} ${thaiMonthShortNames[month - 1]} ${year + 543}`
 }
 
 export function RentalsPage({
@@ -547,6 +565,11 @@ export function RentalsPage({
   const selectedDepositWasForfeited = selectedDepositRows.some((rental) => rental.depositStatus === 'forfeited')
 
   const selectedShippingMethod = selectedRental?.rentals.find((rental) => rental.shippingMethod)?.shippingMethod
+  const selectedOverdueSummary = useMemo(() => (
+    selectedRental
+      ? getOverduePenaltySummary(selectedRental.rentals, todayStr, selectedRental.returnDate)
+      : null
+  ), [selectedRental, todayStr])
 
   useEffect(() => {
     setIsForfeitDepositOpen(false)
@@ -1106,6 +1129,30 @@ export function RentalsPage({
                   <X size={20} />
                 </button>
 
+                {selectedOverdueSummary && (
+                  <section className="overdue-alert-card" aria-label="Overdue Alert">
+                    <div className="overdue-alert-header">
+                      <strong>ออเดอร์เกินกำหนดคืน</strong>
+                      <span>Overdue Alert</span>
+                    </div>
+                    <div className="overdue-alert-grid">
+                      <div className="overdue-alert-item">
+                        <span>เกินกำหนดมาแล้ว</span>
+                        <strong>{selectedOverdueSummary.overdueDays} วัน</strong>
+                        <small>กำหนดคืน {formatThaiShortDate(selectedOverdueSummary.dueDate)}</small>
+                      </div>
+                      <div className="overdue-alert-item">
+                        <span>เกณฑ์ค่าปรับชุดนี้</span>
+                        <strong>{formatBaht(selectedOverdueSummary.dailyRate)} / วัน</strong>
+                      </div>
+                      <div className="overdue-alert-item highlight">
+                        <span>ยอดค่าปรับสะสมปัจจุบัน</span>
+                        <strong>{formatBaht(selectedOverdueSummary.totalPenalty)}</strong>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 {/* Action Bar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1300,8 +1347,9 @@ export function RentalsPage({
                                 type="number"
                                 min="0"
                                 step="0.01"
+                                inputMode="decimal"
                                 value={extraFineAmount}
-                                onChange={(e) => setExtraFineAmount(e.target.value)}
+                                onChange={(e) => setExtraFineAmount(sanitizeNumericInput(e.target.value))}
                                 style={{ width: '100%', marginBottom: '8px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: '#fff' }}
                               />
                               <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>

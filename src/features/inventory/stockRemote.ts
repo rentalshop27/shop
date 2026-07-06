@@ -391,6 +391,10 @@ export type ShopSettings = {
   defaultLateFinePerDay: number
 }
 
+export const DEFAULT_SHOP_RENTAL_PRICES: ShopSettings['defaultRentalPrices'] = [{ days: 1, price: 100 }]
+export const DEFAULT_SHOP_DEPOSIT = 0
+export const DEFAULT_SHOP_LATE_FINE_PER_DAY = 200
+
 const SHOP_HERO_BUCKET = 'shop-assets'
 
 export async function loadShopSettings(supabase: SupabaseClient, shopId: string): Promise<ShopSettings | null> {
@@ -410,6 +414,8 @@ export async function loadShopSettings(supabase: SupabaseClient, shopId: string)
   const catalogMobileHeroImageUrl = data.catalog_mobile_hero_image_path
     ? supabase.storage.from(SHOP_HERO_BUCKET).getPublicUrl(data.catalog_mobile_hero_image_path).data.publicUrl
     : null
+  const parsedDefaultDeposit = data.default_deposit === null ? Number.NaN : Number(data.default_deposit)
+  const parsedDefaultLateFinePerDay = data.default_late_fine_per_day === null ? Number.NaN : Number(data.default_late_fine_per_day)
 
   return {
     brands: data.brands,
@@ -420,9 +426,9 @@ export async function loadShopSettings(supabase: SupabaseClient, shopId: string)
     catalogMobileHeroImageUrl,
     defaultRentalPrices: Array.isArray(data.default_rental_prices) && data.default_rental_prices.length > 0
       ? data.default_rental_prices
-      : [{ days: 1, price: 0 }],
-    defaultDeposit: Number(data.default_deposit) || 0,
-    defaultLateFinePerDay: Number(data.default_late_fine_per_day) || 0,
+      : DEFAULT_SHOP_RENTAL_PRICES.map((tier) => ({ ...tier })),
+    defaultDeposit: Number.isFinite(parsedDefaultDeposit) ? parsedDefaultDeposit : DEFAULT_SHOP_DEPOSIT,
+    defaultLateFinePerDay: Number.isFinite(parsedDefaultLateFinePerDay) ? parsedDefaultLateFinePerDay : DEFAULT_SHOP_LATE_FINE_PER_DAY,
   }
 }
 

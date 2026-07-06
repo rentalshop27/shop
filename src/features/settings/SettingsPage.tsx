@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus, Trash2, Tag, Shirt, AlertCircle, CheckCircle, Palette, Globe2 } from 'lucide-react'
+import { sanitizeNumericInput } from '../../lib/numericInput'
 
 interface SettingsPageProps {
   brands: string[]
@@ -242,8 +243,13 @@ export function SettingsPage({
                 <input
                   type="number"
                   min="0"
+                  step="0.01"
+                  inputMode="decimal"
                   value={defaultLateFinePerDay}
-                  onChange={(e) => onUpdateDefaultLateFinePerDay(parseInt(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const sanitized = sanitizeNumericInput(e.target.value)
+                    onUpdateDefaultLateFinePerDay(sanitized ? Number(sanitized) : 0)
+                  }}
                 />
               </label>
             </div>

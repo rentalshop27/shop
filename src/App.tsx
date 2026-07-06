@@ -56,6 +56,9 @@ import {
   uploadRemoteCustomerDocuments,
 } from './features/customers/customerRemote'
 import {
+  DEFAULT_SHOP_DEPOSIT,
+  DEFAULT_SHOP_LATE_FINE_PER_DAY,
+  DEFAULT_SHOP_RENTAL_PRICES,
   deleteShopHeroImage,
   loadStockItemsForRentalMapping,
   loadProductsWithStock,
@@ -470,9 +473,9 @@ function PrivateApp() {
   const [publicCatalogEnabled, setPublicCatalogEnabled] = useState(DEFAULT_PUBLIC_CATALOG_ENABLED)
   const [catalogHeroImageUrl, setCatalogHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_HERO_IMAGE_KEY))
   const [catalogMobileHeroImageUrl, setCatalogMobileHeroImageUrl] = useState<string | null>(() => getLocalString(LOCAL_CATALOG_MOBILE_HERO_IMAGE_KEY))
-  const [defaultRentalPrices, setDefaultRentalPrices] = useState<{days: number; price: number}[]>([{days: 1, price: 0}])
-  const [defaultDeposit, setDefaultDeposit] = useState<number>(0)
-  const [defaultLateFinePerDay, setDefaultLateFinePerDay] = useState<number>(0)
+  const [defaultRentalPrices, setDefaultRentalPrices] = useState<{days: number; price: number}[]>(() => cloneRentalPriceTiers(DEFAULT_SHOP_RENTAL_PRICES))
+  const [defaultDeposit, setDefaultDeposit] = useState<number>(DEFAULT_SHOP_DEPOSIT)
+  const [defaultLateFinePerDay, setDefaultLateFinePerDay] = useState<number>(DEFAULT_SHOP_LATE_FINE_PER_DAY)
   const [isCatalogHeroUploading, setIsCatalogHeroUploading] = useState(false)
   const [isCatalogMobileHeroUploading, setIsCatalogMobileHeroUploading] = useState(false)
   const [availableShops, setAvailableShops] = useState<ShopSummary[]>([])
@@ -1438,9 +1441,9 @@ function PrivateApp() {
     setPublicCatalogEnabled(DEFAULT_PUBLIC_CATALOG_ENABLED)
     setCatalogHeroImageUrl(null)
     setCatalogMobileHeroImageUrl(null)
-    setDefaultRentalPrices([{days: 1, price: 0}])
-    setDefaultDeposit(0)
-    setDefaultLateFinePerDay(0)
+    setDefaultRentalPrices(cloneRentalPriceTiers(DEFAULT_SHOP_RENTAL_PRICES))
+    setDefaultDeposit(DEFAULT_SHOP_DEPOSIT)
+    setDefaultLateFinePerDay(DEFAULT_SHOP_LATE_FINE_PER_DAY)
 
     Promise.all([
       loadCustomers(client, shopId),
@@ -1455,9 +1458,9 @@ function PrivateApp() {
         setProducts(loadedProducts)
         if (settings) {
           setPublicCatalogEnabled(settings.publicCatalogEnabled)
-          setDefaultRentalPrices(settings.defaultRentalPrices ?? [{days: 1, price: 0}])
-          setDefaultDeposit(settings.defaultDeposit ?? 0)
-          setDefaultLateFinePerDay(settings.defaultLateFinePerDay ?? 0)
+          setDefaultRentalPrices(settings.defaultRentalPrices ?? cloneRentalPriceTiers(DEFAULT_SHOP_RENTAL_PRICES))
+          setDefaultDeposit(settings.defaultDeposit ?? DEFAULT_SHOP_DEPOSIT)
+          setDefaultLateFinePerDay(settings.defaultLateFinePerDay ?? DEFAULT_SHOP_LATE_FINE_PER_DAY)
         }
         setAuditLogs(loadedAuditLogs)
         setSelectedCustomerId(loadedCustomers[0]?.id ?? '')

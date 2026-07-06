@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { InventoryControllerPageProps } from './InventoryPage'
+import { sanitizeNumericInput } from '../../lib/numericInput'
 import {
   countRemoteRentalsForProduct,
   countRemoteRentalsForStockItem,
@@ -36,6 +37,10 @@ const emptyProductDraft: ProductDraft = {
 
 function cloneRentalTiers(tiers: ProductDraft['rentalTiers']): ProductDraft['rentalTiers'] {
   return tiers.map((tier) => ({ ...tier }))
+}
+
+function formatDefaultLateFeeRule(finePerDay: number) {
+  return finePerDay > 0 ? String(finePerDay) : ''
 }
 
 type InventoryControllerOptions = {
@@ -137,7 +142,7 @@ export function useInventoryController({
       ...emptyProductDraft,
       rentalTiers: cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 0 }]),
       depositAmount: defaultDeposit > 0 ? defaultDeposit.toString() : '',
-      lateFeeRule: defaultLateFinePerDay > 0 ? `${defaultLateFinePerDay} บาท/วัน` : '',
+      lateFeeRule: formatDefaultLateFeeRule(defaultLateFinePerDay),
     })
     setFormError('')
     setIsFormOpen(true)
@@ -451,7 +456,7 @@ function toEditableProductDraft(product: ProductWithStockSummary): ProductDraft 
     primaryColor: product.primaryColor,
     publicDescription: product.publicDescription,
     rentalTiers: product.rentalTiers ?? [],
-    lateFeeRule: product.lateFeeRule,
+    lateFeeRule: sanitizeNumericInput(product.lateFeeRule),
     depositAmount: product.depositAmount ? String(product.depositAmount) : '',
     imageUrls: product.imageUrls ?? [],
     publicVisible: product.publicVisible,
@@ -477,7 +482,7 @@ function normalizeProductDraft(draft: ProductDraft): ProductDraft {
       }))
       .filter((tier) => tier.days > 0)
       .sort((a, b) => a.days - b.days),
-    lateFeeRule: draft.lateFeeRule.trim(),
+    lateFeeRule: sanitizeNumericInput(draft.lateFeeRule.trim()),
     depositAmount: parseOptionalNumber(draft.depositAmount) !== undefined ? draft.depositAmount : '',
     variants: draft.variants.filter((v) => v.quantity > 0)
   }

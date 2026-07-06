@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { sanitizeNumericInput } from '../../lib/numericInput'
 import { getInventoryDisplayStatus } from './inventoryStatus'
 import { StockManagementDrawer } from './StockManagementDrawer'
 import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
@@ -77,6 +78,10 @@ export type InventoryPageProps = InventoryControllerPageProps & {
 
 function cloneRentalTiers(tiers: {days: number; price: number}[]) {
   return tiers.map((tier) => ({ ...tier }))
+}
+
+function formatDefaultLateFeeRule(finePerDay: number) {
+  return finePerDay > 0 ? String(finePerDay) : ''
 }
 
 export function InventoryPage({
@@ -528,7 +533,7 @@ export function InventoryPage({
                       }
                       onDraftChange('rentalTiers', cloneRentalTiers(defaultRentalPrices.length > 0 ? defaultRentalPrices : [{ days: 1, price: 0 }]));
                       onDraftChange('depositAmount', defaultDeposit > 0 ? defaultDeposit.toString() : '');
-                      onDraftChange('lateFeeRule', defaultLateFinePerDay > 0 ? `${defaultLateFinePerDay} บาท/วัน` : '');
+                      onDraftChange('lateFeeRule', formatDefaultLateFeeRule(defaultLateFinePerDay));
                     }}
                     style={{ background: 'none', border: '1px solid rgba(218, 165, 32, 0.4)', borderRadius: '6px', padding: '6px 12px', fontSize: '0.85rem', color: 'var(--text-gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
@@ -599,8 +604,12 @@ export function InventoryPage({
                   <InventoryTextField
                     label="เกณฑ์ค่าปรับล่าช้า"
                     value={draft.lateFeeRule}
-                    onChange={(value) => onDraftChange('lateFeeRule', value)}
-                    placeholder="เช่น 300 บาท/วัน หลังครบกำหนด"
+                    onChange={(value) => onDraftChange('lateFeeRule', sanitizeNumericInput(value))}
+                    placeholder="เช่น 300"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
                   />
                 </div>
               </div>
@@ -773,11 +782,11 @@ function InventoryMetricCard({ label, value, icon, type, unit = 'รายกา
   )
 }
 
-function InventoryTextField({ label, value, onChange, placeholder, required, type = 'text', inputMode, disabled }: { label: string; value: string; onChange: (val: string) => void; placeholder?: string; required?: boolean; type?: string; inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']; disabled?: boolean }) {
+function InventoryTextField({ label, value, onChange, placeholder, required, type = 'text', inputMode, disabled, min, step }: { label: string; value: string; onChange: (val: string) => void; placeholder?: string; required?: boolean; type?: string; inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']; disabled?: boolean; min?: number | string; step?: number | string }) {
   return (
     <label className="field">
       <span>{label} {required && <span className="required">*</span>}</span>
-      <input type={type} inputMode={inputMode} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} />
+      <input type={type} inputMode={inputMode} min={min} step={step} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} />
     </label>
   )
 }

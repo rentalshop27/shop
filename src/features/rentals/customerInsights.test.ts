@@ -129,6 +129,17 @@ describe('calculateCustomerInsights', () => {
     expect(insights.starRating).toBe(4)
   })
 
+  it('adds extra fines into total spent while applying the flat star penalty', () => {
+    const insights = calculateCustomerInsights(
+      customer,
+      [makeRental({ depositStatus: 'returned', fineAmount: 300, fineReason: 'ชุดเสียหาย' })],
+      '2026-07-05'
+    )
+
+    expect(insights.totalSpent).toBe(1650)
+    expect(insights.starRating).toBe(3)
+  })
+
   it('counts returned rentals as completed only after deposit resolution', () => {
     const insights = calculateCustomerInsights(
       customer,

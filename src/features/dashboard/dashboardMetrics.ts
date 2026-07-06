@@ -40,7 +40,7 @@ export function buildDashboardMetrics(rentals: RentalOrder[], today: string) {
 
   const totalFines = rentals.reduce((sum, rental) => sum + (rental.fineAmount || 0), 0)
 
-  const netRevenue = totalCashFlow - activeHeldDeposits
+  const netRevenue = totalCashFlow - activeHeldDeposits + totalFines
 
   const currentlyRented = rentals.filter((rental) => rental.status === 'active' || rental.status === 'overdue').length
 

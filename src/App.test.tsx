@@ -77,6 +77,9 @@ vi.mock('./features/customers/customerRemote', () => ({
 }))
 
 vi.mock('./features/inventory/stockRemote', () => ({
+  DEFAULT_SHOP_RENTAL_PRICES: [{ days: 1, price: 100 }],
+  DEFAULT_SHOP_DEPOSIT: 0,
+  DEFAULT_SHOP_LATE_FINE_PER_DAY: 200,
   countRemoteRentalsForProduct: vi.fn(),
   countRemoteRentalsForStockItem: vi.fn(),
   loadStockItemsForRentalMapping,
@@ -363,6 +366,38 @@ describe('App shop selection', () => {
 
     expect(await screen.findByDisplayValue('250')).toBeTruthy()
     expect(screen.queryByDisplayValue('999')).toBeNull()
+  })
+
+  it('prefills inventory late fine defaults as numbers without unit text', async () => {
+    loadShopSettings.mockResolvedValue(makeShopSettings({ defaultLateFinePerDay: 200 }))
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'เพิ่มชุดหลัก' }))
+
+    const lateFineInput = screen.getByLabelText('เกณฑ์ค่าปรับล่าช้า') as HTMLInputElement
+    expect(lateFineInput.value).toBe('200')
+    expect(screen.queryByDisplayValue('200 บาท/วัน')).toBeNull()
+  })
+
+  it('uses global rental default fallbacks when shop settings are empty', async () => {
+    loadShopSettings.mockResolvedValue(null)
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'ตั้งค่า' })[0])
+
+    expect(await screen.findByDisplayValue('100')).toBeTruthy()
+    expect(screen.getByDisplayValue('200')).toBeTruthy()
   })
 
   it('reverts default deposit when saving shop settings fails', async () => {
