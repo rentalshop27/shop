@@ -563,7 +563,7 @@ export function CustomerCatalogPage({
                     key={item.id}
                     id={item.id!}
                     item={item}
-                    inWishlist={wishlist.has(item.productName)}
+                    inWishlist={wishlist.has(item.id || item.baseSku || item.productName)}
                     sizeDisplay={sizeDisplay}
                     isEditModeActive={true}
                     onToggleFeatured={onToggleFeatured}
@@ -588,9 +588,9 @@ export function CustomerCatalogPage({
                       <CatalogCardBase
                         key={itemKey}
                         item={item}
-                        inWishlist={wishlist.has(item.productName)}
+                        inWishlist={wishlist.has(item.id || item.baseSku || item.productName)}
                         sizeDisplay={sizeDisplay}
-                        onToggleWishlist={() => toggleWishlist(item.productName)}
+                        onToggleWishlist={() => toggleWishlist(item.id || item.baseSku || item.productName)}
                         onOpenDetail={() => openDetail(item)}
                       />
                     )
@@ -613,9 +613,9 @@ export function CustomerCatalogPage({
                 <CatalogCardBase
                   key={itemKey}
                   item={item}
-                  inWishlist={wishlist.has(item.productName)}
+                  inWishlist={wishlist.has(item.id || item.baseSku || item.productName)}
                   sizeDisplay={sizeDisplay}
-                  onToggleWishlist={() => toggleWishlist(item.productName)}
+                  onToggleWishlist={() => toggleWishlist(item.id || item.baseSku || item.productName)}
                   onOpenDetail={() => openDetail(item)}
                 />
               )

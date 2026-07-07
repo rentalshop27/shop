@@ -1901,7 +1901,7 @@ select {
 }
 
 .inventory-category-select__option {
-  align-items: start;
+  align-items: center;
   background: transparent;
   border: 0;
   box-sizing: border-box;
@@ -1927,7 +1927,7 @@ select {
 
 .inventory-category-select__checkbox {
   accent-color: var(--text-gold);
-  margin: 2px 0 0;
+  margin: 0;
   pointer-events: none;
 }
 
