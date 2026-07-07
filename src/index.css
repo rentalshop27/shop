@@ -1839,6 +1839,104 @@ select {
   margin-bottom: 0;
 }
 
+.inventory-category-select {
+  min-width: 0;
+  position: relative;
+  width: 100%;
+}
+
+.inventory-category-select__trigger {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.9rem;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.inventory-category-select__trigger:focus-visible {
+  border-color: var(--text-gold);
+  box-shadow: 0 0 0 3px rgba(223, 183, 80, 0.18);
+  outline: none;
+}
+
+.inventory-category-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventory-category-select__caret {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+}
+
+.inventory-category-select__menu {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  left: 0;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px 0;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 100%;
+  z-index: 100;
+}
+
+.inventory-category-select__option {
+  align-items: start;
+  background: transparent;
+  border: 0;
+  box-sizing: border-box;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.inventory-category-select__option:hover,
+.inventory-category-select__option:focus-visible {
+  background: rgba(218, 165, 32, 0.1);
+  outline: none;
+}
+
+.inventory-category-select__option.is-selected .inventory-category-select__option-label {
+  color: var(--text-gold);
+}
+
+.inventory-category-select__checkbox {
+  accent-color: var(--text-gold);
+  margin: 2px 0 0;
+  pointer-events: none;
+}
+
+.inventory-category-select__option-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .stock-code-section .form-grid {
   grid-template-columns: minmax(280px, 1fr) minmax(180px, 0.7fr);
 }

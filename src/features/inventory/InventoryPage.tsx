@@ -111,78 +111,51 @@ function CategoryMultiSelectDropdown({
   }, [isOpen]);
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
-      <div 
+    <div ref={dropdownRef} className="inventory-category-select">
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        style={{ 
-          border: '1px solid rgba(255, 255, 255, 0.2)', 
-          padding: '8px 12px', 
-          borderRadius: '6px', 
-          cursor: 'pointer',
-          background: 'rgba(255,255,255,0.05)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          color: 'var(--text-color)',
-          fontSize: '0.9rem',
-          minHeight: '38px'
-        }}
+        className="inventory-category-select__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
       >
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span className="inventory-category-select__value">
           {selectedCategories.length > 0 ? selectedCategories.join(', ') : '-- เลือกประเภทชุด --'}
         </span>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{isOpen ? '▲' : '▼'}</span>
-      </div>
+        <span className="inventory-category-select__caret" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
+      </button>
       
       {isOpen && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          background: 'var(--bg-color, #111)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          borderRadius: '6px',
-          marginTop: '4px',
-          maxHeight: '220px',
-          overflowY: 'auto',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          padding: '4px 0'
-        }}>
+        <div className="inventory-category-select__menu" role="listbox" aria-multiselectable="true">
           {categories.map((catName) => {
             const isSelected = selectedCategories.includes(catName);
             return (
-              <label 
+              <button
+                type="button"
                 key={catName} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  cursor: 'pointer', 
-                  padding: '8px 12px', 
-                  margin: 0,
-                  fontSize: '0.9rem'
+                className={`inventory-category-select__option ${isSelected ? 'is-selected' : ''}`}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  let current = [...selectedCategories];
+                  if (isSelected) {
+                    current = current.filter((category) => category !== catName);
+                  } else {
+                    current.push(catName);
+                  }
+                  onChange(current.join(', '));
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(218, 165, 32, 0.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={(e) => {
-                    let current = [...selectedCategories];
-                    if (e.target.checked) {
-                      current.push(catName);
-                    } else {
-                      current = current.filter(c => c !== catName);
-                    }
-                    onChange(current.join(', '));
-                  }}
-                  style={{ margin: 0, accentColor: 'var(--primary-color)' }}
+                  onChange={() => undefined}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="inventory-category-select__checkbox"
                 />
-                <span style={{ color: isSelected ? 'var(--text-gold)' : 'var(--text-color)' }}>{catName}</span>
-              </label>
+                <span className="inventory-category-select__option-label">{catName}</span>
+              </button>
             );
           })}
         </div>
@@ -621,14 +594,14 @@ export function InventoryPage({
                     ))}
                   </select>
                 </label>
-                <label className="field">
+                <div className="field">
                   <span>หมวดหมู่/ประเภทชุด</span>
                   <CategoryMultiSelectDropdown 
                     categories={categories} 
                     draftCategory={draft.category} 
                     onChange={(val) => onDraftChange('category', val)} 
                   />
-                </label>
+                </div>
               </div>
               <div style={{ marginTop: '24px', background: 'rgba(218, 165, 32, 0.05)', borderColor: 'rgba(218, 165, 32, 0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(218, 165, 32, 0.2)' }}>
                 <div className="section-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
