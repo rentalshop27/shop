@@ -61,14 +61,14 @@ function makeRental(overrides: Partial<RentalOrder> = {}): RentalOrder {
 }
 
 describe('buildDashboardMetrics', () => {
-  it('keeps totalRevenue available for legacy callers', () => {
+  it('keeps totalRevenue aligned with collected cash when there are no extra fines', () => {
     const metrics = buildDashboardMetrics([makeRental()], '2026-07-05')
 
     expect(metrics.totalRevenue).toBe(1700)
     expect(metrics.totalCashFlow).toBe(1700)
   })
 
-  it('includes fines in net revenue while still exposing them separately', () => {
+  it('includes fines in revenue totals while still exposing them separately', () => {
     const metrics = buildDashboardMetrics([
       makeRental({ fineAmount: 300 }),
       makeRental({
@@ -81,6 +81,7 @@ describe('buildDashboardMetrics', () => {
       }),
     ], '2026-07-05')
 
+    expect(metrics.totalRevenue).toBe(3400)
     expect(metrics.totalFines).toBe(300)
     expect(metrics.activeHeldDeposits).toBe(900)
     expect(metrics.netRevenue).toBe(2500)
