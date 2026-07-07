@@ -325,16 +325,26 @@ export function useInventoryController({
   async function handleTogglePublicVisibility(productId: string, publicVisible: boolean) {
     if (isSaving) return
 
+    const previousPublicVisible = products.find((product) => product.id === productId)?.publicVisible
+    if (previousPublicVisible === undefined) return
+
     setIsSaving(true)
+    setProducts((current) =>
+      current.map((product) => (product.id === productId ? { ...product, publicVisible } : product)),
+    )
     try {
       if (supabase && isAuthenticated && shopId) {
         await updateRemoteProductPublicVisibility(supabase, shopId, productId, publicVisible)
-        await onLoadAuditLogs()
+        void Promise.resolve(onLoadAuditLogs()).catch((error) => {
+          console.warn('Failed to refresh audit logs after toggling product visibility:', error)
+        })
       }
-      setProducts((current) =>
-        current.map((p) => (p.id === productId ? { ...p, publicVisible } : p)),
-      )
     } catch (error) {
+      setProducts((current) =>
+        current.map((product) =>
+          product.id === productId ? { ...product, publicVisible: previousPublicVisible } : product,
+        ),
+      )
       window.alert(getErrorMessage(error))
     } finally {
       setIsSaving(false)

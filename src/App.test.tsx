@@ -14,6 +14,7 @@ const {
   loadAuditLogs,
   loadPublicCatalog,
   updateShopSettings,
+  updateRemoteProductPublicVisibility,
   authStateChange,
   supabase,
 } = vi.hoisted(() => {
@@ -32,6 +33,7 @@ const {
     loadAuditLogs: vi.fn(),
     loadPublicCatalog: vi.fn(),
     updateShopSettings: vi.fn(),
+    updateRemoteProductPublicVisibility: vi.fn(),
     authStateChange,
     supabase: {
       auth: {
@@ -89,11 +91,11 @@ vi.mock('./features/inventory/stockRemote', () => ({
   deleteRemoteProduct: vi.fn(),
   deleteRemoteStockItem: vi.fn(),
   updateRemoteProduct: vi.fn(),
-    updateRemoteProductPublicVisibility: vi.fn(),
-    updateRemoteStockItemStatus: vi.fn(),
-    updateShopSettings,
-    loadShopSettings,
-  }))
+  updateRemoteProductPublicVisibility,
+  updateRemoteStockItemStatus: vi.fn(),
+  updateShopSettings,
+  loadShopSettings,
+}))
 
 vi.mock('./features/rentals/rentalRemote', () => ({
   createRemoteRentals: vi.fn(),
@@ -124,6 +126,43 @@ function makeShopSettings(overrides: Partial<{
     defaultRentalPrices: [{ days: 1, price: 100 }],
     defaultDeposit: 500,
     defaultLateFinePerDay: 200,
+    ...overrides,
+  }
+}
+
+function makeInventoryProduct(overrides: Partial<{
+  id: string
+  baseSku: string
+  productName: string
+  publicVisible: boolean
+}> = {}) {
+  return {
+    id: 'product_1',
+    baseSku: 'SKU-001',
+    productName: 'Golden Dress',
+    brand: 'Precious',
+    category: 'Evening',
+    primaryColor: 'Gold',
+    publicDescription: '',
+    rentalTiers: [{ days: 1, price: 1200 }],
+    lateFeeRule: '100',
+    depositAmount: 500,
+    imageUrls: [],
+    publicVisible: false,
+    isFeatured: false,
+    displayOrder: 0,
+    createdAt: '2026-07-01T00:00:00.000Z',
+    stockItems: [
+      {
+        id: 'stock_1',
+        shopId: 'shop_1',
+        productId: 'product_1',
+        sku: 'SKU-001-M-01',
+        size: 'M',
+        status: 'available',
+        createdAt: '2026-07-01T00:00:00.000Z',
+      },
+    ],
     ...overrides,
   }
 }
@@ -175,6 +214,7 @@ describe('App shop selection', () => {
       ],
     })
     updateShopSettings.mockResolvedValue(undefined)
+    updateRemoteProductPublicVisibility.mockResolvedValue(undefined)
     supabase.auth.signOut.mockResolvedValue({ error: null })
   })
 
@@ -341,6 +381,42 @@ describe('App shop selection', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
 
     expect((screen.getByPlaceholderText(/ค้นหาด้วยรหัสหลัก/) as HTMLInputElement).value).toBe('emerald')
+  })
+
+  it('updates inventory public visibility before audit logs finish loading', async () => {
+    localStorage.setItem('inventoryViewMode', 'table')
+    loadProductsWithStock.mockResolvedValue([makeInventoryProduct()])
+
+    let resolveAuditRefresh: (() => void) | null = null
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
+
+    const visibilityButton = await screen.findByRole('button', { name: 'โชว์หน้าเว็บ' })
+
+    loadAuditLogs.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveAuditRefresh = () => resolve([])
+        }),
+    )
+
+    fireEvent.click(visibilityButton)
+
+    await waitFor(() => {
+      expect(updateRemoteProductPublicVisibility).toHaveBeenCalledWith(supabase, 'shop_1', 'product_1', true)
+    })
+    expect(screen.getByRole('button', { name: 'ซ่อนจากเว็บ' })).toBeTruthy()
+
+    await act(async () => {
+      resolveAuditRefresh?.()
+      await Promise.resolve()
+    })
   })
 
   it('keeps shop rental defaults unchanged when editing a new inventory draft', async () => {
