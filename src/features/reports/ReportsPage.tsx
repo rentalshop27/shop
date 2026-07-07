@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   TrendingUp,
   Wallet,
@@ -13,10 +13,8 @@ import {
   ArrowRight,
   BarChart3,
   RefreshCw,
-  ExternalLink,
-  FileSpreadsheet,
+  Download,
 } from 'lucide-react'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RentalOrder } from '../rentals/rentalTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
 import {
@@ -25,13 +23,7 @@ import {
   buildReportsDateRange,
 } from './reportsMetrics'
 import type { DateRangeMode, DressReportItem } from './reportsMetrics'
-import {
-  disconnectedStatus,
-  loadGoogleSheetsReportStatus,
-  syncGoogleSheetsReport,
-  type GoogleSheetsReportStatus,
-} from './googleSheetsReportRemote'
-import { getUserFacingErrorMessage } from '../../lib/errorMessages'
+import { exportDressReportsToCSV, exportRentalsToCSV } from '../../utils/exportUtils'
 import './ReportsPage.css'
 
 // Helper to format currency
@@ -47,13 +39,6 @@ function getLocalDateString(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('th-TH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
 function formatMonthLabel(month: string) {
   return new Intl.DateTimeFormat('th-TH', {
     month: 'short',
@@ -61,8 +46,13 @@ function formatMonthLabel(month: string) {
   }).format(new Date(`${month}-01T00:00:00`))
 }
 
-function getErrorMessage(error: unknown) {
-  return getUserFacingErrorMessage(error)
+function sanitizeFilenamePart(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
 }
 
 const categoryChartColors = ['#81c784', '#ead483', '#64b5f6', '#ce93d8', '#ffb74d', '#f06292']
@@ -73,21 +63,13 @@ type SortOrder = 'asc' | 'desc'
 export function ReportsPage({
   rentals,
   stockItems,
-  supabase,
-  shopId,
   shopName,
 }: {
   rentals: RentalOrder[]
   stockItems: FlatStockItem[]
-  supabase?: SupabaseClient | null
-  shopId?: string | null
   shopName?: string
 }) {
   const [activeSubTab, setActiveSubTab] = useState<'dresses' | 'general'>('dresses')
-  const [googleReportStatus, setGoogleReportStatus] = useState<GoogleSheetsReportStatus>(() => disconnectedStatus())
-  const [isGoogleReportLoading, setIsGoogleReportLoading] = useState(false)
-  const [isGoogleReportSyncing, setIsGoogleReportSyncing] = useState(false)
-  const [googleReportError, setGoogleReportError] = useState('')
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState('')
@@ -107,40 +89,6 @@ export function ReportsPage({
 
   // Get current date as string
   const todayStr = useMemo(() => getLocalDateString(new Date()), [])
-
-  useEffect(() => {
-    if (!supabase || !shopId) {
-      setGoogleReportStatus(disconnectedStatus())
-      setGoogleReportError('')
-      return
-    }
-
-    let cancelled = false
-    setIsGoogleReportLoading(true)
-    setGoogleReportError('')
-
-    loadGoogleSheetsReportStatus(supabase, shopId)
-      .then((status) => {
-        if (!cancelled) {
-          setGoogleReportStatus(status)
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setGoogleReportError(getErrorMessage(error))
-          setGoogleReportStatus(disconnectedStatus())
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsGoogleReportLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [supabase, shopId])
 
   // Categories, Brands, Sizes, Colors list from stockItems for dropdowns
   const categoriesList = useMemo(() => {
@@ -263,6 +211,16 @@ export function ReportsPage({
     return buildGeneralStoreMetrics(rentals)
   }, [rentals])
 
+  const exportFilename = useMemo(() => {
+    const safeShopName = sanitizeFilenamePart(shopName || 'precious-rental') || 'precious-rental'
+
+    if (activeSubTab === 'general') {
+      return `${safeShopName}-rentals-all.csv`
+    }
+
+    return `${safeShopName}-dress-report-${activeDateRange.start}-to-${activeDateRange.end}.csv`
+  }, [activeDateRange.end, activeDateRange.start, activeSubTab, shopName])
+
   const monthlyRevenueMax = useMemo(() => {
     return Math.max(1, ...generalStoreMetrics.monthlyRevenueTrends.map(item => item.revenue))
   }, [generalStoreMetrics.monthlyRevenueTrends])
@@ -301,31 +259,15 @@ export function ReportsPage({
     return sortOrder === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />
   }
 
-  const handleSyncGoogleSheets = async () => {
-    if (!supabase || !shopId || isGoogleReportSyncing) return
-
-    setIsGoogleReportSyncing(true)
-    setGoogleReportError('')
-    try {
-      const result = await syncGoogleSheetsReport(supabase, shopId)
-      setGoogleReportStatus((current) => ({
-        connected: true,
-        googleEmail: current.connected ? current.googleEmail : '',
-        spreadsheetUrl: result.spreadsheetUrl,
-        lastSyncAt: result.syncedAt,
-        lastSyncStatus: 'success',
-        lastSyncError: '',
-      }))
-    } catch (error: unknown) {
-      setGoogleReportError(getErrorMessage(error))
-      setGoogleReportStatus((current) => (
-        current.connected
-          ? { ...current, lastSyncStatus: 'error', lastSyncError: getErrorMessage(error) }
-          : current
-      ))
-    } finally {
-      setIsGoogleReportSyncing(false)
+  const handleExportCsv = () => {
+    if (activeSubTab === 'general') {
+      if (rentals.length === 0) return
+      exportRentalsToCSV(rentals, exportFilename)
+      return
     }
+
+    if (sortedDressReports.length === 0) return
+    exportDressReportsToCSV(sortedDressReports, exportFilename)
   }
 
   return (
@@ -359,52 +301,34 @@ export function ReportsPage({
         </div>
       </header>
 
-      <section className="reports-google-sheet-panel" aria-label="Google Sheets report sync">
-        <div className="reports-google-main">
-          <span className="reports-google-icon"><FileSpreadsheet size={22} /></span>
+      <section className="reports-export-panel" aria-label="Export report CSV">
+        <div className="reports-export-main">
+          <span className="reports-export-icon"><Download size={22} /></span>
           <div>
-            <h2>Google Sheets สำหรับดูรายงาน</h2>
+            <h2>Export รายงานเป็น CSV</h2>
             <p>
-              {shopName
-                ? `ซิงก์ข้อมูลรายงานของร้าน ${shopName} ไปยังชีตที่เชื่อมกับ Google ของร้านนี้`
-                : 'ซิงก์ข้อมูลรายงานของร้านที่เลือกอยู่ไปยัง Google Sheets'}
+              {activeSubTab === 'general'
+                ? 'ดาวน์โหลดรายการเช่าทั้งหมดของร้านในไฟล์ CSV เพื่อนำไปเปิดต่อใน Excel หรือโปรแกรมสเปรดชีตได้ทันที'
+                : 'ดาวน์โหลดรายการเช่าตามช่วงเวลาและตัวกรองที่เลือกในแท็บนี้เป็นไฟล์ CSV'}
             </p>
-            <div className="reports-google-meta" role="status">
-              {isGoogleReportLoading
-                ? 'กำลังตรวจสถานะ Google...'
-                : googleReportStatus.connected
-                  ? `เชื่อมกับ ${googleReportStatus.googleEmail || 'Google account'}${googleReportStatus.lastSyncAt ? ` · ซิงก์ล่าสุด ${formatDateTime(googleReportStatus.lastSyncAt)}` : ''}`
-                  : 'ยังไม่ได้เชื่อม Google ในหน้าโปรไฟล์'}
+            <div className="reports-export-meta" role="status">
+              {activeSubTab === 'general'
+                ? `พร้อม export ${rentals.length} รายการจากข้อมูลการเช่าทั้งหมด${shopName ? ` ของร้าน ${shopName}` : ''}`
+                : `พร้อม export ${sortedDressReports.length} ชุด · ช่วงวันที่ ${activeDateRange.start} ถึง ${activeDateRange.end}`}
             </div>
-            {(googleReportError || (googleReportStatus.connected && googleReportStatus.lastSyncError)) && (
-              <p className="reports-google-error" role="alert">
-                {googleReportError || googleReportStatus.lastSyncError}
-              </p>
-            )}
           </div>
         </div>
 
-        <div className="reports-google-actions">
+        <div className="reports-export-actions">
           <button
-            className="primary-button reports-google-sync-button"
+            className="primary-button reports-export-button"
             type="button"
-            onClick={handleSyncGoogleSheets}
-            disabled={!supabase || !shopId || !googleReportStatus.connected || isGoogleReportLoading || isGoogleReportSyncing}
+            onClick={handleExportCsv}
+            disabled={activeSubTab === 'general' ? rentals.length === 0 : sortedDressReports.length === 0}
           >
-            <RefreshCw size={18} className={isGoogleReportSyncing ? 'spinning' : ''} />
-            {isGoogleReportSyncing ? 'กำลังซิงก์...' : 'ซิงก์ไป Google Sheets'}
+            <Download size={18} />
+            Export CSV
           </button>
-          {googleReportStatus.connected && googleReportStatus.spreadsheetUrl && (
-            <a
-              className="secondary-button reports-google-open-button"
-              href={googleReportStatus.spreadsheetUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={18} />
-              เปิดชีต
-            </a>
-          )}
         </div>
       </section>
 

@@ -2385,8 +2385,6 @@ function PrivateApp() {
             <LazyReportsPage
               rentals={rentals}
               stockItems={flatStockItems}
-              supabase={supabase}
-              shopId={shopId}
               shopName={currentShop?.name}
             />
           )}

@@ -51,7 +51,7 @@
   box-shadow: 0 4px 12px rgba(234, 212, 131, 0.25);
 }
 
-.reports-google-sheet-panel {
+.reports-export-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -62,72 +62,65 @@
   padding: 18px 20px;
 }
 
-.reports-google-main {
+.reports-export-main {
   display: flex;
   align-items: flex-start;
   gap: 14px;
   min-width: 0;
 }
 
-.reports-google-icon {
+.reports-export-icon {
   width: 44px;
   height: 44px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(76, 175, 80, 0.12);
-  color: #81c784;
+  background: rgba(234, 212, 131, 0.12);
+  color: var(--text-gold, #ead483);
   flex-shrink: 0;
 }
 
-.reports-google-main h2 {
+.reports-export-main h2 {
   font-size: 17px;
   font-weight: 850;
   color: var(--text-bright, #fff7ef);
   margin: 0 0 4px;
 }
 
-.reports-google-main p {
+.reports-export-main p {
   font-size: 13px;
   color: var(--text-muted, #8f8580);
   margin: 0;
   line-height: 1.45;
 }
 
-.reports-google-meta {
+.reports-export-meta {
   margin-top: 8px;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-gold, #ead483);
 }
 
-.reports-google-error {
-  margin-top: 8px !important;
-  color: #ff8a80 !important;
-  font-weight: 700;
-}
-
-.reports-google-actions {
+.reports-export-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
 }
 
-.reports-google-actions .primary-button:disabled {
+.reports-export-actions .primary-button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
   box-shadow: none;
 }
 
-.reports-google-actions .primary-button:disabled:hover {
+.reports-export-actions .primary-button:disabled:hover {
   background: transparent;
   color: var(--text-gold, #ead483);
 }
 
-.reports-google-sync-button,
-.reports-google-open-button {
+.reports-export-button {
   white-space: nowrap;
 }
 
@@ -1201,18 +1194,17 @@
     justify-content: space-around;
   }
 
-  .reports-google-sheet-panel {
+  .reports-export-panel {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .reports-google-actions {
+  .reports-export-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .reports-google-sync-button,
-  .reports-google-open-button {
+  .reports-export-button {
     width: 100%;
   }
 

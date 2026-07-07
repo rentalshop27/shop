@@ -1,8 +1,35 @@
 import type { RentalOrder } from '../features/rentals/rentalTypes'
+import type { DressReportItem } from '../features/reports/reportsMetrics'
 import { calculateNetRentalRevenue } from '../features/reports/reportsMetrics'
 
+function downloadCsv(headers: string[], rows: Array<Array<string | number>>, filename: string) {
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((row) =>
+      row.map((cell) => {
+        const cellString = String(cell)
+        if (cellString.includes(',') || cellString.includes('"') || cellString.includes('\n')) {
+          return `"${cellString.replace(/"/g, '""')}"`
+        }
+        return cellString
+      }).join(','),
+    ),
+  ].join('\n')
+
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
 export function exportRentalsToCSV(rentals: RentalOrder[], filename: string) {
-  // 1. Define headers
   const headers = [
     'รหัสออเดอร์',
     'ชื่อลูกค้า',
@@ -15,13 +42,11 @@ export function exportRentalsToCSV(rentals: RentalOrder[], filename: string) {
     'เหตุผลการปรับ/ยึด'
   ]
 
-  // 2. Map data to rows
   const rows = rentals.map(rental => {
     const forfeited = rental.depositForfeitedAmount ?? 0
     const fine = rental.fineAmount ?? 0
     const netRevenue = calculateNetRentalRevenue(rental)
 
-    // combined notes for reasons
     const reasons = [rental.depositResolutionNote, rental.fineReason]
       .filter(Boolean)
       .join(' / ')
@@ -39,31 +64,39 @@ export function exportRentalsToCSV(rentals: RentalOrder[], filename: string) {
     ]
   })
 
-  // 3. Convert to CSV string (handling quotes for commas/newlines in fields)
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => 
-      row.map(cell => {
-        const cellString = String(cell)
-        if (cellString.includes(',') || cellString.includes('"') || cellString.includes('\n')) {
-          return `"${cellString.replace(/"/g, '""')}"`
-        }
-        return cellString
-      }).join(',')
-    )
-  ].join('\n')
+  downloadCsv(headers, rows, filename)
+}
 
-  // 4. Create Blob with BOM for Thai support in Excel
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
-  
-  // 5. Trigger download
-  const link = document.createElement('a')
-  const url = URL.createObjectURL(blob)
-  link.setAttribute('href', url)
-  link.setAttribute('download', filename)
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+export function exportDressReportsToCSV(rows: DressReportItem[], filename: string) {
+  const headers = [
+    'SKU',
+    'ชื่อชุด',
+    'แบรนด์',
+    'หมวดหมู่',
+    'ไซซ์',
+    'จำนวนเช่า',
+    'รายได้รวม',
+    'เฉลี่ยต่อครั้ง',
+    'วันเช่าสะสม',
+    'วันว่าง',
+    'วันทั้งหมด',
+    'อัตราว่าง (%)',
+  ]
+
+  const csvRows = rows.map((item) => [
+    item.stockItem.sku,
+    item.stockItem.productName,
+    item.stockItem.brand || '-',
+    item.stockItem.category || '-',
+    item.stockItem.size || '-',
+    item.rentalCount,
+    item.totalRevenue.toFixed(2),
+    item.averageRevenue.toFixed(2),
+    item.rentedDays,
+    item.emptyDays,
+    item.totalDays,
+    item.emptyRate.toFixed(1),
+  ])
+
+  downloadCsv(headers, csvRows, filename)
 }
