@@ -182,7 +182,8 @@ export function CustomerCatalogPage({
       const availability = getCatalogAvailability(item, rentals, today)
       
       const matchesBrand = brandFilter === 'all' || item.brand === brandFilter
-      const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter
+      const itemCategories = (item.category || '').split(',').map(c => c.trim()).filter(Boolean)
+      const matchesCategory = categoryFilter === 'all' || itemCategories.includes(categoryFilter)
       const matchesColor = colorFilter === 'all' || item.primaryColor === colorFilter
       
       let itemSizes: string[] = []

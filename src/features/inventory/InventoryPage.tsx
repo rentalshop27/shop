@@ -514,14 +514,33 @@ export function InventoryPage({
                     ))}
                   </select>
                 </label>
-                <label className="field">
-                  <span>หมวดหมู่/ประเภทชุด</span>
-                  <select value={draft.category} onChange={(event) => onDraftChange('category', event.target.value)}>
-                    <option value="">-- เลือกประเภทชุด --</option>
-                    {categories.map((catName) => (
-                      <option key={catName} value={catName}>{catName}</option>
-                    ))}
-                  </select>
+                <label className="field" style={{ gridColumn: '1 / -1' }}>
+                  <span>หมวดหมู่/ประเภทชุด (เลือกได้มากกว่า 1)</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', padding: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                    {categories.map((catName) => {
+                      const selectedCategories = (draft.category || '').split(',').map(c => c.trim()).filter(Boolean);
+                      const isSelected = selectedCategories.includes(catName);
+                      return (
+                        <label key={catName} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, fontWeight: 'normal' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              let current = [...selectedCategories];
+                              if (e.target.checked) {
+                                current.push(catName);
+                              } else {
+                                current = current.filter(c => c !== catName);
+                              }
+                              onDraftChange('category', current.join(', '));
+                            }}
+                            style={{ margin: 0, accentColor: 'var(--primary-color)' }}
+                          />
+                          <span style={{ fontSize: '0.9rem', color: isSelected ? 'var(--text-gold)' : 'var(--text-color)' }}>{catName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </label>
               </div>
               <div style={{ marginTop: '24px', background: 'rgba(218, 165, 32, 0.05)', borderColor: 'rgba(218, 165, 32, 0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(218, 165, 32, 0.2)' }}>

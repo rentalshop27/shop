@@ -3,6 +3,7 @@
 ฟังก์ชันที่ใช้ใน flow นี้:
 
 - `health` สำหรับ cron keepalive/uptime checks
+- `create-shop-member`
 - `google-oauth-start`
 - `google-oauth-callback`
 - `google-drive-customer-documents-upload`
@@ -43,10 +44,21 @@ GOOGLE_OAUTH_STATE_SECRET=replace-with-a-long-random-secret
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+## Staff management function
+
+ฟังก์ชัน `create-shop-member` ใช้สำหรับให้ Owner สร้างบัญชีพนักงานใหม่จากหน้า Settings และต้องถูก deploy แยกต่างหากหลัง merge โค้ด
+
+ฟังก์ชันนี้ใช้ค่า built-in ของ Supabase:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
 ## Deploy
 
 ```bash
 supabase functions deploy health --no-verify-jwt
+supabase functions deploy create-shop-member
 supabase functions deploy google-oauth-start --no-verify-jwt
 supabase functions deploy google-oauth-callback --no-verify-jwt
 supabase functions deploy google-drive-customer-documents-upload --no-verify-jwt

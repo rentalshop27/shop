@@ -27,6 +27,17 @@ function isDuplicateUserError(error: unknown) {
     || message.includes('already exists')
 }
 
+function createPayloadErrorResponse(
+  error: string,
+  details = '',
+  status = 200,
+) {
+  return new Response(
+    JSON.stringify({ success: false, error, details }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  )
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -36,25 +47,16 @@ serve(async (req) => {
     const { email, password, role, shopId } = await req.json() as CreateShopMemberRequest
 
     if (!email || !password || !role || !shopId) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return createPayloadErrorResponse('Missing required fields')
     }
 
     if (role !== 'manager' && role !== 'staff') {
-      return new Response(
-        JSON.stringify({ error: 'Invalid role' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return createPayloadErrorResponse('Invalid role')
     }
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return createPayloadErrorResponse('Missing authorization header')
     }
 
     // 1. Verify caller permissions using their JWT
@@ -67,9 +69,9 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await userClient.auth.getUser()
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized caller' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return createPayloadErrorResponse(
+        'Unauthorized caller',
+        authError ? getErrorMessage(authError) : '',
       )
     }
 
@@ -83,9 +85,9 @@ serve(async (req) => {
       .single()
 
     if (memberError || !memberData || memberData.role !== 'owner') {
-      return new Response(
-        JSON.stringify({ error: 'คุณไม่มีสิทธิ์เพิ่มพนักงาน (ต้องเป็นเจ้าของร้านเท่านั้น)' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return createPayloadErrorResponse(
+        'คุณไม่มีสิทธิ์เพิ่มพนักงาน (ต้องเป็นเจ้าของร้านเท่านั้น)',
+        memberError ? getErrorMessage(memberError) : '',
       )
     }
 
@@ -99,13 +101,12 @@ serve(async (req) => {
     })
 
     if (createError || !createdUser.user) {
-      const status = isDuplicateUserError(createError) ? 409 : 400
       const message = isDuplicateUserError(createError)
         ? 'อีเมลนี้มีบัญชีอยู่แล้ว กรุณาใช้อีเมลใหม่หรือให้เจ้าของบัญชีเดิมเข้าสู่ระบบเอง'
         : 'ไม่สามารถสร้างบัญชีได้'
-      return new Response(
-        JSON.stringify({ error: message, details: createError ? getErrorMessage(createError) : '' }),
-        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return createPayloadErrorResponse(
+        message,
+        createError ? getErrorMessage(createError) : '',
       )
     }
 
@@ -127,16 +128,16 @@ serve(async (req) => {
       )
     } catch (insertError: unknown) {
       await adminClient.auth.admin.deleteUser(newUserId)
-      return new Response(
-        JSON.stringify({ error: 'ไม่สามารถบันทึกสิทธิ์พนักงานได้ กรุณาลองใหม่', details: getErrorMessage(insertError) }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      return createPayloadErrorResponse(
+        'ไม่สามารถบันทึกสิทธิ์พนักงานได้ กรุณาลองใหม่',
+        getErrorMessage(insertError),
       )
     }
 
   } catch (error: unknown) {
-    return new Response(
-      JSON.stringify({ error: 'Internal Server Error', details: getErrorMessage(error) }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    return createPayloadErrorResponse(
+      'Internal Server Error',
+      getErrorMessage(error),
     )
   }
 })
