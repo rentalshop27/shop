@@ -73,14 +73,12 @@ describe('ProfilePage', () => {
     )
 
     expect(screen.getByText('โหมดทดลอง')).toBeTruthy()
-    expect(screen.getByText('โหมดทดลองยังไม่มีข้อมูลร้าน')).toBeTruthy()
+    expect(screen.getByText('เชื่อมต่อบัญชีร้านค้าเพื่อดูและสลับร้านที่เข้าถึงได้')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'ออกจากระบบ' })).toBeNull()
   })
 
-  it('shows Google OAuth setup values from env', () => {
+  it('shows Google OAuth setup guidance for owners', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://abc123.supabase.co')
-    vi.stubEnv('VITE_PUBLIC_APP_URL', 'https://app.precious.test')
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-id.apps.googleusercontent.com')
 
     render(
       <ProfilePage
@@ -91,13 +89,9 @@ describe('ProfilePage', () => {
       />,
     )
 
-    expect(screen.getByText('เตรียมค่าเชื่อม Google Drive ของร้านที่เลือกอยู่')).toBeTruthy()
-    expect(screen.getByText('พร้อมเชื่อม Google สำหรับร้าน Precious Siam')).toBeTruthy()
-    expect(
-      screen.getByRole('link', { name: 'เชื่อม Google' }).getAttribute('href'),
-    ).toBe(
-      'https://abc123.supabase.co/functions/v1/google-oauth-start?shopId=shop_1&redirectTo=http%3A%2F%2Flocalhost%3A3000%2F%3Ftab%3Dprofile',
-    )
+    expect(screen.getByText('เชื่อม Google Drive เพื่อ sync เอกสารของร้าน')).toBeTruthy()
+    expect(screen.getByText('ตั้งค่า env และ callback URL ให้ตรงกับ Google Cloud ก่อนใช้งาน')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'เชื่อม Google' })).toBeTruthy()
   })
 
   it('requires the current password before submitting', () => {
@@ -180,6 +174,54 @@ describe('ProfilePage', () => {
     expect(screen.getByText('เชื่อม Google สำเร็จแล้ว: owner@gmail.com')).toBeTruthy()
   })
 
+  it('shows the persisted Google connection status for owners', () => {
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        googleOAuthConnection={{ status: 'connected', googleEmail: 'owner@gmail.com' }}
+        onShopChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('เชื่อมต่อแล้ว')).toBeTruthy()
+    expect(screen.getByText('บัญชีที่เชื่อมอยู่: owner@gmail.com')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'เชื่อม Google ใหม่' })).toBeTruthy()
+  })
+
+  it('hides the Google OAuth card from managers and staff', () => {
+    render(
+      <ProfilePage
+        email="manager@example.com"
+        availableShops={[{ id: 'shop_1', name: 'Precious Siam', role: 'manager' as const }]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText('Google OAuth')).toBeNull()
+  })
+
+  it('starts Google OAuth through the authenticated handler', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://abc123.supabase.co')
+    const onStartGoogleOAuth = vi.fn(async () => undefined)
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+        onStartGoogleOAuth={onStartGoogleOAuth}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'เชื่อม Google' }))
+
+    await waitFor(() => expect(onStartGoogleOAuth).toHaveBeenCalledWith('shop_1'))
+  })
+
   it('prevents repeated password changes while the request is pending', async () => {
     let finishChangePassword: (() => void) | undefined
     const onChangePassword = vi.fn(() => new Promise<void>((resolve) => { finishChangePassword = resolve }))
@@ -203,7 +245,7 @@ describe('ProfilePage', () => {
     fireEvent.click(changePasswordButton)
 
     expect(onChangePassword).toHaveBeenCalledTimes(1)
-    expect((screen.getByRole('button', { name: 'กำลังเปลี่ยนรหัสผ่าน...' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'กำลังเปลี่ยน...' }) as HTMLButtonElement).disabled).toBe(true)
 
     finishChangePassword?.()
     await waitFor(() => expect(onChangePassword).toHaveBeenCalledTimes(1))

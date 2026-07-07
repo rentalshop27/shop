@@ -78,7 +78,7 @@ function getStateSecret() {
   return getRequiredEnv('GOOGLE_OAUTH_STATE_SECRET')
 }
 
-export function createSignedState(payload: { shopId: string; redirectTo: string }) {
+export function createSignedState(payload: { shopId: string; redirectTo: string; userId: string }) {
   const now = Math.floor(Date.now() / 1000)
   const body = JSON.stringify({
     ...payload,
@@ -94,7 +94,7 @@ export async function signStateToken(token: string) {
   return signValue(token, getStateSecret())
 }
 
-export async function buildState(payload: { shopId: string; redirectTo: string }) {
+export async function buildState(payload: { shopId: string; redirectTo: string; userId: string }) {
   const token = createSignedState(payload)
   const signature = await signStateToken(token)
   return `${token}.${signature}`
@@ -123,10 +123,11 @@ export async function verifyState(state: string) {
   const payload = JSON.parse(rawBody) as {
     shopId: string
     redirectTo: string
+    userId: string
     exp: number
   }
 
-  if (!payload.shopId || !payload.redirectTo) {
+  if (!payload.shopId || !payload.redirectTo || !payload.userId) {
     throw new Error('Invalid OAuth state payload')
   }
 

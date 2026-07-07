@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Building2, Check, KeyRound, Link2, LogOut, Mail, Store, UserRound, Shield } from 'lucide-react'
+import { Building2, Check, Link2, LogOut } from 'lucide-react'
 import type { ShopSummary } from '../customers/customerRemote'
-import { getGoogleOAuthSetupState } from '../google/googleOAuth'
+import { getGoogleOAuthSetupState, type GoogleOAuthConnection } from '../google/googleOAuth'
 import { TextField } from '../../components/TextField'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -14,8 +14,11 @@ interface ProfilePageProps {
   email: string | null
   availableShops: ShopSummary[]
   selectedShopId: string | null
+  googleOAuthConnection?: GoogleOAuthConnection | null
+  isGoogleOAuthConnectionLoading?: boolean
   onShopChange: (shopId: string | null) => void
   onChangePassword?: (currentPassword: string, nextPassword: string) => Promise<void>
+  onStartGoogleOAuth?: (shopId: string) => Promise<void>
   onLogout?: () => Promise<void>
 }
 
@@ -23,8 +26,11 @@ export function ProfilePage({
   email,
   availableShops,
   selectedShopId,
+  googleOAuthConnection = null,
+  isGoogleOAuthConnectionLoading = false,
   onShopChange,
   onChangePassword,
+  onStartGoogleOAuth,
   onLogout,
 }: ProfilePageProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -35,6 +41,8 @@ export function ProfilePage({
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState('')
+  const [isStartingGoogleOAuth, setIsStartingGoogleOAuth] = useState(false)
+  const [googleOAuthActionError, setGoogleOAuthActionError] = useState('')
   const currentShop = availableShops.find((shop) => shop.id === selectedShopId) ?? null
   const googleOAuth = getGoogleOAuthSetupState(selectedShopId)
   const googleOAuthResult = (() => {
@@ -127,215 +135,225 @@ export function ProfilePage({
     }
   }
 
+  async function handleStartGoogleOAuth() {
+    if (!onStartGoogleOAuth || !selectedShopId || isStartingGoogleOAuth) return
+
+    setGoogleOAuthActionError('')
+    setIsStartingGoogleOAuth(true)
+    try {
+      await onStartGoogleOAuth(selectedShopId)
+    } catch (error) {
+      setGoogleOAuthActionError(error instanceof Error ? error.message : 'เริ่มเชื่อม Google ไม่สำเร็จ กรุณาลองใหม่')
+      setIsStartingGoogleOAuth(false)
+    }
+  }
+
+  const googleStatusTone = googleOAuthResult?.tone
+    ?? (googleOAuthConnection?.status === 'connected' ? 'ready' : googleOAuthConnection?.status === 'error' ? 'warning' : 'muted')
+  const googleStatusLabel = isGoogleOAuthConnectionLoading
+    ? 'กำลังตรวจสอบ...'
+    : googleOAuthConnection?.status === 'connected'
+      ? 'เชื่อมต่อแล้ว'
+      : googleOAuthConnection?.status === 'error'
+        ? 'เชื่อมต่อมีปัญหา'
+        : googleOAuthConnection?.status === 'revoked'
+          ? 'ต้องเชื่อมต่อใหม่'
+          : 'ยังไม่ได้เชื่อมต่อ'
+  const googleConnectionMessage = googleOAuthResult?.message
+    ?? (googleOAuthConnection?.status === 'connected' && googleOAuthConnection.googleEmail
+      ? `บัญชีที่เชื่อมอยู่: ${googleOAuthConnection.googleEmail}`
+      : '')
+
   return (
-    <>
-      <header className="page-header">
+    <main className="profile-page">
+      <section className="profile-header">
         <div>
-          <p className="eyebrow">Profile</p>
+          <p className="eyebrow">PROFILE</p>
           <h1>โปรไฟล์</h1>
-          <p className="subtitle">จัดการบัญชี ร้านที่กำลังใช้งาน และการเข้าสู่ระบบ</p>
+          <p className="subtitle">จัดการบัญชี ร้านที่เข้าใช้งาน และการเชื่อมต่อระบบ</p>
         </div>
-      </header>
 
-      <div className="profile-grid">
-        <section className="panel profile-panel" aria-labelledby="account-title">
-          <div className="profile-panel-heading">
-            <span className="profile-icon"><UserRound size={22} /></span>
-            <div>
-              <h2 id="account-title">ข้อมูลบัญชี</h2>
-              <p>บัญชีที่กำลังเข้าสู่ระบบ</p>
-            </div>
+        {currentShop && (
+          <div className="active-store-chip">
+            <span style={{ color: 'var(--text-muted)' }}>ร้านที่ใช้งานอยู่:</span>
+            <strong>{currentShop.name}</strong>
           </div>
+        )}
+      </section>
 
-          <div className="profile-account-row">
-            <Mail size={20} />
-            <div>
+      <section className="profile-grid">
+        <div className="profile-left">
+          <div className="profile-card">
+            <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: 'var(--text-bright)' }}>ข้อมูลบัญชี</h2>
+
+            <div className="account-row">
               <span>อีเมล</span>
               <strong>{email || 'โหมดทดลอง'}</strong>
             </div>
-          </div>
 
-          {currentShop && (
-            <>
-              <div className="profile-account-row">
-                <Store size={20} />
-                <div>
+            {currentShop && (
+              <>
+                <div className="account-row">
                   <span>ร้านที่กำลังใช้งาน</span>
                   <strong>{currentShop.name}</strong>
                 </div>
-              </div>
-              <div className="profile-account-row">
-                <Shield size={20} />
-                <div>
+                <div className="account-row">
                   <span>ตำแหน่ง (Role)</span>
                   <strong>{ROLE_LABELS[currentShop.role] || currentShop.role}</strong>
                 </div>
-              </div>
-            </>
-          )}
-        </section>
+              </>
+            )}
 
-        {onChangePassword && (
-          <section className="panel profile-panel profile-password-panel" aria-labelledby="password-title">
-            <div className="profile-panel-heading">
-              <span className="profile-icon"><KeyRound size={22} /></span>
-              <div>
-                <h2 id="password-title">เปลี่ยนรหัสผ่าน</h2>
-                <p>อัปเดตรหัสผ่านของบัญชีที่กำลังเข้าสู่ระบบอยู่ตอนนี้</p>
+            {onLogout && (
+              <div style={{ marginTop: '24px' }}>
+                <button className="profile-logout-button" style={{ width: '100%' }} type="button" onClick={handleLogout} disabled={isLoggingOut}>
+                  <LogOut size={18} />
+                  {isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
+                </button>
+                {logoutError && <p className="profile-logout-error" role="alert" style={{ marginTop: '8px' }}>{logoutError}</p>}
               </div>
+            )}
+          </div>
+
+          <div className="profile-card">
+            <h2 style={{ fontSize: '18px', margin: '0 0 16px 0', color: 'var(--text-bright)' }}>ร้านที่เข้าถึงได้</h2>
+
+            <div className="profile-shop-list">
+              {availableShops.length === 0 && (
+                <p className="profile-shop-empty">เชื่อมต่อบัญชีร้านค้าเพื่อดูและสลับร้านที่เข้าถึงได้</p>
+              )}
+              {availableShops.map((shop) => {
+                const isCurrent = shop.id === selectedShopId
+                return (
+                  <button
+                    className={`profile-shop-option ${isCurrent ? 'active' : ''}`}
+                    key={shop.id}
+                    type="button"
+                    onClick={() => onShopChange(shop.id)}
+                    disabled={isCurrent}
+                    aria-pressed={isCurrent}
+                    style={isCurrent ? { border: '1px solid rgba(218, 179, 90, 0.45)' } : {}}
+                  >
+                    <span className="profile-shop-name">{shop.name}</span>
+                    {isCurrent && <span className="profile-current-badge"><Check size={15} /> กำลังใช้งาน</span>}
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="profile-password-form">
-              <p className="profile-password-note">
-                รหัสใหม่จะมีผลกับบัญชีนี้ทันที และควรแจ้งพนักงานให้ใช้รหัสใหม่ในการเข้าสู่ระบบครั้งถัดไป
-              </p>
+            {availableShops.length > 1 && (
+              <button className="secondary-button profile-overview-button" style={{ marginTop: '16px' }} type="button" onClick={() => onShopChange(null)}>
+                <Building2 size={18} />
+                กลับภาพรวมทุกร้าน
+              </button>
+            )}
+          </div>
+        </div>
 
-              <div className="form-grid profile-password-grid">
+        <div className="profile-right">
+          {onChangePassword && (
+            <div className="profile-card">
+              <h2 style={{ fontSize: '18px', margin: '0 0 8px 0', color: 'var(--text-bright)' }}>ความปลอดภัย</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>เปลี่ยนรหัสผ่านสำหรับเข้าใช้งานระบบ</p>
+
+              <div className="profile-password-form">
                 <TextField
                   label="รหัสผ่านปัจจุบัน"
                   value={currentPassword}
                   type="password"
-                  placeholder="กรอกรหัสที่ใช้เข้าสู่ระบบตอนนี้"
+                  placeholder="รหัสผ่านปัจจุบัน"
                   disabled={isChangingPassword}
                   onChange={handleCurrentPasswordChange}
                 />
-                <TextField
-                  label="รหัสผ่านใหม่"
-                  value={newPassword}
-                  type="password"
-                  placeholder="อย่างน้อย 6 ตัวอักษร"
-                  disabled={isChangingPassword}
-                  onChange={handleNewPasswordChange}
-                />
-                <TextField
-                  label="ยืนยันรหัสผ่านใหม่"
-                  value={confirmPassword}
-                  type="password"
-                  placeholder="กรอกรหัสเดิมอีกครั้ง"
-                  disabled={isChangingPassword}
-                  onChange={handleConfirmPasswordChange}
-                />
-              </div>
 
-              {passwordError && <p className="form-error" role="alert">{passwordError}</p>}
-              {passwordSuccess && <p className="profile-password-success" role="status">{passwordSuccess}</p>}
-
-              <div className="profile-password-actions">
-                <button className="primary-button" type="button" onClick={handlePasswordChange} disabled={isChangingPassword}>
-                  {isChangingPassword ? 'กำลังเปลี่ยนรหัสผ่าน...' : 'เปลี่ยนรหัสผ่าน'}
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section className="panel profile-panel" aria-labelledby="shops-title">
-          <div className="profile-panel-heading">
-            <span className="profile-icon"><Building2 size={22} /></span>
-            <div>
-              <h2 id="shops-title">ร้านที่เข้าถึงได้</h2>
-              <p>
-                {availableShops.length === 0
-                  ? 'โหมดทดลองยังไม่มีข้อมูลร้าน'
-                  : availableShops.length > 1
-                    ? 'เลือกร้านที่ต้องการเข้าใช้งาน'
-                    : 'บัญชีนี้เข้าถึงร้านเดียว'}
-              </p>
-            </div>
-          </div>
-
-          <div className="profile-shop-list">
-            {availableShops.length === 0 && (
-              <p className="profile-shop-empty">เชื่อมต่อบัญชีร้านค้าเพื่อดูและสลับร้านที่เข้าถึงได้</p>
-            )}
-            {availableShops.map((shop) => {
-              const isCurrent = shop.id === selectedShopId
-              return (
-                <button
-                  className={`profile-shop-option ${isCurrent ? 'active' : ''}`}
-                  key={shop.id}
-                  type="button"
-                  onClick={() => onShopChange(shop.id)}
-                  disabled={isCurrent}
-                  aria-pressed={isCurrent}
-                >
-                  <span className="profile-shop-mark"><Store size={20} /></span>
-                  <span className="profile-shop-name">{shop.name}</span>
-                  {isCurrent && <span className="profile-current-badge"><Check size={15} /> กำลังใช้งาน</span>}
-                </button>
-              )
-            })}
-          </div>
-
-          {availableShops.length > 1 && (
-            <button className="secondary-button profile-overview-button" type="button" onClick={() => onShopChange(null)}>
-              <Building2 size={18} />
-              กลับภาพรวมทุกร้าน
-            </button>
-          )}
-        </section>
-
-        {(!currentShop || currentShop.role !== 'staff') && (
-          <section className="panel profile-panel" aria-labelledby="google-title">
-            <div className="profile-panel-heading">
-              <span className="profile-icon"><Link2 size={22} /></span>
-              <div>
-                <h2 id="google-title">Google OAuth</h2>
-                <p>เตรียมค่าเชื่อม Google Drive ของร้านที่เลือกอยู่</p>
-              </div>
-            </div>
-
-            <div className="profile-oauth-stack">
-              <div className="profile-oauth-actions">
-                <a
-                  className={`primary-button profile-connect-button ${!googleOAuth.canStartOAuth ? 'disabled' : ''}`}
-                  href={googleOAuth.startUrl || undefined}
-                  aria-disabled={!googleOAuth.canStartOAuth}
-                  onClick={(event) => {
-                    if (!googleOAuth.canStartOAuth) {
-                      event.preventDefault()
-                    }
-                  }}
-                >
-                  <Link2 size={18} />
-                  เชื่อม Google
-                </a>
-              </div>
-
-              <div
-                className={`profile-oauth-note ${googleOAuth.canStartOAuth ? 'ready' : 'warning'}`}
-                role="status"
-              >
-                {googleOAuth.canStartOAuth
-                  ? `พร้อมเชื่อม Google สำหรับร้าน ${currentShop?.name || ''}`.trim()
-                  : !googleOAuth.hasSelectedShop
-                    ? 'เลือกร้านก่อน แล้วค่อยใช้ค่าชุดนี้สำหรับปุ่มเชื่อม Google ของร้านนั้น'
-                    : 'ตั้งค่า env ให้ครบก่อน แล้วค่อยนำ callback URL นี้ไปใส่ใน Google Cloud'}
-              </div>
-
-              {googleOAuthResult && (
-                <div className={`profile-oauth-note ${googleOAuthResult.tone}`} role="status">
-                  {googleOAuthResult.message}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
+                  <TextField
+                    label="รหัสผ่านใหม่"
+                    value={newPassword}
+                    type="password"
+                    placeholder="อย่างน้อย 6 ตัวอักษร"
+                    disabled={isChangingPassword}
+                    onChange={handleNewPasswordChange}
+                  />
+                  <TextField
+                    label="ยืนยันรหัสผ่านใหม่"
+                    value={confirmPassword}
+                    type="password"
+                    placeholder="กรอกรหัสเดิมอีกครั้ง"
+                    disabled={isChangingPassword}
+                    onChange={handleConfirmPasswordChange}
+                  />
                 </div>
-              )}
-            </div>
-          </section>
-        )}
 
-        {onLogout && (
-          <section className="panel profile-panel profile-logout-panel" aria-labelledby="logout-title">
-            <div>
-              <h2 id="logout-title">ออกจากระบบ</h2>
-              <p>ออกจากบัญชีนี้บนอุปกรณ์ปัจจุบัน</p>
+                {passwordError && <p className="form-error" role="alert" style={{ margin: '4px 0 0' }}>{passwordError}</p>}
+                {passwordSuccess && <p className="profile-password-success" role="status" style={{ margin: '4px 0 0' }}>{passwordSuccess}</p>}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                  <button className="primary-button" type="button" onClick={handlePasswordChange} disabled={isChangingPassword}>
+                    {isChangingPassword ? 'กำลังเปลี่ยน...' : 'เปลี่ยนรหัสผ่าน'}
+                  </button>
+                </div>
+              </div>
             </div>
-            <button className="profile-logout-button" type="button" onClick={handleLogout} disabled={isLoggingOut}>
-              <LogOut size={18} />
-              {isLoggingOut ? 'กำลังออกจากระบบ...' : 'ออกจากระบบ'}
-            </button>
-            {logoutError && <p className="profile-logout-error" role="alert">{logoutError}</p>}
-          </section>
-        )}
-      </div>
-    </>
+          )}
+
+          {currentShop?.role === 'owner' && (
+            <div className="profile-card">
+              <h2 style={{ fontSize: '18px', margin: '0 0 8px 0', color: 'var(--text-bright)' }}>Google OAuth</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>เชื่อม Google Drive เพื่อ sync เอกสารของร้าน</p>
+
+              <div className="profile-oauth-stack">
+                <div style={{ marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                    สถานะ: <strong style={{ color: googleStatusTone === 'ready' ? 'var(--text-bright)' : 'var(--text-muted)' }}>
+                      {googleStatusLabel}
+                    </strong>
+                  </span>
+
+                  <button
+                    className={`primary-button ${!googleOAuth.canStartOAuth ? 'disabled' : ''}`}
+                    style={{ width: 'fit-content' }}
+                    type="button"
+                    aria-disabled={!googleOAuth.canStartOAuth}
+                    onClick={handleStartGoogleOAuth}
+                    disabled={!googleOAuth.canStartOAuth || isStartingGoogleOAuth}
+                  >
+                    <Link2 size={18} />
+                    {isStartingGoogleOAuth
+                      ? 'กำลังเปิด Google...'
+                      : googleOAuthConnection?.status === 'connected' || googleOAuthResult?.tone === 'ready'
+                        ? 'เชื่อม Google ใหม่'
+                        : 'เชื่อม Google'}
+                  </button>
+                </div>
+
+                <div
+                  className={`profile-oauth-note ${googleOAuth.canStartOAuth ? 'ready' : 'warning'}`}
+                  role="status"
+                  style={{ marginTop: '8px' }}
+                >
+                  <strong style={{ display: 'block', marginBottom: '4px' }}>คำเตือน:</strong>
+                  {!googleOAuth.hasSelectedShop
+                    ? 'เลือกร้านก่อน แล้วค่อยใช้ค่าชุดนี้สำหรับปุ่มเชื่อม Google ของร้านนั้น'
+                    : 'ตั้งค่า env และ callback URL ให้ตรงกับ Google Cloud ก่อนใช้งาน'}
+                </div>
+
+                {googleConnectionMessage && (
+                  <div className={`profile-oauth-note ${googleStatusTone === 'ready' ? 'ready' : 'warning'}`} role="status">
+                    {googleConnectionMessage}
+                  </div>
+                )}
+
+                {googleOAuthActionError && (
+                  <div className="profile-oauth-note warning" role="alert">
+                    {googleOAuthActionError}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
   )
 }

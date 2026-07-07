@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  buildGoogleOAuthStartUrl,
   getGoogleOAuthCallbackUrl,
   getGoogleOAuthReturnUrl,
   getGoogleOAuthSetupState,
@@ -21,13 +20,13 @@ describe('googleOAuth helpers', () => {
     vi.stubEnv('VITE_PUBLIC_APP_URL', 'https://app.precious.test/')
 
     expect(getGoogleOAuthReturnUrl()).toBe('https://app.precious.test/?tab=profile')
+    expect(getGoogleOAuthReturnUrl('shop_1')).toBe('https://app.precious.test/?tab=profile&shopId=shop_1')
   })
 
-  it('does not build the start URL until config and shop are present', () => {
+  it('does not allow OAuth start until config and shop are present', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://abc123.supabase.co')
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-id.apps.googleusercontent.com')
 
-    expect(buildGoogleOAuthStartUrl(null)).toBe('')
+    expect(getGoogleOAuthSetupState(null).canStartOAuth).toBe(false)
     expect(getGoogleOAuthSetupState('shop_1').canStartOAuth).toBe(true)
   })
 })

@@ -100,6 +100,11 @@ import { buildCatalogSizeSummary } from './features/catalog/catalogAvailability'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { getUserFacingErrorMessage } from './lib/errorMessages'
 import { formatProductCategories } from './lib/productCategories'
+import {
+  loadGoogleOAuthConnection,
+  startGoogleOAuth,
+  type GoogleOAuthConnection,
+} from './features/google/googleOAuth'
 
 const emptyDraft: CustomerDraft = {
   fullName: '',
@@ -313,6 +318,19 @@ function getPreferredShopId(userId: string | null, shops: ShopSummary[]) {
   return shops.length === 1 ? shops[0].id : null
 }
 
+function getRequestedTab() {
+  const tab = new URLSearchParams(window.location.search).get('tab')
+  if (tab === 'dashboard' || tab === 'inventory' || tab === 'catalog' || tab === 'customers' || tab === 'rentals' || tab === 'calendar' || tab === 'settings' || tab === 'audit' || tab === 'reports' || tab === 'profile') {
+    return tab
+  }
+  return null
+}
+
+function getRequestedShopId() {
+  const shopId = new URLSearchParams(window.location.search).get('shopId')
+  return shopId?.trim() || null
+}
+
 function getPublicCatalogKey() {
   const match = window.location.pathname.match(/^\/catalog\/([^/]+)\/?$/)
   return match?.[1] ? decodeURIComponent(match[1]) : null
@@ -389,7 +407,7 @@ function AuthShell({ children }: { children: ReactNode }) {
 }
 
 function PrivateApp() {
-  const [activeTab, setActiveTab] = useState<ViewKey>('dashboard')
+  const [activeTab, setActiveTab] = useState<ViewKey>(() => getRequestedTab() ?? 'dashboard')
   const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('general')
   const [externalSelectedRentalId, setExternalSelectedRentalId] = useState<string>('')
   const [externalIsFormOpen, setExternalIsFormOpen] = useState<boolean>(false)
@@ -1283,6 +1301,8 @@ function PrivateApp() {
   const [shopId, setShopId] = useState<string | null>(null)
   const [overviewShopsData, setOverviewShopsData] = useState<OverviewShopData[]>([])
   const [remoteError, setRemoteError] = useState('')
+  const [googleOAuthConnection, setGoogleOAuthConnection] = useState<GoogleOAuthConnection | null>(null)
+  const [isGoogleOAuthConnectionLoading, setIsGoogleOAuthConnectionLoading] = useState(false)
   const currentShop = availableShops.find((shop) => shop.id === shopId) ?? null
   const currentPermissions = getShopPermissions(currentShop?.role)
   const activeSettingsSubTab = normalizeSettingsSubTabForPermissions(settingsSubTab, currentPermissions)
@@ -1379,13 +1399,19 @@ function PrivateApp() {
           setOverviewShopsData([])
           setShopId(shops[0].id)
         } else {
-          setOverviewShopsData(shops.map((shop) => ({
-            shop,
-            status: 'loading',
-            rentals: [],
-            error: '',
-          })))
-          setShopId(null)
+          const requestedShopId = getRequestedShopId()
+          if (requestedShopId && shops.some((shop) => shop.id === requestedShopId)) {
+            setOverviewShopsData([])
+            setShopId(requestedShopId)
+          } else {
+            setOverviewShopsData(shops.map((shop) => ({
+              shop,
+              status: 'loading',
+              rentals: [],
+              error: '',
+            })))
+            setShopId(null)
+          }
         }
       })
       .catch((error: unknown) => {
@@ -1411,6 +1437,11 @@ function PrivateApp() {
     if (error) throw error
   }
 
+  async function handleStartGoogleOAuth(nextShopId: string) {
+    if (!supabase) return
+    await startGoogleOAuth(supabase, nextShopId)
+  }
+
   async function handlePasswordChange(currentPassword: string, nextPassword: string) {
     if (!supabase) return
     if (!authUserEmail) {
@@ -1431,6 +1462,39 @@ function PrivateApp() {
     if (!authUserId || !shopId) return
     safeLocalStorageSet(getLastSelectedShopKey(authUserId), shopId)
   }, [authUserId, shopId])
+
+  useEffect(() => {
+    if (!supabase || !isAuthenticated || !shopId || currentShop?.role !== 'owner') {
+      setGoogleOAuthConnection(null)
+      setIsGoogleOAuthConnectionLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    setIsGoogleOAuthConnectionLoading(true)
+    loadGoogleOAuthConnection(supabase, shopId)
+      .then((connection) => {
+        if (!cancelled) {
+          setGoogleOAuthConnection(connection)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          console.warn('Failed to load Google OAuth connection state:', error)
+          setGoogleOAuthConnection(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsGoogleOAuthConnectionLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentShop?.role, isAuthenticated, shopId])
 
   useEffect(() => {
     if (!supabase || !isAuthenticated || availableShops.length <= 1 || shopId) {
@@ -2448,8 +2512,11 @@ function PrivateApp() {
               email={authUserEmail}
               availableShops={availableShops}
               selectedShopId={shopId}
+              googleOAuthConnection={googleOAuthConnection}
+              isGoogleOAuthConnectionLoading={isGoogleOAuthConnectionLoading}
               onShopChange={handleShopChange}
               onChangePassword={hasSupabaseConfig && authUserEmail ? handlePasswordChange : undefined}
+              onStartGoogleOAuth={hasSupabaseConfig ? handleStartGoogleOAuth : undefined}
               onLogout={hasSupabaseConfig ? handleLogout : undefined}
             />
           )}

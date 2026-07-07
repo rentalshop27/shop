@@ -47,6 +47,21 @@ Deno.serve(async (request) => {
     }
 
     const supabase = createServiceClient()
+    const { data: ownerMembership, error: ownerMembershipError } = await supabase
+      .from('shop_members')
+      .select('shop_id')
+      .eq('shop_id', payload.shopId)
+      .eq('user_id', payload.userId)
+      .eq('role', 'owner')
+      .maybeSingle()
+
+    if (ownerMembershipError) {
+      throw ownerMembershipError
+    }
+
+    if (!ownerMembership) {
+      throw new Error('คุณไม่มีสิทธิ์เชื่อม Google ให้ร้านนี้')
+    }
 
     const { data: existingIntegration, error: existingIntegrationError } = await supabase
       .from('shop_google_integrations')
