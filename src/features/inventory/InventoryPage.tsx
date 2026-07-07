@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { sanitizeNumericInput } from '../../lib/numericInput'
+import { parseProductCategories } from '../../lib/productCategories'
 import { getInventoryDisplayStatus } from './inventoryStatus'
 import { StockManagementDrawer } from './StockManagementDrawer'
 import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
@@ -96,7 +97,7 @@ function CategoryMultiSelectDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const selectedCategories = (draftCategory || '').split(',').map(c => c.trim()).filter(Boolean);
+  const selectedCategories = parseProductCategories(draftCategory);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

@@ -114,4 +114,31 @@ describe('buildGeneralStoreMetrics', () => {
     expect(metrics.totalDepositRefunded).toBe(0)
     expect(metrics.totalDepositForfeited).toBe(0)
   })
+
+  it('splits multi-category rentals into separate category slices without changing total revenue', () => {
+    const metrics = buildGeneralStoreMetrics([
+      makeRental({
+        costume: {
+          ...stockItem,
+          category: 'Evening, Cocktail',
+        },
+      }),
+    ])
+
+    expect(metrics.totalRevenue).toBe(1200)
+    expect(metrics.revenueByCategory).toEqual([
+      expect.objectContaining({
+        category: 'Cocktail',
+        revenue: 600,
+        rentalCount: 1,
+        percentage: 50,
+      }),
+      expect.objectContaining({
+        category: 'Evening',
+        revenue: 600,
+        rentalCount: 1,
+        percentage: 50,
+      }),
+    ])
+  })
 })

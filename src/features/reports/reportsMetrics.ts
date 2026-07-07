@@ -1,5 +1,6 @@
 import type { RentalOrder, RentalStatus } from '../rentals/rentalTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
+import { parseProductCategories } from '../../lib/productCategories'
 
 export type DateRangeMode = 'all' | '30days' | 'this_month' | '90days' | 'custom'
 
@@ -194,11 +195,16 @@ export function buildRevenueByCategory(rentals: RentalOrder[]): CategoryRevenueS
   const categoryTotals = new Map<string, Omit<CategoryRevenueSlice, 'percentage'>>()
 
   rentals.forEach((rental) => {
-    const category = rental.costume.category || 'ไม่ระบุหมวดหมู่'
-    const current = categoryTotals.get(category) ?? { category, revenue: 0, rentalCount: 0 }
-    current.revenue += calculateNetRentalRevenue(rental)
-    current.rentalCount += 1
-    categoryTotals.set(category, current)
+    const categories = parseProductCategories(rental.costume.category)
+    const normalizedCategories = categories.length > 0 ? categories : ['ไม่ระบุหมวดหมู่']
+    const revenueShare = calculateNetRentalRevenue(rental) / normalizedCategories.length
+
+    normalizedCategories.forEach((category) => {
+      const current = categoryTotals.get(category) ?? { category, revenue: 0, rentalCount: 0 }
+      current.revenue += revenueShare
+      current.rentalCount += 1
+      categoryTotals.set(category, current)
+    })
   })
 
   const totalRevenue = Array.from(categoryTotals.values()).reduce((sum, item) => sum + item.revenue, 0)

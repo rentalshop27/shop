@@ -30,7 +30,7 @@ describe('stockRemote', () => {
         base_sku: 'PR-001',
         product_name: 'Ruby Dress',
         brand: 'Precious',
-        category: 'Evening',
+        category: ['Evening'],
         primary_color: 'Red',
         public_description: '',
         rental_tiers: [{days: 1, price: 2200}],
@@ -95,7 +95,7 @@ describe('stockRemote', () => {
         base_sku: 'PR-001',
         product_name: 'Ruby Dress',
         brand: 'Precious',
-        category: 'Evening',
+        category: ['Evening'],
         primary_color: 'Red',
         public_description: '',
         rental_tiers: [{days: 1, price: 2200}],
@@ -137,7 +137,7 @@ describe('stockRemote', () => {
         id: 'product_1',
         product_name: 'Ruby Dress',
         brand: 'Precious',
-        category: 'Evening',
+        category: ['Evening'],
         primary_color: 'Red',
         rental_tiers: [{ days: 1, price: 2200 }],
         late_fee_rule: '100/day',
@@ -314,6 +314,7 @@ describe('stockRemote', () => {
     )
 
     expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      category: ['Evening'],
       image_urls: expect.arrayContaining(['shop_1/keep.webp']),
       public_visible: true,
     }))

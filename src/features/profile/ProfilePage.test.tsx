@@ -91,10 +91,13 @@ describe('ProfilePage', () => {
       />,
     )
 
-    expect(screen.getByText('client-id.apps.googleusercontent.com')).toBeTruthy()
-    expect(screen.getByText('https://abc123.supabase.co/functions/v1/google-oauth-callback')).toBeTruthy()
+    expect(screen.getByText('เตรียมค่าเชื่อม Google Drive ของร้านที่เลือกอยู่')).toBeTruthy()
     expect(screen.getByText('พร้อมเชื่อม Google สำหรับร้าน Precious Siam')).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'เชื่อม Google' })).toBeTruthy()
+    expect(
+      screen.getByRole('link', { name: 'เชื่อม Google' }).getAttribute('href'),
+    ).toBe(
+      'https://abc123.supabase.co/functions/v1/google-oauth-start?shopId=shop_1&redirectTo=http%3A%2F%2Flocalhost%3A3000%2F%3Ftab%3Dprofile',
+    )
   })
 
   it('requires the current password before submitting', () => {

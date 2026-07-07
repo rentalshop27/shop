@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FlatStockItem, ProductWithStockSummary, StockItemStatus, ProductDraft } from './inventoryTypes'
+import { formatProductCategories, parseProductCategories } from '../../lib/productCategories'
 
 const COSTUMES_BUCKET = 'costumes'
 const LEGACY_STOCK_IMAGES_BUCKET = 'stock-images'
@@ -15,7 +16,7 @@ type ProductOverviewRow = {
   id: string
   product_name: string
   brand: string | null
-  category: string | null
+  category: unknown
   primary_color: string | null
   rental_tiers: unknown
   late_fee_rule: string | null
@@ -57,7 +58,7 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
     baseSku: row.base_sku,
     productName: row.product_name,
     brand: row.brand ?? '',
-    category: row.category ?? '',
+    category: formatProductCategories(row.category),
     primaryColor: row.primary_color ?? '',
     publicDescription: row.public_description ?? '',
     rentalTiers: Array.isArray(row.rental_tiers) ? row.rental_tiers : [],
@@ -127,7 +128,7 @@ export async function loadStockItemsForRentalMapping(
       createdAt: stockRow.created_at,
       productName: product.product_name,
       brand: product.brand ?? '',
-      category: product.category ?? '',
+      category: formatProductCategories(product.category),
       primaryColor: product.primary_color ?? '',
       rentalTiers: Array.isArray(product.rental_tiers) ? product.rental_tiers : [],
       lateFeeRule: product.late_fee_rule ?? '',
@@ -238,7 +239,7 @@ export async function createProductWithVariants(supabase: SupabaseClient, shopId
     base_sku: draft.baseSku,
     product_name: draft.productName,
     brand: draft.brand,
-    category: draft.category,
+    category: parseProductCategories(draft.category),
     primary_color: draft.primaryColor,
     public_description: draft.publicDescription,
     rental_tiers: draft.rentalTiers,
@@ -286,7 +287,7 @@ export async function updateRemoteProduct(
   const { error } = await supabase.from('products').update({
     product_name: draft.productName,
     brand: draft.brand,
-    category: draft.category,
+    category: parseProductCategories(draft.category),
     primary_color: draft.primaryColor,
     public_description: draft.publicDescription,
     rental_tiers: draft.rentalTiers,

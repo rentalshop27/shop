@@ -281,29 +281,11 @@ export function ProfilePage({
               <span className="profile-icon"><Link2 size={22} /></span>
               <div>
                 <h2 id="google-title">Google OAuth</h2>
-                <p>เตรียมค่าเชื่อม Google Sheets และ Google Drive ของร้านที่เลือกอยู่</p>
+                <p>เตรียมค่าเชื่อม Google Drive ของร้านที่เลือกอยู่</p>
               </div>
             </div>
 
             <div className="profile-oauth-stack">
-              <div className="profile-account-row">
-                <KeyRound size={20} />
-                <div>
-                  <span>OAuth Client ID</span>
-                  <strong>{googleOAuth.clientId || 'ยังไม่ได้ตั้งค่า VITE_GOOGLE_OAUTH_CLIENT_ID'}</strong>
-                </div>
-              </div>
-
-              <div className="profile-oauth-field">
-                <span>Authorized redirect URI</span>
-                <code>{googleOAuth.callbackUrl || 'ตั้งค่า VITE_SUPABASE_URL เพื่อสร้าง callback URL'}</code>
-              </div>
-
-              <div className="profile-oauth-field">
-                <span>App return URL</span>
-                <code>{googleOAuth.returnUrl || 'ตั้งค่า VITE_PUBLIC_APP_URL หรือเปิดแอปผ่านโดเมนจริง'}</code>
-              </div>
-
               <div className="profile-oauth-actions">
                 <a
                   className={`primary-button profile-connect-button ${!googleOAuth.canStartOAuth ? 'disabled' : ''}`}

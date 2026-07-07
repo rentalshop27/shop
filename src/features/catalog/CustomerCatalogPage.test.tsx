@@ -67,6 +67,43 @@ describe('CustomerCatalogPage filters', () => {
     expect(within(screen.getByLabelText('รายการชุดสำหรับลูกค้า')).getByText('฿1,500')).toBeInTheDocument()
   })
 
+  it('splits comma-separated categories into separate filter options', async () => {
+    const user = userEvent.setup()
+    render(
+      <CustomerCatalogPage
+        items={[
+          ...catalogItems,
+          {
+            productName: 'Midnight Suit Set',
+            brand: 'Precious',
+            category: 'ชุดราตรี, ชุดสูท',
+            size: 'L',
+            primaryColor: 'ดำ',
+            publicDescription: 'Two categories in one field',
+            rentalTiers: [{ days: 1, price: 2500 }],
+            imageUrls: ['https://example.com/img3.jpg'],
+            publicVisible: true,
+            availabilityStatus: 'available',
+            createdAt: '2026-06-30T00:00:00.000Z',
+          },
+        ]}
+        rentals={[]}
+      />,
+    )
+
+    const categoryFilter = screen.getByLabelText('หมวดหมู่')
+    const categoryOptions = within(categoryFilter).getAllByRole('option').map((option) => option.textContent)
+
+    expect(categoryOptions).toContain('ชุดราตรี')
+    expect(categoryOptions).toContain('ชุดสูท')
+    expect(categoryOptions).not.toContain('ชุดราตรี, ชุดสูท')
+
+    await user.selectOptions(categoryFilter, 'ชุดสูท')
+    expect(screen.getByText('Midnight Suit Set')).toBeInTheDocument()
+    expect(screen.queryByText('Ruby Evening Dress')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pearl Wedding Gown')).not.toBeInTheDocument()
+  })
+
   it('keeps unavailable items visible when customers choose every status', async () => {
     const user = userEvent.setup()
     render(<CustomerCatalogPage items={catalogItems} rentals={[]} />)

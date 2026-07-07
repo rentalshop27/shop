@@ -14,7 +14,7 @@ type ProductRow = {
   base_sku: string
   product_name: string
   brand: string
-  category: string
+  category: string[] | string | null
   primary_color: string
   public_description: string
   rental_tiers: { days: number; price: number }[]
@@ -78,6 +78,26 @@ function extractProductImageRef(imageRef: string | null | undefined) {
   }
 
   return null
+}
+
+function formatProductCategories(value: string[] | string | null | undefined) {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : []
+
+  const normalized: string[] = []
+  const seen = new Set<string>()
+
+  values.forEach((entry) => {
+    const trimmed = entry.trim()
+    if (!trimmed || seen.has(trimmed)) return
+    seen.add(trimmed)
+    normalized.push(trimmed)
+  })
+
+  return normalized.join(', ')
 }
 
 Deno.serve(async (request) => {
@@ -227,7 +247,7 @@ Deno.serve(async (request) => {
         baseSku: row.base_sku,
         productName: row.product_name,
         brand: row.brand ?? '',
-        category: row.category ?? '',
+        category: formatProductCategories(row.category),
         primaryColor: row.primary_color ?? '',
         publicDescription: row.public_description ?? '',
         rentalTiers: Array.isArray(row.rental_tiers) ? row.rental_tiers : [],

@@ -180,7 +180,7 @@ begin
     v_base_sku,
     p_product->>'product_name',
     coalesce(p_product->>'brand', ''),
-    coalesce(p_product->>'category', ''),
+    public.normalize_product_categories(p_product->'category'),
     coalesce(p_product->>'primary_color', ''),
     coalesce(p_product->>'public_description', ''),
     coalesce(p_product->'rental_tiers', '[]'::jsonb),

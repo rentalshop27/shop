@@ -99,6 +99,7 @@ import { TextField } from './components/TextField'
 import { buildCatalogSizeSummary } from './features/catalog/catalogAvailability'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { getUserFacingErrorMessage } from './lib/errorMessages'
+import { formatProductCategories } from './lib/productCategories'
 
 const emptyDraft: CustomerDraft = {
   fullName: '',
@@ -584,7 +585,7 @@ function PrivateApp() {
         ...si,
         productName: p.productName,
         brand: p.brand,
-        category: p.category,
+        category: formatProductCategories(p.category),
         primaryColor: p.primaryColor,
         rentalTiers: p.rentalTiers,
         lateFeeRule: p.lateFeeRule,
@@ -1550,7 +1551,7 @@ function PrivateApp() {
             ...si,
             productName: p.productName,
             brand: p.brand,
-            category: p.category,
+            category: formatProductCategories(p.category),
             primaryColor: p.primaryColor,
             rentalTiers: p.rentalTiers,
             lateFeeRule: p.lateFeeRule,
@@ -2297,7 +2298,7 @@ function PrivateApp() {
                 baseSku: p.baseSku,
                 productName: p.productName,
                 brand: p.brand,
-                category: p.category,
+                category: formatProductCategories(p.category),
                 primaryColor: p.primaryColor,
                 publicDescription: p.publicDescription,
                 rentalTiers: p.rentalTiers,

@@ -25,6 +25,7 @@ import {
 } from './reportsMetrics'
 import type { DateRangeMode, DressReportItem } from './reportsMetrics'
 import { exportDressReportsToCSV, exportRentalsToCSV } from '../../utils/exportUtils'
+import { parseProductCategories } from '../../lib/productCategories'
 import './ReportsPage.css'
 
 // Helper to format currency
@@ -93,7 +94,11 @@ export function ReportsPage({
 
   // Categories, Brands, Sizes, Colors list from stockItems for dropdowns
   const categoriesList = useMemo(() => {
-    return Array.from(new Set(stockItems.map(item => item.category).filter(Boolean))).sort()
+    return Array.from(
+      new Set(
+        stockItems.flatMap((item) => parseProductCategories(item.category)),
+      ),
+    ).sort()
   }, [stockItems])
 
   const brandsList = useMemo(() => {
@@ -135,9 +140,10 @@ export function ReportsPage({
         item.stockItem.sku.toLowerCase().includes(searchQuery.toLowerCase())
 
       // Category match
+      const itemCategories = parseProductCategories(item.stockItem.category)
       const matchCategory =
         categoryFilter === 'all' ||
-        item.stockItem.category === categoryFilter
+        itemCategories.includes(categoryFilter)
 
       // Brand match
       const matchBrand =

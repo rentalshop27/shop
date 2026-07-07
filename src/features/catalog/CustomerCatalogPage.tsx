@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
+import { parseProductCategories } from '../../lib/productCategories'
 
 export type CatalogDisplayItem = {
   id?: string
@@ -153,7 +154,7 @@ export function CustomerCatalogPage({
   }, [items])
 
   const brands = useCatalogOptions(customerReadyItems, 'brand')
-  const categories = useCatalogOptions(customerReadyItems, 'category')
+  const categories = useCatalogOptions(customerReadyItems, 'category', splitCatalogCategories)
   const colors = useCatalogOptions(customerReadyItems, 'primaryColor')
   
   // Custom hook for sizes since sizes can be in .size or .sizeSummary
@@ -187,7 +188,7 @@ export function CustomerCatalogPage({
       const availability = getCatalogAvailability(item, rentals, today)
       
       const matchesBrand = brandFilter === 'all' || item.brand === brandFilter
-      const itemCategories = (item.category || '').split(',').map(c => c.trim()).filter(Boolean)
+      const itemCategories = splitCatalogCategories(item.category)
       const matchesCategory = categoryFilter === 'all' || itemCategories.includes(categoryFilter)
       const matchesColor = colorFilter === 'all' || item.primaryColor === colorFilter
       
@@ -832,16 +833,26 @@ export function reorderCatalogEditOrder(
   return arrayMove(orderedIds, oldIndex, newIndex)
 }
 
-function useCatalogOptions(items: CatalogDisplayItem[], key: keyof CatalogDisplayItem) {
+function splitCatalogCategories(value: string) {
+  return parseProductCategories(value)
+}
+
+function useCatalogOptions(
+  items: CatalogDisplayItem[],
+  key: keyof CatalogDisplayItem,
+  expandValue?: (value: string) => string[],
+) {
   return useMemo(() => {
     return Array.from(
       new Set(
-        items
-          .map((item) => item[key])
-          .filter((value): value is string => typeof value === 'string' && value.length > 0),
+        items.flatMap((item) => {
+          const value = item[key]
+          if (typeof value !== 'string' || value.length === 0) return []
+          return expandValue ? expandValue(value) : [value]
+        }),
       ),
     ).sort((a, b) => a.localeCompare(b, 'th'))
-  }, [items, key])
+  }, [expandValue, items, key])
 }
 
 function getCatalogAvailability(item: CatalogDisplayItem, rentals: RentalOrder[], today: string): CatalogAvailabilityStatus {

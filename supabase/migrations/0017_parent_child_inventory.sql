@@ -12,7 +12,7 @@ create table public.products (
   base_sku             text    not null,
   product_name         text    not null,
   brand                text    not null default '',
-  category             text    not null default '',
+  category             text[]  not null default '{}',
   primary_color        text    not null default '',
   public_description   text    not null default '',
   rental_price_per_day numeric(10,2) not null default 0.00,
@@ -41,6 +41,42 @@ create policy "owners can manage products"
 create trigger audit_products_trigger
   after insert or update or delete on public.products
   for each row execute function public.log_audit_event();
+
+create or replace function public.normalize_product_categories(p_value jsonb)
+returns text[] language plpgsql immutable as $$
+declare
+  v_entry text;
+  v_categories text[] := '{}'::text[];
+begin
+  if p_value is null then
+    return v_categories;
+  end if;
+
+  if jsonb_typeof(p_value) = 'array' then
+    for v_entry in
+      select btrim(value)
+      from jsonb_array_elements_text(p_value) as entries(value)
+    loop
+      if v_entry <> '' and not (v_entry = any(v_categories)) then
+        v_categories := array_append(v_categories, v_entry);
+      end if;
+    end loop;
+
+    return v_categories;
+  end if;
+
+  for v_entry in
+    select btrim(value)
+    from unnest(regexp_split_to_array(coalesce(p_value #>> '{}', ''), '\s*,\s*')) as entries(value)
+  loop
+    if v_entry <> '' and not (v_entry = any(v_categories)) then
+      v_categories := array_append(v_categories, v_entry);
+    end if;
+  end loop;
+
+  return v_categories;
+end;
+$$;
 
 -- ══════════════════════════════════════════════════════════════════
 -- Step 2: Add product_id FK + Unique Constraint to stock_items
@@ -85,7 +121,7 @@ select distinct on (shop_id, product_name, brand, primary_color)
   sku                                       as base_sku,
   product_name,
   coalesce(brand, ''),
-  coalesce(category, ''),
+  public.normalize_product_categories(to_jsonb(category)),
   coalesce(primary_color, ''),
   coalesce(public_description, ''),
   coalesce(rental_price_per_day, 0),
@@ -188,7 +224,7 @@ begin
     v_base_sku,
     p_product->>'product_name',
     coalesce(p_product->>'brand', ''),
-    coalesce(p_product->>'category', ''),
+    public.normalize_product_categories(p_product->'category'),
     coalesce(p_product->>'primary_color', ''),
     coalesce(p_product->>'public_description', ''),
     coalesce((p_product->>'rental_price_per_day')::numeric, 0),

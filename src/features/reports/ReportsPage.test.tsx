@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Customer } from '../customers/customerTypes'
 import type { FlatStockItem } from '../inventory/inventoryTypes'
@@ -110,7 +110,7 @@ afterEach(() => {
 })
 
 describe('ReportsPage export', () => {
-  it('exports the visible dress report rows and no longer shows Google Sheets copy', () => {
+  it('exports the visible dress report rows', () => {
     const exportDressReportsToCSVMock = vi.mocked(exportDressReportsToCSV)
 
     render(
@@ -120,8 +120,6 @@ describe('ReportsPage export', () => {
         shopName="Precious Siam"
       />,
     )
-
-    expect(screen.queryByText(/Google Sheets/i)).toBeNull()
 
     fireEvent.change(screen.getByPlaceholderText('ค้นหาชื่อชุด หรือ SKU...'), {
       target: { value: 'Golden' },
@@ -137,7 +135,7 @@ describe('ReportsPage export', () => {
           stockItem: expect.objectContaining({ sku: 'SKU-001' }),
         }),
       ]),
-      'Precious-Siam-dress-report-2026-07-01-to-2026-07-07.csv',
+      expect.stringMatching(/^Precious-Siam-dress-report-2026-07-01-to-\d{4}-\d{2}-\d{2}\.csv$/),
     )
     expect(exportDressReportsToCSVMock.mock.calls[0][0]).toHaveLength(1)
   })
@@ -156,6 +154,53 @@ describe('ReportsPage export', () => {
 
     expect(exportRentalsToCSV).toHaveBeenCalledTimes(1)
     expect(exportDressReportsToCSV).not.toHaveBeenCalled()
-    expect(exportRentalsToCSV).toHaveBeenCalledWith(rentals, 'Precious-Siam-rentals-2026-07-01-to-2026-07-07.csv')
+    expect(exportRentalsToCSV).toHaveBeenCalledWith(
+      rentals,
+      expect.stringMatching(/^Precious-Siam-rentals-2026-07-01-to-\d{4}-\d{2}-\d{2}\.csv$/),
+    )
+  })
+
+  it('splits comma-separated categories in report filters', () => {
+    render(
+      <ReportsPage
+        rentals={rentals}
+        stockItems={[
+          ...stockItems,
+          {
+            ...stockItems[0],
+            id: 'stock_3',
+            productId: 'product_3',
+            sku: 'SKU-003',
+            productName: 'Midnight Set',
+            category: 'Evening, Cocktail',
+            size: 'L',
+          },
+        ]}
+        shopName="Precious Siam"
+      />,
+    )
+
+    const categoryFilter = screen
+      .getAllByRole('combobox')
+      .find((select) => select.parentElement?.textContent?.includes('หมวดหมู่'))
+
+    expect(categoryFilter).toBeTruthy()
+    if (!categoryFilter) {
+      throw new Error('Category filter not found')
+    }
+
+    const options = Array.from(categoryFilter.querySelectorAll('option')).map((option) => option.textContent)
+
+    expect(options).toContain('Evening')
+    expect(options).toContain('Cocktail')
+    expect(options).not.toContain('Evening, Cocktail')
+
+    fireEvent.change(categoryFilter, { target: { value: 'Cocktail' } })
+
+    const reportTable = screen.getByRole('table', { name: 'ตารางรายงานชุดเช่า' })
+
+    expect(within(reportTable).getByText('Midnight Set')).toBeTruthy()
+    expect(within(reportTable).getByText('Silver Dress')).toBeTruthy()
+    expect(within(reportTable).queryByText('Golden Dress')).toBeNull()
   })
 })
