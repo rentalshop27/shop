@@ -21,6 +21,7 @@ import {
   buildDressReportsData,
   buildGeneralStoreMetrics,
   buildReportsDateRange,
+  isDateInRange,
 } from './reportsMetrics'
 import type { DateRangeMode, DressReportItem } from './reportsMetrics'
 import { exportDressReportsToCSV, exportRentalsToCSV } from '../../utils/exportUtils'
@@ -206,16 +207,21 @@ export function ReportsPage({
     return { mostRented, highestRevenue, leastRented }
   }, [dressReportsData])
 
+  // Filtered Rentals for General Tab
+  const filteredRentalsForGeneral = useMemo(() => {
+    return rentals.filter(r => r.pickupDate && isDateInRange(r.pickupDate, activeDateRange))
+  }, [rentals, activeDateRange])
+
   // General Store Revenue Metrics (Tab 2)
   const generalStoreMetrics = useMemo(() => {
-    return buildGeneralStoreMetrics(rentals)
-  }, [rentals])
+    return buildGeneralStoreMetrics(filteredRentalsForGeneral)
+  }, [filteredRentalsForGeneral])
 
   const exportFilename = useMemo(() => {
     const safeShopName = sanitizeFilenamePart(shopName || 'precious-rental') || 'precious-rental'
 
     if (activeSubTab === 'general') {
-      return `${safeShopName}-rentals-all.csv`
+      return `${safeShopName}-rentals-${activeDateRange.start}-to-${activeDateRange.end}.csv`
     }
 
     return `${safeShopName}-dress-report-${activeDateRange.start}-to-${activeDateRange.end}.csv`
@@ -261,8 +267,8 @@ export function ReportsPage({
 
   const handleExportCsv = () => {
     if (activeSubTab === 'general') {
-      if (rentals.length === 0) return
-      exportRentalsToCSV(rentals, exportFilename)
+      if (filteredRentalsForGeneral.length === 0) return
+      exportRentalsToCSV(filteredRentalsForGeneral, exportFilename)
       return
     }
 
@@ -308,12 +314,12 @@ export function ReportsPage({
             <h2>Export รายงานเป็น CSV</h2>
             <p>
               {activeSubTab === 'general'
-                ? 'ดาวน์โหลดรายการเช่าทั้งหมดของร้านในไฟล์ CSV เพื่อนำไปเปิดต่อใน Excel หรือโปรแกรมสเปรดชีตได้ทันที'
+                ? 'ดาวน์โหลดรายการเช่าตามช่วงเวลาที่เลือกในไฟล์ CSV เพื่อนำไปเปิดต่อใน Excel หรือโปรแกรมสเปรดชีตได้ทันที'
                 : 'ดาวน์โหลดรายการเช่าตามช่วงเวลาและตัวกรองที่เลือกในแท็บนี้เป็นไฟล์ CSV'}
             </p>
             <div className="reports-export-meta" role="status">
               {activeSubTab === 'general'
-                ? `พร้อม export ${rentals.length} รายการจากข้อมูลการเช่าทั้งหมด${shopName ? ` ของร้าน ${shopName}` : ''}`
+                ? `พร้อม export ${filteredRentalsForGeneral.length} รายการ · ช่วงวันที่ ${activeDateRange.start} ถึง ${activeDateRange.end}${shopName ? ` · ร้าน ${shopName}` : ''}`
                 : `พร้อม export ${sortedDressReports.length} ชุด · ช่วงวันที่ ${activeDateRange.start} ถึง ${activeDateRange.end}`}
             </div>
           </div>
@@ -324,11 +330,135 @@ export function ReportsPage({
             className="primary-button reports-export-button"
             type="button"
             onClick={handleExportCsv}
-            disabled={activeSubTab === 'general' ? rentals.length === 0 : sortedDressReports.length === 0}
+            disabled={activeSubTab === 'general' ? filteredRentalsForGeneral.length === 0 : sortedDressReports.length === 0}
           >
             <Download size={18} />
             Export CSV
           </button>
+        </div>
+      </section>
+
+      {/* Shared Filters Section */}
+      <section className="reports-filter-section" aria-label="ตัวกรองรายงาน">
+        {/* Line 1: Search & Date Range */}
+        <div className="filter-row-1">
+          {activeSubTab === 'dresses' && (
+            <div className="search-box-container">
+              <Search size={18} className="search-icon" />
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อชุด หรือ SKU..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="reports-search-input"
+              />
+            </div>
+          )}
+
+          <div className="date-range-container">
+            <Calendar size={18} className="calendar-icon" />
+            <select
+              value={dateRangeMode}
+              onChange={e => setDateRangeMode(e.target.value as DateRangeMode)}
+              className="reports-select-input date-mode-select"
+            >
+              <option value="all">ทั้งหมด (ตั้งแต่เปิดร้าน)</option>
+              <option value="30days">30 วันล่าสุด</option>
+              <option value="this_month">เดือนนี้</option>
+              <option value="90days">90 วันล่าสุด</option>
+              <option value="custom">กำหนดช่วงเวลาเอง...</option>
+            </select>
+
+            {dateRangeMode === 'custom' && (
+              <div className="custom-date-inputs">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={e => setCustomStartDate(e.target.value)}
+                  className="reports-date-input"
+                  aria-label="วันที่เริ่มต้น"
+                />
+                <ArrowRight size={14} className="date-connector" />
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={e => setCustomEndDate(e.target.value)}
+                  className="reports-date-input"
+                  aria-label="วันที่สิ้นสุด"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Line 2: Advanced Dropdowns */}
+        {activeSubTab === 'dresses' && (
+          <div className="filter-row-2">
+            <div className="dropdown-item">
+              <label>หมวดหมู่</label>
+              <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="reports-select-input">
+                <option value="all">ทั้งหมด</option>
+                {categoriesList.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="dropdown-item">
+              <label>แบรนด์</label>
+              <select value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className="reports-select-input">
+                <option value="all">ทั้งหมด</option>
+                {brandsList.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="dropdown-item">
+              <label>ไซซ์</label>
+              <select value={sizeFilter} onChange={e => setSizeFilter(e.target.value)} className="reports-select-input">
+                <option value="all">ทั้งหมด</option>
+                {sizesList.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="dropdown-item">
+              <label>สีหลัก</label>
+              <select value={colorFilter} onChange={e => setColorFilter(e.target.value)} className="reports-select-input">
+                <option value="all">ทั้งหมด</option>
+                {colorsList.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              className="clear-filter-btn"
+              onClick={() => {
+                setSearchQuery('')
+                setCategoryFilter('all')
+                setBrandFilter('all')
+                setSizeFilter('all')
+                setColorFilter('all')
+                setDateRangeMode('all')
+              }}
+              type="button"
+              title="ล้างตัวกรองทั้งหมด"
+            >
+              <RefreshCw size={16} />
+              <span>รีเซ็ตตัวกรอง</span>
+            </button>
+          </div>
+        )}
+
+        {/* Active Range Info Bar */}
+        <div className="active-range-info">
+          <Info size={14} />
+          <span>
+            กำลังแสดงรายงานวิเคราะห์ตั้งแต่วันที่ <strong>{activeDateRange.start}</strong> ถึง <strong>{activeDateRange.end}</strong>
+          </span>
         </div>
       </section>
 
@@ -440,126 +570,6 @@ export function ReportsPage({
               ) : (
                 <p className="no-data-text">ไม่มีข้อมูลชุดในระบบ</p>
               )}
-            </div>
-          </section>
-
-          {/* Search & Filters Section */}
-          <section className="reports-filter-section" aria-label="ตัวกรองรายงาน">
-            {/* Line 1: Search & Date Range */}
-            <div className="filter-row-1">
-              <div className="search-box-container">
-                <Search size={18} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="ค้นหาชื่อชุด หรือ SKU..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="reports-search-input"
-                />
-              </div>
-
-              <div className="date-range-container">
-                <Calendar size={18} className="calendar-icon" />
-                <select
-                  value={dateRangeMode}
-                  onChange={e => setDateRangeMode(e.target.value as DateRangeMode)}
-                  className="reports-select-input date-mode-select"
-                >
-                  <option value="all">ทั้งหมด (ตั้งแต่เปิดร้าน)</option>
-                  <option value="30days">30 วันล่าสุด</option>
-                  <option value="this_month">เดือนนี้</option>
-                  <option value="90days">90 วันล่าสุด</option>
-                  <option value="custom">กำหนดช่วงเวลาเอง...</option>
-                </select>
-
-                {dateRangeMode === 'custom' && (
-                  <div className="custom-date-inputs">
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={e => setCustomStartDate(e.target.value)}
-                      className="reports-date-input"
-                      aria-label="วันที่เริ่มต้น"
-                    />
-                    <ArrowRight size={14} className="date-connector" />
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={e => setCustomEndDate(e.target.value)}
-                      className="reports-date-input"
-                      aria-label="วันที่สิ้นสุด"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Line 2: Advanced Dropdowns */}
-            <div className="filter-row-2">
-              <div className="dropdown-item">
-                <label>หมวดหมู่</label>
-                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="reports-select-input">
-                  <option value="all">ทั้งหมด</option>
-                  {categoriesList.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="dropdown-item">
-                <label>แบรนด์</label>
-                <select value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className="reports-select-input">
-                  <option value="all">ทั้งหมด</option>
-                  {brandsList.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="dropdown-item">
-                <label>ไซซ์</label>
-                <select value={sizeFilter} onChange={e => setSizeFilter(e.target.value)} className="reports-select-input">
-                  <option value="all">ทั้งหมด</option>
-                  {sizesList.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="dropdown-item">
-                <label>สีหลัก</label>
-                <select value={colorFilter} onChange={e => setColorFilter(e.target.value)} className="reports-select-input">
-                  <option value="all">ทั้งหมด</option>
-                  {colorsList.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <button
-                className="clear-filter-btn"
-                onClick={() => {
-                  setSearchQuery('')
-                  setCategoryFilter('all')
-                  setBrandFilter('all')
-                  setSizeFilter('all')
-                  setColorFilter('all')
-                  setDateRangeMode('all')
-                }}
-                type="button"
-                title="ล้างตัวกรองทั้งหมด"
-              >
-                <RefreshCw size={16} />
-                <span>รีเซ็ตตัวกรอง</span>
-              </button>
-            </div>
-
-            {/* Active Range Info Bar */}
-            <div className="active-range-info">
-              <Info size={14} />
-              <span>
-                กำลังแสดงรายงานวิเคราะห์ตั้งแต่วันที่ <strong>{activeDateRange.start}</strong> ถึง <strong>{activeDateRange.end}</strong>
-              </span>
             </div>
           </section>
 
@@ -732,7 +742,7 @@ export function ReportsPage({
               <div className="card-info">
                 <span className="card-label">เงินประกันที่ยังถืออยู่</span>
                 <h2 className="card-value blue-color">{formatBaht(generalStoreMetrics.totalDepositHeld)}</h2>
-                <p className="card-sub">รวมใบเช่าสถานะจองแล้ว ใช้งานอยู่ และเกินกำหนดส่งคืน</p>
+                <p className="card-sub">รวมใบเช่าสถานะจองแล้ว ใช้งานอยู่ เกินกำหนดส่งคืน และรายการที่คืนชุดแล้วแต่ยังไม่ปิดเคสเงินประกัน</p>
               </div>
             </div>
           </section>

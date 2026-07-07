@@ -156,6 +156,6 @@ describe('ReportsPage export', () => {
 
     expect(exportRentalsToCSV).toHaveBeenCalledTimes(1)
     expect(exportDressReportsToCSV).not.toHaveBeenCalled()
-    expect(exportRentalsToCSV).toHaveBeenCalledWith(rentals, 'Precious-Siam-rentals-all.csv')
+    expect(exportRentalsToCSV).toHaveBeenCalledWith(rentals, 'Precious-Siam-rentals-2026-07-01-to-2026-07-07.csv')
   })
 })
