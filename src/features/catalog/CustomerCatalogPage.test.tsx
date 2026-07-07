@@ -4,7 +4,11 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
-import { CustomerCatalogPage, type CatalogDisplayItem } from './CustomerCatalogPage'
+import {
+  CustomerCatalogPage,
+  reorderCatalogEditOrder,
+  type CatalogDisplayItem,
+} from './CustomerCatalogPage'
 
 const catalogItems: CatalogDisplayItem[] = [
   {
@@ -110,5 +114,39 @@ describe('CustomerCatalogPage filters', () => {
     expect(hero.style.getPropertyValue('--prc-hero-bg-image')).toBe("url('https://example.com/hero.webp')")
     expect(hero.style.getPropertyValue('--prc-hero-mobile-bg-image')).toBe("url('https://example.com/mobile-hero.webp')")
     expect(hero.getAttribute('style')).not.toContain('linear-gradient')
+  })
+
+  it('keeps featured items above standard items in edit-mode reordering', () => {
+    const items: CatalogDisplayItem[] = [
+      { ...catalogItems[0], id: 'featured_1', isFeatured: true },
+      { ...catalogItems[1], id: 'featured_2', isFeatured: true },
+      { ...catalogItems[0], id: 'standard_1', isFeatured: false },
+    ]
+
+    expect(
+      reorderCatalogEditOrder(
+        ['featured_1', 'featured_2', 'standard_1'],
+        items,
+        'featured_2',
+        'standard_1',
+      ),
+    ).toEqual(['featured_1', 'featured_2', 'standard_1'])
+  })
+
+  it('still allows reordering inside the same featured group', () => {
+    const items: CatalogDisplayItem[] = [
+      { ...catalogItems[0], id: 'featured_1', isFeatured: true },
+      { ...catalogItems[1], id: 'featured_2', isFeatured: true },
+      { ...catalogItems[0], id: 'standard_1', isFeatured: false },
+    ]
+
+    expect(
+      reorderCatalogEditOrder(
+        ['featured_1', 'featured_2', 'standard_1'],
+        items,
+        'featured_2',
+        'featured_1',
+      ),
+    ).toEqual(['featured_2', 'featured_1', 'standard_1'])
   })
 })

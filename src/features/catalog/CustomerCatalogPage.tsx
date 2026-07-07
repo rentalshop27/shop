@@ -112,11 +112,16 @@ export function CustomerCatalogPage({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    setOrderedItemIds((items) => {
-      const oldIndex = items.indexOf(active.id as string)
-      const newIndex = items.indexOf(over.id as string)
-      return arrayMove(items, oldIndex, newIndex)
-    })
+
+    const nextOrder = reorderCatalogEditOrder(
+      orderedItemIds,
+      items,
+      String(active.id),
+      String(over.id),
+    )
+    if (nextOrder === orderedItemIds) return
+
+    setOrderedItemIds(nextOrder)
     setHasOrderChanged(true)
   }
 
@@ -539,6 +544,11 @@ export function CustomerCatalogPage({
               {isSavingOrder ? 'กำลังบันทึก...' : 'บันทึกลำดับใหม่'}
             </button>
           )}
+          {isEditModeActive && (
+            <p className="prc-admin-toolbar-note">
+              รายการปักหมุดจะอยู่เหนือรายการทั่วไปเสมอ และจัดลำดับได้ภายในแต่ละกลุ่ม
+            </p>
+          )}
         </div>
       )}
 
@@ -814,6 +824,30 @@ function getCatalogHeroTitle(shopName?: string) {
   const normalizedName = shopName?.trim()
   if (!normalizedName) return 'Precious Rental'
   return /rental$/i.test(normalizedName) ? normalizedName : `${normalizedName} Rental`
+}
+
+export function reorderCatalogEditOrder(
+  orderedIds: string[],
+  items: Pick<CatalogDisplayItem, 'id' | 'isFeatured'>[],
+  activeId: string,
+  overId: string,
+) {
+  const oldIndex = orderedIds.indexOf(activeId)
+  const newIndex = orderedIds.indexOf(overId)
+  if (oldIndex === -1 || newIndex === -1) return orderedIds
+
+  const featuredById = new Map(
+    items
+      .filter((item): item is Pick<CatalogDisplayItem, 'id' | 'isFeatured'> & { id: string } => Boolean(item.id))
+      .map((item) => [item.id, Boolean(item.isFeatured)]),
+  )
+
+  const activeIsFeatured = featuredById.get(activeId)
+  const overIsFeatured = featuredById.get(overId)
+  if (activeIsFeatured === undefined || overIsFeatured === undefined) return orderedIds
+  if (activeIsFeatured !== overIsFeatured) return orderedIds
+
+  return arrayMove(orderedIds, oldIndex, newIndex)
 }
 
 function useCatalogOptions(items: CatalogDisplayItem[], key: keyof CatalogDisplayItem) {
