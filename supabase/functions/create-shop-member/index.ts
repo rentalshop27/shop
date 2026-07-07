@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getErrorMessage, isDuplicateUserError } from './errorUtils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,19 +13,6 @@ type CreateShopMemberRequest = {
   password?: string
   role?: string
   shopId?: string
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) return error.message
-  return 'Unexpected error'
-}
-
-function isDuplicateUserError(error: unknown) {
-  const message = getErrorMessage(error).toLowerCase()
-  return message.includes('already been registered')
-    || message.includes('already registered')
-    || message.includes('user already registered')
-    || message.includes('already exists')
 }
 
 function createPayloadErrorResponse(

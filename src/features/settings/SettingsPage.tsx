@@ -354,7 +354,7 @@ function GeneralSettingsTab(props: SettingsPageProps) {
           </div>
           <div>
             <h2 id="public-catalog-title" className="panel-section-title">Public catalog</h2>
-            <p className="panel-section-subtitle">เปิดเมื่อต้องการให้ลูกค้าเข้าลิงก์หน้ารายการชุดได้โดยไม่ต้องล็อกอิน</p>
+            <p className="panel-section-subtitle">เปิดเพื่อให้ลูกค้าเปิดลิงก์ดูรายการชุดของร้านได้เลย โดยไม่ต้องเข้าสู่ระบบ</p>
           </div>
         </div>
 
@@ -365,8 +365,8 @@ function GeneralSettingsTab(props: SettingsPageProps) {
             onChange={(event) => props.onPublicCatalogEnabledChange(event.target.checked)}
           />
           <span>
-            {props.publicCatalogEnabled ? 'เปิด public catalog แล้ว' : 'ปิด public catalog อยู่'}
-            <small>ชุดแต่ละรายการต้องเปิด “โชว์ชุดนี้ในหน้า public catalog” เพิ่มด้วย</small>
+            {props.publicCatalogEnabled ? 'ลูกค้าเห็นหน้ารายการชุดจากลิงก์นี้ได้แล้ว' : 'ตอนนี้ลูกค้ายังเปิดลิงก์หน้ารายการชุดไม่ได้'}
+            <small>ถ้าต้องการให้ชุดไหนแสดงในหน้านี้ ต้องเปิด “โชว์ชุดนี้ในหน้า public catalog” ในรายการชุดนั้นเพิ่มด้วย</small>
           </span>
         </label>
       </section>

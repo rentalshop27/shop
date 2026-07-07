@@ -87,4 +87,24 @@ describe('shopMembersRemote', () => {
       'ฐานข้อมูล Supabase ของระบบเพิ่มพนักงานยังเป็น schema เก่าอยู่ โปรดรัน migration 0033_shop_member_roles_and_permissions.sql แล้วลองใหม่',
     )
   })
+
+  it('translates the legacy Unexpected error payload into a deploy-and-migrate hint', async () => {
+    const invoke = vi.fn(() => Promise.resolve({
+      data: {
+        success: false,
+        error: 'ไม่สามารถบันทึกสิทธิ์พนักงานได้ กรุณาลองใหม่',
+        details: 'Unexpected error',
+      },
+      error: null,
+    }))
+    const supabase = {
+      functions: { invoke },
+    }
+
+    await expect(
+      createShopMember(supabase as never, 'shop_1', 'manager@example.com', '123456', 'manager'),
+    ).rejects.toThrow(
+      'ระบบเพิ่มพนักงานบันทึกลงฐานข้อมูลไม่ได้ และ Edge Function ฝั่ง Supabase ยังเป็นเวอร์ชันที่ซ่อนสาเหตุจริงอยู่ โปรด deploy ฟังก์ชัน create-shop-member ล่าสุด และตรวจว่า migration 0033_shop_member_roles_and_permissions.sql กับ 0034_manage_shop_members.sql ถูก apply แล้ว',
+    )
+  })
 })

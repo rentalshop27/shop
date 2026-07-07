@@ -66,6 +66,13 @@ function getCreateShopMemberPayloadErrorMessage(payload: CreateShopMemberRespons
 
   if (!details) return errorMessage
 
+  if (
+    errorMessage === 'ไม่สามารถบันทึกสิทธิ์พนักงานได้ กรุณาลองใหม่'
+    && details === 'Unexpected error'
+  ) {
+    return 'ระบบเพิ่มพนักงานบันทึกลงฐานข้อมูลไม่ได้ และ Edge Function ฝั่ง Supabase ยังเป็นเวอร์ชันที่ซ่อนสาเหตุจริงอยู่ โปรด deploy ฟังก์ชัน create-shop-member ล่าสุด และตรวจว่า migration 0033_shop_member_roles_and_permissions.sql กับ 0034_manage_shop_members.sql ถูก apply แล้ว'
+  }
+
   const normalizedDetails = details.toLowerCase()
   if (
     normalizedDetails.includes('shop_members_role_check')
