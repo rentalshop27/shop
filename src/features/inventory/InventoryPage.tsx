@@ -84,6 +84,113 @@ function formatDefaultLateFeeRule(finePerDay: number) {
   return finePerDay > 0 ? String(finePerDay) : ''
 }
 
+function CategoryMultiSelectDropdown({ 
+  categories, 
+  draftCategory, 
+  onChange 
+}: { 
+  categories: string[], 
+  draftCategory: string, 
+  onChange: (val: string) => void 
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const selectedCategories = (draftCategory || '').split(',').map(c => c.trim()).filter(Boolean);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ 
+          border: '1px solid rgba(255, 255, 255, 0.2)', 
+          padding: '8px 12px', 
+          borderRadius: '6px', 
+          cursor: 'pointer',
+          background: 'rgba(255,255,255,0.05)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          color: 'var(--text-color)',
+          fontSize: '0.9rem',
+          minHeight: '38px'
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selectedCategories.length > 0 ? selectedCategories.join(', ') : '-- เลือกประเภทชุด --'}
+        </span>
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{isOpen ? '▲' : '▼'}</span>
+      </div>
+      
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          background: 'var(--bg-color, #111)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: '6px',
+          marginTop: '4px',
+          maxHeight: '220px',
+          overflowY: 'auto',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          padding: '4px 0'
+        }}>
+          {categories.map((catName) => {
+            const isSelected = selectedCategories.includes(catName);
+            return (
+              <label 
+                key={catName} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  cursor: 'pointer', 
+                  padding: '8px 12px', 
+                  margin: 0,
+                  fontSize: '0.9rem'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(218, 165, 32, 0.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => {
+                    let current = [...selectedCategories];
+                    if (e.target.checked) {
+                      current.push(catName);
+                    } else {
+                      current = current.filter(c => c !== catName);
+                    }
+                    onChange(current.join(', '));
+                  }}
+                  style={{ margin: 0, accentColor: 'var(--primary-color)' }}
+                />
+                <span style={{ color: isSelected ? 'var(--text-gold)' : 'var(--text-color)' }}>{catName}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function InventoryPage({
   products,
   query,
@@ -514,33 +621,13 @@ export function InventoryPage({
                     ))}
                   </select>
                 </label>
-                <label className="field" style={{ gridColumn: '1 / -1' }}>
-                  <span>หมวดหมู่/ประเภทชุด (เลือกได้มากกว่า 1)</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', padding: '12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', maxHeight: '160px', overflowY: 'auto' }}>
-                    {categories.map((catName) => {
-                      const selectedCategories = (draft.category || '').split(',').map(c => c.trim()).filter(Boolean);
-                      const isSelected = selectedCategories.includes(catName);
-                      return (
-                        <label key={catName} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, fontWeight: 'normal' }}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              let current = [...selectedCategories];
-                              if (e.target.checked) {
-                                current.push(catName);
-                              } else {
-                                current = current.filter(c => c !== catName);
-                              }
-                              onDraftChange('category', current.join(', '));
-                            }}
-                            style={{ margin: 0, accentColor: 'var(--primary-color)' }}
-                          />
-                          <span style={{ fontSize: '0.9rem', color: isSelected ? 'var(--text-gold)' : 'var(--text-color)' }}>{catName}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                <label className="field">
+                  <span>หมวดหมู่/ประเภทชุด</span>
+                  <CategoryMultiSelectDropdown 
+                    categories={categories} 
+                    draftCategory={draft.category} 
+                    onChange={(val) => onDraftChange('category', val)} 
+                  />
                 </label>
               </div>
               <div style={{ marginTop: '24px', background: 'rgba(218, 165, 32, 0.05)', borderColor: 'rgba(218, 165, 32, 0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(218, 165, 32, 0.2)' }}>
