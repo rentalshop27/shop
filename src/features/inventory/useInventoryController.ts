@@ -501,8 +501,8 @@ function validateRentalTiers(tiers: ProductDraft['rentalTiers']) {
     if (!Number.isInteger(tier.days) || tier.days <= 0) {
       return 'จำนวนวันในแพ็กเกจต้องเป็นเลขจำนวนเต็มมากกว่า 0'
     }
-    if (!Number.isFinite(tier.price) || tier.price <= 0) {
-      return 'ราคาแพ็กเกจต้องมากกว่า 0 บาท'
+    if (!Number.isFinite(tier.price) || tier.price < 0) {
+      return 'ราคาแพ็กเกจต้องไม่ติดลบ'
     }
     if (seenDays.has(tier.days)) {
       return 'ห้ามมีแพ็กเกจจำนวนวันซ้ำกัน'
