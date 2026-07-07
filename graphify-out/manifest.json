@@ -195,13 +195,17 @@
     "mtime": 1782729274.8974304,
     "hash": "6dcee7a26af264272dc5632a3fc99c76"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/dev-dist/workbox-7e5eb42b.js": {
+    "mtime": 1783406826.419166,
+    "hash": "733f99f3ff5771d4fde4b9ced7839754"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/dev-dist/workbox-f0c192c2.js": {
     "mtime": 1781759760.232661,
     "hash": "9eb2f1e1adaee5c2ede8c164a56577f9"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/dev-dist/sw.js": {
-    "mtime": 1781759867.2559834,
-    "hash": "64a42c3dee565c68987f8175e542df94"
+    "mtime": 1783406826.4185843,
+    "hash": "8ae5b045cae0d9ed249532667031d629"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
     "mtime": 1783367336.7023919,
@@ -252,8 +256,8 @@
     "hash": "bb37c167341d12c77ee9ecf6e71b86cd"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/settings/SettingsPage.tsx": {
-    "mtime": 1783367306.836541,
-    "hash": "26f9896a9aa6d71aee1ef82518327932"
+    "mtime": 1783406752.2130873,
+    "hash": "26cc65c6418619fe41513a0ce0dd30f2"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/settings/UpdatePrompt.tsx": {
     "mtime": 1781269137.6934338,

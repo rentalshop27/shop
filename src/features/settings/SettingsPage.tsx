@@ -805,10 +805,10 @@ function StaffSettingsTab({ shopId }: { shopId: string | null }) {
               />
             </label>
           </div>
-          <div className="field">
+          <div className="field staff-role-field">
             <span>ระดับสิทธิ์การเข้าถึง</span>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <div className="staff-role-options">
+              <label className="staff-role-option">
                 <input 
                   type="radio" 
                   name="role" 
@@ -819,7 +819,7 @@ function StaffSettingsTab({ shopId }: { shopId: string | null }) {
                 />
                 <span>พนักงานทั่วไป (Staff)</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <label className="staff-role-option">
                 <input 
                   type="radio" 
                   name="role" 
@@ -863,10 +863,10 @@ function StaffSettingsTab({ shopId }: { shopId: string | null }) {
               <div className="settings-empty-state">ไม่มีรายชื่อพนักงาน</div>
             ) : (
               members.map((member) => (
-                <div key={member.user_id} className="settings-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                     <span className="item-text" style={{ fontWeight: 600 }}>{member.email}</span>
-                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginLeft: '8px', padding: '2px 6px', background: 'var(--surface-light)', borderRadius: '4px' }}>
+                <div key={member.user_id} className="settings-list-item staff-member-row">
+                  <div className="staff-member-main">
+                     <span className="item-text staff-member-email">{member.email}</span>
+                     <span className="staff-member-role">
                         {member.role === 'owner' ? 'เจ้าของร้าน' : member.role === 'manager' ? 'ผู้จัดการ' : 'พนักงาน'}
                      </span>
                   </div>

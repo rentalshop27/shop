@@ -557,6 +557,7 @@ button {
 /* App Shell & Page Header */
 .app-shell {
   width: min(100%, 1920px);
+  min-width: 0;
   min-height: 100vh;
   padding: 40px 48px 56px;
 }
@@ -4296,7 +4297,7 @@ select {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: 24px;
   margin-top: 24px;
 }
@@ -4337,7 +4338,73 @@ select {
 }
 
 .settings-panel {
+  min-width: 0;
   padding: 28px;
+}
+
+.staff-role-field {
+  min-width: 0;
+}
+
+.staff-role-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 8px;
+}
+
+.staff-role-option {
+  align-items: center;
+  color: var(--text-bright);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 1 220px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.field .staff-role-option input[type='radio'] {
+  accent-color: #3b82f6;
+  flex: 0 0 auto;
+  height: 16px;
+  margin: 0;
+  min-height: 16px;
+  padding: 0;
+  width: 16px;
+}
+
+.staff-role-option span {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.staff-member-row {
+  gap: 16px;
+}
+
+.staff-member-main {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.staff-member-email {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.staff-member-role {
+  background: var(--surface-light);
+  border-radius: 4px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  padding: 2px 6px;
 }
 
 .settings-public-panel {
