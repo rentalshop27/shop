@@ -1,50 +1,76 @@
-# Handoff: ปรับปรุงหน้ารายชื่อลูกค้า (Customer Profile & KYC Enhancements)
+# Handoff: เพิ่มจุดเปลี่ยนรหัสผ่านในหน้าโปรไฟล์พนักงาน
 
 ## Summary
-- รอบการทำงานนี้ได้ทำการพัฒนาและปรับปรุง UI/UX ของแผงข้อมูลลูกค้า (Right Panel) ในหน้ารายชื่อลูกค้า เพื่อให้เจ้าของร้านสามารถตรวจสอบประวัติการเช่าและเอกสารยืนยันตัวตนได้สะดวกยิ่งขึ้น
-- มีการนำสถิติเชิงลึก (Customer Insights) มาแสดงผลให้เห็นเด่นชัด และเพิ่มระบบสลับ Tab ระหว่างข้อมูลติดต่อกับประวัติการเช่า
-- เพิ่มปุ่มทางลัด (Shortcut) ในการสร้างรายการเช่าใหม่ให้กับลูกค้าคนนั้นๆ ทันที ซึ่งระบบจะเปลี่ยนหน้าและกรอกข้อมูลลูกค้าลงฟอร์มให้โดยอัตโนมัติ
+- งานรอบนี้แก้ปัญหาที่หน้าโปรไฟล์ยังไม่มีจุดให้พนักงานหรือผู้ใช้ที่ล็อกอินอยู่เปลี่ยนรหัสผ่านเอง
+- เพิ่ม flow เปลี่ยนรหัสผ่านจริงบนหน้าโปรไฟล์ โดยผูกกับ Supabase Auth session ปัจจุบัน ไม่ใช่ mock UI
+- อัปเดต knowledge graph แล้วหลังแก้โค้ด
 
 ## User Intent
-- ต้องการให้แผงรายละเอียดลูกค้ามีข้อมูลสถิติที่ครบถ้วน (จำนวนการเช่า, ยอดสุทธิ, สถิติยึดมัดจำ) เช่นเดียวกับที่มีในหน้าเช่า/คืน 
-- ต้องการย้ายจุดอัปโหลดและตรวจเอกสาร (KYC) มาอยู่ในตำแหน่งที่สังเกตได้ง่ายขึ้น พร้อมปุ่มลัดสำหรับผู้จัดการเพื่ออนุมัติหรือปฏิเสธเอกสารได้อย่างรวดเร็ว
-- ต้องการลดขั้นตอนการทำงาน (Friction) ของพนักงานหน้าร้าน โดยสามารถกดเปิดบิลเช่าใหม่จากหน้าโปรไฟล์ลูกค้าได้ทันที และระบบจะ Auto-fill ชื่อให้
+- ผู้ใช้แจ้งตรงๆ ว่า "ยังไม่มีจุดให้พนักงานเปลี่ยนรหัส"
+- เป้าหมายคือให้มีจุดเปลี่ยนรหัสในหน้าโปรไฟล์ที่ใช้งานได้จริงทันที
 
 ## What Changed
-
-### 1. ระบบ Tabs ประวัติการเช่าและสถิติ (Customer Insights)
-- **[MODIFY]** `src/features/customers/CustomersPage.tsx`
-  - เปลี่ยนจาก Layout ข้อมูลติดต่อยาวๆ มาเป็นระบบ Tab: `[ 📝 ข้อมูลติดต่อ ]` และ `[ 📜 ประวัติการเช่า ]`
-  - นำฟังก์ชัน `calculateCustomerInsights` มาใช้คำนวณข้อมูลสถิติของลูกค้า (เช่น จำนวนครั้งที่เช่า, ยอดใช้จ่ายรวม, จำนวนบิลค้างคืน, และดาวลูกค้า) แสดงผลเป็น Grid ใน Tab ประวัติการเช่า
-  - เพิ่มส่วน "รายการเช่าของลูกค้านี้" เพื่อลิสต์รายการบิลทั้งหมดที่ลูกค้าเคยทำรายการไว้ พร้อมสถานะบิล 
-
-### 2. โซนตรวจเอกสารยืนยันตัวตน (KYC/Document Verification)
-- **[MODIFY]** `src/features/customers/CustomersPage.tsx`
-  - ย้ายส่วนตรวจสอบหลักฐานยืนยันตัวตนขึ้นมาไว้ด้านบน (ใต้กล่องแจ้งเตือน Rental Guard)
-  - เพิ่มปุ่ม Action ลัด:
-    - `[ 🟢 อนุมัติเอกสารผ่าน ]`: ตั้งค่าสถานะเป็น "ตรวจแล้ว" (verified) และล้างธงความเสี่ยง
-    - `[ 🔴 ปฏิเสธ / บล็อกลูกค้า ]`: เปลี่ยนสถานะเป็น "ระงับ" (suspended) สำหรับกรณีที่ข้อมูลไม่น่าเชื่อถือ
-
-### 3. ปุ่มทางลัดเปิดบิลเช่าด่วน (Quick Rental Creation)
-- **[MODIFY]** `src/App.tsx`
-  - สร้าง State ใหม่ `externalPrefillCustomerId` และส่ง Props ต่อไปยัง `LazyRentalsPage`
-  - ปรับปรุง `handleNavigateToCreateRental` ให้รองรับการรับ `customerId` เพิ่มเติม
-- **[MODIFY]** `src/features/rentals/RentalsPage.tsx`
-  - เพิ่ม Logic ใน `useEffect` หากมีการส่ง `externalPrefillCustomerId` เข้ามา ระบบจะทำการค้นหาข้อมูลลูกค้าและตั้งค่าลงในช่อง "เลือกลูกค้า" (selectedCustomer) ให้โดยอัตโนมัติเมื่อฟอร์มเปิดขึ้น
-- **[MODIFY]** `src/features/customers/CustomersPage.tsx`
-  - เพิ่มปุ่ม `[ ➕ สร้างรายการเช่าใหม่ให้ลูกค้านี้ ]` ที่ด้านล่างสุดของแผงโปรไฟล์ เมื่อกดจะเรียกใช้ Callback เพื่อไปยังหน้า Rentals พร้อมแนบ ID ลูกค้าไปกรอกในฟอร์ม
+- [src/App.tsx](/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx)
+  - เพิ่ม callback `handlePasswordChange(nextPassword)` ที่เรียก `supabase.auth.updateUser({ password: nextPassword })`
+  - ส่ง prop `onChangePassword` เข้า `LazyProfilePage`
+- [src/features/profile/ProfilePage.tsx](/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/profile/ProfilePage.tsx)
+  - เพิ่ม section "เปลี่ยนรหัสผ่าน"
+  - เพิ่ม input `รหัสผ่านใหม่` และ `ยืนยันรหัสผ่านใหม่`
+  - เพิ่ม validation ฝั่ง UI:
+    - ต้องกรอกทั้งสองช่อง
+    - รหัสผ่านอย่างน้อย 6 ตัวอักษร
+    - รหัสผ่านกับการยืนยันต้องตรงกัน
+  - กันการกด submit ซ้ำระหว่าง request กำลังทำงาน
+  - แสดง success/error feedback ให้ผู้ใช้
+- [src/index.css](/Users/bhusitt./Downloads/Precious-Shop-Test/src/index.css)
+  - เพิ่ม style ของ password panel
+  - ปรับ mobile layout ให้ปุ่ม submit เต็มความกว้าง
+- [src/features/profile/ProfilePage.test.tsx](/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/profile/ProfilePage.test.tsx)
+  - เพิ่มเทสต์ validation กรณียืนยันรหัสไม่ตรง
+  - เพิ่มเทสต์ submit สำเร็จ
+  - เพิ่มเทสต์กันการกดซ้ำระหว่าง request pending
 
 ## Verification Already Run
-- ทดสอบระบบ Tab Switching ภายในแผงข้อมูลลูกค้า
-- ทดสอบการคำนวณ Customer Insights และการจัดเรียงประวัติการเช่า
-- ทดสอบคลิกปุ่ม **"สร้างรายการเช่าใหม่ให้ลูกค้านี้"** ระบบสามารถเปลี่ยนแท็บไปหน้าเช่า/คืน, เปิดฟอร์มใหม่, และ Auto-fill ชื่อลูกค้าได้ถูกต้อง
-- รัน `npm run build` และ `npm run lint` เพื่อตรวจสอบ Type Errors ผ่านทั้งหมดแล้ว
+- `npm test -- src/features/profile/ProfilePage.test.tsx`
+- `npm run typecheck`
+- `npm run build`
+- `graphify update .`
+
+## Current Status
+- งานเพิ่มจุดเปลี่ยนรหัสผ่านเสร็จแล้วในโค้ดและผ่านการตรวจหลักครบ
+- Build ผ่าน แต่ยังมี Vite warning เดิมเรื่อง bundle หลักใหญ่กว่า 500 kB
+- ยังไม่ได้ commit
+
+## Important Context
+- หน้าโปรไฟล์เดิมมีแค่ข้อมูลบัญชี, ร้านที่เข้าถึงได้, Google OAuth, และออกจากระบบ
+- โปรเจกต์นี้มีการสร้างบัญชีพนักงานด้วยรหัสผ่านอยู่แล้วในส่วน staff settings ดังนั้นการเพิ่ม self-service change password ใน profile สอดคล้องกับ auth model เดิม
+- หลีกเลี่ยงการสับสนกับข้อมูลอีเมลจริงของผู้ใช้: อย่าอ้างอิง PII จาก session หรือ screenshot ใน handoff ถัดไป
+
+## Dirty Worktree Notes
+- มีไฟล์ที่เกี่ยวกับงานนี้:
+  - [src/App.tsx](/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx)
+  - [src/features/profile/ProfilePage.tsx](/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/profile/ProfilePage.tsx)
+  - [src/features/profile/ProfilePage.test.tsx](/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/profile/ProfilePage.test.tsx)
+  - [src/index.css](/Users/bhusitt./Downloads/Precious-Shop-Test/src/index.css)
+  - `graphify-out/*` ที่ถูกอัปเดตจาก `graphify update .`
+- มีการเปลี่ยนแปลงอื่นใน worktree ที่ไม่ใช่งานรอบนี้อยู่แล้ว:
+  - [src/features/dashboard/dashboardMetrics.ts](/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.ts)
+  - [src/features/dashboard/dashboardMetrics.test.ts](/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.test.ts)
+  - `supabase/.temp/cli-latest`
+  - cache ใต้ `graphify-out/cache/ast/`
+- ถ้าจะ commit งานนี้ ควรแยก scope ให้ดีและตรวจอีกครั้งว่าไฟล์ dashboard ที่ค้างอยู่เป็นของผู้ใช้หรือของงานอื่น
 
 ## Recommended Next Session
-1. **ทดสอบใช้งานจริงบนเบราว์เซอร์:**
-   - ลองคลิกดูข้อมูลลูกค้าที่มีประวัติการเช่า เพื่อตรวจสอบสถิติและออเดอร์ย้อนหลัง
-   - ลองกดปุ่ม 🟢 อนุมัติเอกสารผ่าน เพื่อดูการเปลี่ยนสถานะ
-   - ลองกดปุ่ม ➕ สร้างรายการเช่าใหม่ และตรวจสอบว่าข้อมูลลูกค้าถูกตั้งค่าในฟอร์มของหน้าเช่า/คืนเรียบร้อยหรือไม่
-2. **Commit and Push:**
-   - ตรวจสอบความเรียบร้อย แล้วรันคำสั่ง `graphify update .` 
-   - ทำการ Commit การเปลี่ยนแปลงทั้งหมดขึ้น Repository
+1. เปิดหน้าโปรไฟล์ในเบราว์เซอร์แล้วลองเปลี่ยนรหัสผ่านจริงกับบัญชีทดสอบ เพื่อยืนยัน UX และข้อความจาก Supabase ใน runtime จริง
+2. ถ้าต้องการ polish ต่อ:
+   - พิจารณาเพิ่มข้อบังคับรหัสผ่านที่ชัดกว่านี้
+   - พิจารณาเพิ่มช่องรหัสผ่านปัจจุบัน ถ้าทีมต้องการ flow ที่เข้มขึ้น
+3. ถ้างานนี้โอเคแล้ว ให้จัดการ commit โดยระวังไม่รวมไฟล์ที่ไม่เกี่ยว
+
+## Suggested Skills
+- `handoff`
+  - ถ้าต้องอัปเดต handoff นี้อีกหลังมีงานต่อเนื่อง
+- `scrutinize`
+  - ถ้าจะ review งานเปลี่ยนรหัสผ่านต่อในมุม regression หรือ boundary ของ auth
+- `browser:control-in-app-browser`
+  - ถ้าจะ smoke test หน้าโปรไฟล์และ flow เปลี่ยนรหัสผ่านบน localhost หรือ preview

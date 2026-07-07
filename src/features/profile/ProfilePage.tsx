@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Building2, Check, KeyRound, Link2, LogOut, Mail, Store, UserRound, Shield } from 'lucide-react'
 import type { ShopSummary } from '../customers/customerRemote'
 import { getGoogleOAuthSetupState } from '../google/googleOAuth'
+import { TextField } from '../../components/TextField'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'เจ้าของร้าน (Owner)',
@@ -14,6 +15,7 @@ interface ProfilePageProps {
   availableShops: ShopSummary[]
   selectedShopId: string | null
   onShopChange: (shopId: string | null) => void
+  onChangePassword?: (currentPassword: string, nextPassword: string) => Promise<void>
   onLogout?: () => Promise<void>
 }
 
@@ -22,10 +24,17 @@ export function ProfilePage({
   availableShops,
   selectedShopId,
   onShopChange,
+  onChangePassword,
   onLogout,
 }: ProfilePageProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
   const currentShop = availableShops.find((shop) => shop.id === selectedShopId) ?? null
   const googleOAuth = getGoogleOAuthSetupState(selectedShopId)
   const googleOAuthResult = (() => {
@@ -62,6 +71,59 @@ export function ProfilePage({
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : 'ออกจากระบบไม่สำเร็จ กรุณาลองใหม่')
       setIsLoggingOut(false)
+    }
+  }
+
+  function handleCurrentPasswordChange(value: string) {
+    setCurrentPassword(value)
+    setPasswordError('')
+    setPasswordSuccess('')
+  }
+
+  function handleNewPasswordChange(value: string) {
+    setNewPassword(value)
+    setPasswordError('')
+    setPasswordSuccess('')
+  }
+
+  function handleConfirmPasswordChange(value: string) {
+    setConfirmPassword(value)
+    setPasswordError('')
+    setPasswordSuccess('')
+  }
+
+  async function handlePasswordChange() {
+    if (!onChangePassword || isChangingPassword) return
+
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('กรุณากรอกรหัสผ่านปัจจุบัน รหัสผ่านใหม่ และยืนยันรหัสผ่าน')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน')
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      await onChangePassword(currentPassword, newPassword)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordSuccess('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว กรุณาใช้รหัสใหม่ในการเข้าสู่ระบบครั้งถัดไป')
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'เปลี่ยนรหัสผ่านไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -112,6 +174,60 @@ export function ProfilePage({
             </>
           )}
         </section>
+
+        {onChangePassword && (
+          <section className="panel profile-panel profile-password-panel" aria-labelledby="password-title">
+            <div className="profile-panel-heading">
+              <span className="profile-icon"><KeyRound size={22} /></span>
+              <div>
+                <h2 id="password-title">เปลี่ยนรหัสผ่าน</h2>
+                <p>อัปเดตรหัสผ่านของบัญชีที่กำลังเข้าสู่ระบบอยู่ตอนนี้</p>
+              </div>
+            </div>
+
+            <div className="profile-password-form">
+              <p className="profile-password-note">
+                รหัสใหม่จะมีผลกับบัญชีนี้ทันที และควรแจ้งพนักงานให้ใช้รหัสใหม่ในการเข้าสู่ระบบครั้งถัดไป
+              </p>
+
+              <div className="form-grid profile-password-grid">
+                <TextField
+                  label="รหัสผ่านปัจจุบัน"
+                  value={currentPassword}
+                  type="password"
+                  placeholder="กรอกรหัสที่ใช้เข้าสู่ระบบตอนนี้"
+                  disabled={isChangingPassword}
+                  onChange={handleCurrentPasswordChange}
+                />
+                <TextField
+                  label="รหัสผ่านใหม่"
+                  value={newPassword}
+                  type="password"
+                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  disabled={isChangingPassword}
+                  onChange={handleNewPasswordChange}
+                />
+                <TextField
+                  label="ยืนยันรหัสผ่านใหม่"
+                  value={confirmPassword}
+                  type="password"
+                  placeholder="กรอกรหัสเดิมอีกครั้ง"
+                  disabled={isChangingPassword}
+                  onChange={handleConfirmPasswordChange}
+                />
+              </div>
+
+              {passwordError && <p className="form-error" role="alert">{passwordError}</p>}
+              {passwordSuccess && <p className="profile-password-success" role="status">{passwordSuccess}</p>}
+
+              <div className="profile-password-actions">
+                <button className="primary-button" type="button" onClick={handlePasswordChange} disabled={isChangingPassword}>
+                  {isChangingPassword ? 'กำลังเปลี่ยนรหัสผ่าน...' : 'เปลี่ยนรหัสผ่าน'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="panel profile-panel" aria-labelledby="shops-title">
           <div className="profile-panel-heading">

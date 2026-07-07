@@ -212,8 +212,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1783427709.9834154,
-    "hash": "31e17517d36ca72e44a4f991e053cb75"
+    "mtime": 1783432379.647335,
+    "hash": "af8ca62ad30cf0c87a9c019da3842237"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1783245721.582826,
@@ -384,16 +384,16 @@
     "hash": "696a1c649eaa49b19d63211a43302565"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.test.ts": {
-    "mtime": 1783342141.366582,
-    "hash": "240b8803b7c35196dcf244a37c57e76f"
+    "mtime": 1783429079.8622978,
+    "hash": "c8a48c073d9d01de16fac684ac79cb0c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/MultiShopDashboardPage.tsx": {
     "mtime": 1783363166.094781,
     "hash": "84519c408011ba38ba3ba252e9ab4e0c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/dashboardMetrics.ts": {
-    "mtime": 1783427709.981241,
-    "hash": "5abd20aa45523968689fa6d450a17888"
+    "mtime": 1783429079.8607926,
+    "hash": "852046503115d34d35043f378a187475"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/dashboard/DashboardPage.tsx": {
     "mtime": 1783356421.5301228,
@@ -412,12 +412,12 @@
     "hash": "e310a0368f8f4522d5709ea925c5e582"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/profile/ProfilePage.tsx": {
-    "mtime": 1783367536.2008865,
-    "hash": "6065b0f22bd19417399c8577e52ee339"
+    "mtime": 1783432393.2874398,
+    "hash": "4d10ca1fa3dc897fb557f542423207e6"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/profile/ProfilePage.test.tsx": {
-    "mtime": 1783356612.5038311,
-    "hash": "0becc542d37433ef3602838fbdf27613"
+    "mtime": 1783432407.8954864,
+    "hash": "72e0b42b40508e6dd48fc0994950bae4"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/inventoryStatus.ts": {
     "mtime": 1782849441.9558635,
@@ -528,8 +528,8 @@
     "hash": "8ee39dcfe68a23b3797b02648930d699"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/handoff.md": {
-    "mtime": 1783424501.6378257,
-    "hash": "e767d65d7a595aecebde6c1e02add5ee"
+    "mtime": 1783432019.0535922,
+    "hash": "c15e3815495bc248bdf7c205838ef702"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/docs/google-oauth-setup.md": {
     "mtime": 1783367536.2003806,

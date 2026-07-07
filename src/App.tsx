@@ -1410,6 +1410,22 @@ function PrivateApp() {
     if (error) throw error
   }
 
+  async function handlePasswordChange(currentPassword: string, nextPassword: string) {
+    if (!supabase) return
+    if (!authUserEmail) {
+      throw new Error('ไม่พบอีเมลของบัญชีที่กำลังเข้าสู่ระบบ')
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: authUserEmail,
+      password: currentPassword,
+    })
+    if (signInError) throw signInError
+
+    const { error } = await supabase.auth.updateUser({ password: nextPassword })
+    if (error) throw error
+  }
+
   useEffect(() => {
     if (!authUserId || !shopId) return
     safeLocalStorageSet(getLastSelectedShopKey(authUserId), shopId)
@@ -2432,6 +2448,7 @@ function PrivateApp() {
               availableShops={availableShops}
               selectedShopId={shopId}
               onShopChange={handleShopChange}
+              onChangePassword={hasSupabaseConfig && authUserEmail ? handlePasswordChange : undefined}
               onLogout={hasSupabaseConfig ? handleLogout : undefined}
             />
           )}

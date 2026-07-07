@@ -97,6 +97,71 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('link', { name: 'เชื่อม Google' })).toBeTruthy()
   })
 
+  it('requires the current password before submitting', () => {
+    const onChangePassword = vi.fn()
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+        onChangePassword={onChangePassword}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('รหัสผ่านใหม่'), { target: { value: 'secret123' } })
+    fireEvent.change(screen.getByLabelText('ยืนยันรหัสผ่านใหม่'), { target: { value: 'secret123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'เปลี่ยนรหัสผ่าน' }))
+
+    expect(screen.getByText('กรุณากรอกรหัสผ่านปัจจุบัน รหัสผ่านใหม่ และยืนยันรหัสผ่าน')).toBeTruthy()
+    expect(onChangePassword).not.toHaveBeenCalled()
+  })
+
+  it('validates the password confirmation before submitting', () => {
+    const onChangePassword = vi.fn()
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+        onChangePassword={onChangePassword}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('รหัสผ่านปัจจุบัน'), { target: { value: 'old-secret' } })
+    fireEvent.change(screen.getByLabelText('รหัสผ่านใหม่'), { target: { value: 'secret123' } })
+    fireEvent.change(screen.getByLabelText('ยืนยันรหัสผ่านใหม่'), { target: { value: 'secret999' } })
+    fireEvent.click(screen.getByRole('button', { name: 'เปลี่ยนรหัสผ่าน' }))
+
+    expect(screen.getByText('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน')).toBeTruthy()
+    expect(onChangePassword).not.toHaveBeenCalled()
+  })
+
+  it('changes the current user password and shows success feedback', async () => {
+    const onChangePassword = vi.fn(async () => undefined)
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+        onChangePassword={onChangePassword}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('รหัสผ่านปัจจุบัน'), { target: { value: 'old-secret' } })
+    fireEvent.change(screen.getByLabelText('รหัสผ่านใหม่'), { target: { value: 'secret123' } })
+    fireEvent.change(screen.getByLabelText('ยืนยันรหัสผ่านใหม่'), { target: { value: 'secret123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'เปลี่ยนรหัสผ่าน' }))
+
+    await waitFor(() => expect(onChangePassword).toHaveBeenCalledWith('old-secret', 'secret123'))
+    expect(screen.getByText('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว กรุณาใช้รหัสใหม่ในการเข้าสู่ระบบครั้งถัดไป')).toBeTruthy()
+  })
+
   it('shows the Google OAuth success message from the callback query string', () => {
     window.history.replaceState({}, '', '/?tab=profile&google_oauth=success&google_email=owner%40gmail.com')
 
@@ -110,6 +175,35 @@ describe('ProfilePage', () => {
     )
 
     expect(screen.getByText('เชื่อม Google สำเร็จแล้ว: owner@gmail.com')).toBeTruthy()
+  })
+
+  it('prevents repeated password changes while the request is pending', async () => {
+    let finishChangePassword: (() => void) | undefined
+    const onChangePassword = vi.fn(() => new Promise<void>((resolve) => { finishChangePassword = resolve }))
+
+    render(
+      <ProfilePage
+        email="owner@example.com"
+        availableShops={[shops[0]]}
+        selectedShopId="shop_1"
+        onShopChange={vi.fn()}
+        onChangePassword={onChangePassword}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('รหัสผ่านปัจจุบัน'), { target: { value: 'old-secret' } })
+    fireEvent.change(screen.getByLabelText('รหัสผ่านใหม่'), { target: { value: 'secret123' } })
+    fireEvent.change(screen.getByLabelText('ยืนยันรหัสผ่านใหม่'), { target: { value: 'secret123' } })
+
+    const changePasswordButton = screen.getByRole('button', { name: 'เปลี่ยนรหัสผ่าน' })
+    fireEvent.click(changePasswordButton)
+    fireEvent.click(changePasswordButton)
+
+    expect(onChangePassword).toHaveBeenCalledTimes(1)
+    expect((screen.getByRole('button', { name: 'กำลังเปลี่ยนรหัสผ่าน...' }) as HTMLButtonElement).disabled).toBe(true)
+
+    finishChangePassword?.()
+    await waitFor(() => expect(onChangePassword).toHaveBeenCalledTimes(1))
   })
 
   it('prevents repeated logout clicks while logout is pending', async () => {

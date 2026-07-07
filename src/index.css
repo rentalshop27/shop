@@ -523,6 +523,46 @@ button {
   color: #fcd34d;
 }
 
+.profile-password-panel {
+  grid-column: 1 / -1;
+}
+
+.profile-password-form {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-password-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-password-note {
+  background: rgba(223, 183, 80, 0.06);
+  border: 1px solid rgba(223, 183, 80, 0.16);
+  border-radius: 10px;
+  color: var(--text-muted) !important;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 !important;
+  padding: 14px 16px;
+}
+
+.profile-password-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-password-success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 8px;
+  color: #86efac !important;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  padding: 10px 14px;
+}
+
 .profile-logout-panel {
   align-items: center;
   grid-column: 1 / -1;
@@ -2360,6 +2400,18 @@ select {
   .profile-logout-panel {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .profile-password-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-password-actions {
+    justify-content: stretch;
+  }
+
+  .profile-password-actions .primary-button {
+    width: 100%;
   }
 
   .profile-logout-button {
