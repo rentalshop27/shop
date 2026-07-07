@@ -64,7 +64,8 @@ interface RentalsPageProps {
   onFormOpenChange?: (open: boolean) => void
   externalPickupDate?: string
   externalReturnDate?: string
-  onClearExternalDates?: () => void
+  externalPrefillCustomerId?: string
+  onConsumeExternalCreatePrefill?: () => void
 }
 
 const getTodayString = () => {
@@ -127,7 +128,8 @@ export function RentalsPage({
   onFormOpenChange,
   externalPickupDate,
   externalReturnDate,
-  onClearExternalDates
+  externalPrefillCustomerId,
+  onConsumeExternalCreatePrefill
 }: RentalsPageProps) {
   // Navigation / Selected rental
   const [localSelectedRentalId, setLocalSelectedRentalId] = useState<string>('')
@@ -239,11 +241,19 @@ export function RentalsPage({
         setReturnDate(externalReturnDate)
         consumed = true
       }
-      if (consumed && onClearExternalDates) {
-        onClearExternalDates()
+      if (externalPrefillCustomerId) {
+        const customerToPrefill = customers.find(c => c.id === externalPrefillCustomerId)
+        if (customerToPrefill) {
+          setSelectedCustomer(customerToPrefill)
+          setCustomerSearch(`${customerToPrefill.fullName} (${customerToPrefill.customerCode})`)
+        }
+        consumed = true
+      }
+      if (consumed && onConsumeExternalCreatePrefill) {
+        onConsumeExternalCreatePrefill()
       }
     }
-  }, [isFormOpen, externalPickupDate, externalReturnDate, onClearExternalDates])
+  }, [isFormOpen, externalPickupDate, externalReturnDate, externalPrefillCustomerId, onConsumeExternalCreatePrefill, customers])
 
   // Autocomplete Suggestions
   const filteredCustomersSuggestions = useMemo(() => {

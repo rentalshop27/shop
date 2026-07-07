@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react'
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import {
   AlertTriangle,
@@ -32,6 +33,8 @@ import type {
   CustomerProfileStatus,
   RiskFlag,
 } from './customerTypes'
+import type { RentalOrder } from '../rentals/rentalTypes'
+import { calculateCustomerInsights } from '../rentals/customerInsights'
 
 type StatusFilter = 'all' | CustomerProfileStatus | 'has_risk'
 
@@ -54,6 +57,7 @@ type CustomersPageProps = {
   }
   statusOptions: Array<{ value: StatusFilter; label: string }>
   paginatedCustomers: Customer[]
+  rentals: RentalOrder[]
   selectedCustomer?: Customer
   isMobileDetailOpen: boolean
   isFormOpen: boolean
@@ -75,6 +79,7 @@ type CustomersPageProps = {
   onMobileDetailOpenChange: Dispatch<SetStateAction<boolean>>
   onStatusChange: (status: CustomerProfileStatus) => void
   onRiskChange: (riskFlag: RiskFlag) => void
+  onApproveCustomerDocuments: () => void
   onArchiveSelectedCustomer?: () => void
   onDocumentUpload: (files: FileList | null) => void
   onDocumentPreviewError: (customerId: string) => void
@@ -89,6 +94,7 @@ type CustomersPageProps = {
   onResetForm: () => void
   onSaveCustomer: () => void
   onClosePreview: () => void
+  onNavigateToCreateRental?: (customerId: string) => void
 }
 
 export function CustomersPage({
@@ -99,6 +105,7 @@ export function CustomersPage({
   summary,
   statusOptions,
   paginatedCustomers,
+  rentals,
   selectedCustomer,
   isMobileDetailOpen,
   isFormOpen,
@@ -120,6 +127,7 @@ export function CustomersPage({
   onMobileDetailOpenChange,
   onStatusChange,
   onRiskChange,
+  onApproveCustomerDocuments,
   onArchiveSelectedCustomer,
   onDocumentUpload,
   onDocumentPreviewError,
@@ -134,6 +142,7 @@ export function CustomersPage({
   onResetForm,
   onSaveCustomer,
   onClosePreview,
+  onNavigateToCreateRental,
 }: CustomersPageProps) {
   return (
     <>
@@ -292,12 +301,15 @@ export function CustomersPage({
                 customer={selectedCustomer}
                 onStatusChange={onStatusChange}
                 onRiskChange={onRiskChange}
+                onApproveCustomerDocuments={onApproveCustomerDocuments}
                 onArchive={onArchiveSelectedCustomer}
                 onDocumentUpload={onDocumentUpload}
                 onDocumentPreviewError={onDocumentPreviewError}
                 onEdit={() => onEditCustomer(selectedCustomer)}
                 onClose={() => onMobileDetailOpenChange(false)}
                 onPreviewDocument={(index) => onPreviewCustomerDocument(selectedCustomer.id, index)}
+                rentals={rentals}
+                onNavigateToCreateRental={onNavigateToCreateRental}
               />
             </div>
           </div>
@@ -595,23 +607,39 @@ function CustomerDetail({
   customer,
   onStatusChange,
   onRiskChange,
+  onApproveCustomerDocuments,
   onArchive,
   onDocumentUpload,
   onDocumentPreviewError,
   onEdit,
   onClose,
   onPreviewDocument,
+  rentals,
+  onNavigateToCreateRental,
 }: {
   customer: Customer
   onStatusChange: (status: CustomerProfileStatus) => void
   onRiskChange: (riskFlag: RiskFlag) => void
+  onApproveCustomerDocuments: () => void
   onArchive?: () => void
   onDocumentUpload: (files: FileList | null) => void
   onDocumentPreviewError: (customerId: string) => void
   onEdit: () => void
   onClose?: () => void
   onPreviewDocument?: (index: number) => void
+  rentals: RentalOrder[]
+  onNavigateToCreateRental?: (customerId: string) => void
 }) {
+  const [activeTab, setActiveTab] = useState<'contact' | 'history'>('contact')
+
+  const customerInsights = useMemo(() => {
+    return calculateCustomerInsights(customer, rentals, new Date().toISOString().split('T')[0])
+  }, [customer, rentals])
+
+  const formatBaht = (value: number) => {
+    return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
+  }
+
   const rentalGuard = canCreateRentalForCustomer(customer)
   const initials = customer.fullName ? customer.fullName.slice(0, 2).toLowerCase() : ''
 
@@ -645,87 +673,12 @@ function CustomerDetail({
         {rentalGuard.message || 'ลูกค้าพร้อมสร้างรายการเช่า'}
       </div>
 
-      <section className="detail-section">
-        <h3>ข้อมูลติดต่อ</h3>
-        <div className="info-list-container">
-          <div className="info-row">
-            <div className="info-row-left">
-              <Phone size={18} />
-              <span>โทรศัพท์</span>
-            </div>
-            <strong className="info-row-right">{customer.phoneNormalized}</strong>
-          </div>
-          <div className="info-row">
-            <div className="info-row-left">
-              <MessageSquare size={18} />
-              <span>LINE ID</span>
-            </div>
-            <strong className="info-row-right">{customer.lineAccount || '-'}</strong>
-          </div>
-          <div className="info-row">
-            <div className="info-row-left">
-              <FileText size={18} />
-              <span>หมายเหตุ</span>
-            </div>
-            <strong className="info-row-right">{customer.notes || '-'}</strong>
-          </div>
-          <div className="info-row">
-            <div className="info-row-left">
-              <FileText size={18} />
-              <span>ที่อยู่ปัจจุบัน</span>
-            </div>
-            <strong className="info-row-right">{customer.currentAddress || '-'}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="detail-section">
-        <h3>สัดส่วนลูกค้า</h3>
-        <div className="measurement-grid">
-          {formatMeasurements(customer).map((measurement) => (
-            <div key={measurement.label}>
-              <span>{measurement.label}</span>
-              <strong>{measurement.value}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="detail-section controls-section">
-        <label className="field">
-          <span>สถานะโปรไฟล์</span>
-          <select value={customer.profileStatus} onChange={(event) => onStatusChange(event.target.value as CustomerProfileStatus)}>
-            <option value="incomplete">ข้อมูลไม่ครบ</option>
-            <option value="pending_review">รอตรวจ</option>
-            <option value="verified">ตรวจแล้ว</option>
-            <option value="suspended">ระงับ</option>
-          </select>
-        </label>
-        <label className="field">
-          <span>สัญญาณความเสี่ยง</span>
-          <select value={customer.riskFlag} onChange={(event) => onRiskChange(event.target.value as RiskFlag)}>
-            <option value="none">ไม่มี</option>
-            <option value="has_risk">มี</option>
-          </select>
-        </label>
-      </section>
-
-      <section className="detail-section">
-        <div className="section-title-row">
-          <h3>ตรวจสอบหลักฐานยืนยันตัวตน</h3>
+      <section className="detail-section" style={{ marginTop: '16px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="section-title-row" style={{ marginBottom: '12px' }}>
+          <h3 style={{ margin: 0 }}>ตรวจสอบหลักฐานยืนยันตัวตน</h3>
           <span>{customer.documents.length}/5 รูป</span>
         </div>
-        <label className="upload-box">
-          <Camera size={20} />
-          อัปโหลดรูปเอกสาร/บัตรประชาชน (เลือกพร้อมกันได้หลายรูป)
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(event) => onDocumentUpload(event.target.files)}
-          />
-        </label>
-        <div className="document-grid">
+        <div className="document-grid" style={{ marginBottom: '16px' }}>
           {customer.documents.length === 0 && (
             <div className="empty-doc">
               <FileImage size={28} />
@@ -755,7 +708,168 @@ function CustomerDetail({
             </figure>
           ))}
         </div>
+        <label className="upload-box" style={{ marginBottom: '16px' }}>
+          <Camera size={20} />
+          อัปโหลดรูปเอกสาร/บัตรประชาชน (เลือกพร้อมกันได้หลายรูป)
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(event) => onDocumentUpload(event.target.files)}
+          />
+        </label>
+        {customer.profileStatus !== 'verified' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <button className="primary-button" type="button" onClick={onApproveCustomerDocuments} style={{ minHeight: '40px', fontSize: '14px', background: 'var(--success-color)' }}>
+              🟢 อนุมัติเอกสารผ่าน
+            </button>
+            <button className="danger-button" type="button" onClick={() => { onStatusChange('suspended'); }} style={{ minHeight: '40px', fontSize: '14px', background: 'var(--danger-color)' }}>
+              🔴 ปฏิเสธ / บล็อกลูกค้า
+            </button>
+          </div>
+        )}
       </section>
+
+      <div className="tabs" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginTop: '16px', paddingBottom: '8px', overflowX: 'auto' }}>
+        <button className={`ghost-button ${activeTab === 'contact' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('contact')} style={{ background: activeTab === 'contact' ? 'rgba(255,255,255,0.1)' : 'transparent' }}>
+          📝 ข้อมูลติดต่อ
+        </button>
+        <button className={`ghost-button ${activeTab === 'history' ? 'active' : ''}`} type="button" onClick={() => setActiveTab('history')} style={{ background: activeTab === 'history' ? 'rgba(255,255,255,0.1)' : 'transparent' }}>
+          📜 ประวัติการเช่า
+        </button>
+      </div>
+
+      {activeTab === 'contact' && (
+        <>
+          <section className="detail-section" style={{ marginTop: '16px' }}>
+            <div className="info-list-container">
+              <div className="info-row">
+                <div className="info-row-left">
+                  <Phone size={18} />
+                  <span>โทรศัพท์</span>
+                </div>
+                <strong className="info-row-right">{customer.phoneNormalized}</strong>
+              </div>
+              <div className="info-row">
+                <div className="info-row-left">
+                  <MessageSquare size={18} />
+                  <span>LINE ID</span>
+                </div>
+                <strong className="info-row-right">{customer.lineAccount || '-'}</strong>
+              </div>
+              <div className="info-row">
+                <div className="info-row-left">
+                  <FileText size={18} />
+                  <span>หมายเหตุ</span>
+                </div>
+                <strong className="info-row-right">{customer.notes || '-'}</strong>
+              </div>
+              <div className="info-row">
+                <div className="info-row-left">
+                  <FileText size={18} />
+                  <span>ที่อยู่ปัจจุบัน</span>
+                </div>
+                <strong className="info-row-right">{customer.currentAddress || '-'}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="detail-section">
+            <h3>สัดส่วนลูกค้า</h3>
+            <div className="measurement-grid">
+              {formatMeasurements(customer).map((measurement) => (
+                <div key={measurement.label}>
+                  <span>{measurement.label}</span>
+                  <strong>{measurement.value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="detail-section controls-section">
+            <label className="field">
+              <span>สถานะโปรไฟล์</span>
+              <select value={customer.profileStatus} onChange={(event) => onStatusChange(event.target.value as CustomerProfileStatus)}>
+                <option value="incomplete">ข้อมูลไม่ครบ</option>
+                <option value="pending_review">รอตรวจ</option>
+                <option value="verified">ตรวจแล้ว</option>
+                <option value="suspended">ระงับ</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>สัญญาณความเสี่ยง</span>
+              <select value={customer.riskFlag} onChange={(event) => onRiskChange(event.target.value as RiskFlag)}>
+                <option value="none">ไม่มี</option>
+                <option value="has_risk">มี</option>
+              </select>
+            </label>
+          </section>
+        </>
+      )}
+
+      {activeTab === 'history' && (
+        <section className="detail-section" style={{ marginTop: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>เช่าทั้งหมด</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-bright)', fontWeight: 600 }}>{customerInsights.rentalCount} ครั้ง</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>คืนครบแล้ว</div>
+              <div style={{ fontSize: '13px', color: 'var(--success-color)', fontWeight: 600 }}>{customerInsights.completedRentalCount}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ค้างคืนตอนนี้</div>
+              <div style={{ fontSize: '13px', color: 'var(--warning-color)', fontWeight: 600 }}>{customerInsights.activeOverdueCount}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ยึดมัดจำ</div>
+              <div style={{ fontSize: '13px', color: customerInsights.depositForfeitedCount > 0 ? 'var(--warning-color)' : 'var(--success-color)', fontWeight: 600 }}>{customerInsights.depositForfeitedCount}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ยอดสุทธิ</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-bright)', fontWeight: 600 }}>{formatBaht(customerInsights.totalSpent)}</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ระดับลูกค้า</div>
+              <div aria-label={`ระดับลูกค้า ${customerInsights.starRating} จาก 5`} style={{ fontSize: '13px', color: 'var(--text-gold)', fontWeight: 600 }}>{customerInsights.starDisplay}</div>
+            </div>
+          </div>
+
+          <h3 style={{ marginTop: '16px', marginBottom: '8px' }}>รายการเช่าของลูกค้านี้</h3>
+          <div className="rental-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {rentals.filter(r => r.customer.id === customer.id).length === 0 ? (
+              <div className="empty-state" style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                ยังไม่มีประวัติการเช่า
+              </div>
+            ) : (
+              rentals.filter(r => r.customer.id === customer.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(r => (
+                <div key={r.id} style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <strong style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                      {r.id.includes('-') ? `#${r.id.split('-').pop()}` : `#${r.id}`}
+                    </strong>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.pickupDate} - {r.returnDate}</span>
+                  </div>
+                  <span className={`status-pill ${r.status}`} style={{ fontSize: '12px', padding: '2px 8px' }}>
+                    {r.status === 'booked' ? 'จอง' : r.status === 'active' ? 'กำลังเช่า' : r.status === 'returned' ? 'คืนแล้ว' : r.status === 'overdue' ? 'เกินกำหนด' : 'ยกเลิก'}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
+
+      <button
+        className="primary-button"
+        style={{ width: '100%', marginTop: '24px', minHeight: '48px', fontSize: '15px' }}
+        type="button"
+        onClick={() => onNavigateToCreateRental?.(customer.id)}
+      >
+        <Plus size={20} />
+        สร้างรายการเช่าใหม่ให้ลูกค้านี้
+      </button>
       <div
         className="detail-action-buttons"
         style={{

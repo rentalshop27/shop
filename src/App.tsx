@@ -394,10 +394,12 @@ function PrivateApp() {
   const [externalIsFormOpen, setExternalIsFormOpen] = useState<boolean>(false)
   const [externalPickupDate, setExternalPickupDate] = useState<string>('')
   const [externalReturnDate, setExternalReturnDate] = useState<string>('')
+  const [externalPrefillCustomerId, setExternalPrefillCustomerId] = useState<string>('')
 
-  function handleClearExternalDates() {
+  function handleConsumeExternalCreateRentalPrefill() {
     setExternalPickupDate('')
     setExternalReturnDate('')
+    setExternalPrefillCustomerId('')
   }
 
   function handleNavigateToRentals(rentalId: string) {
@@ -406,9 +408,10 @@ function PrivateApp() {
     setActiveTab('rentals')
   }
 
-  function handleNavigateToCreateRental(pickupDate: string, returnDate: string) {
+  function handleNavigateToCreateRental(pickupDate: string, returnDate: string, customerId?: string) {
     setExternalPickupDate(pickupDate)
     setExternalReturnDate(returnDate)
+    setExternalPrefillCustomerId(customerId || '')
     setExternalIsFormOpen(true)
     setActiveTab('rentals')
   }
@@ -430,6 +433,7 @@ function PrivateApp() {
       setExternalPickupDate('')
       setExternalReturnDate('')
       setExternalSelectedRentalId('')
+      setExternalPrefillCustomerId('')
     }
   }
 
@@ -1984,6 +1988,35 @@ function PrivateApp() {
     )
   }
 
+  async function approveSelectedCustomerDocuments() {
+    if (!selectedCustomer) return
+
+    if (selectedCustomer.documents.length === 0) {
+      const confirmed = window.confirm(
+        'ลูกค้ายังไม่มีรูปเอกสาร ต้องการเปลี่ยนเป็นตรวจแล้วใช่ไหม?',
+      )
+      if (!confirmed) return
+    }
+
+    if (supabase) {
+      try {
+        await updateRemoteCustomerStatus(supabase, selectedCustomer.shopId, selectedCustomer.id, 'verified')
+        await updateRemoteCustomerRisk(supabase, selectedCustomer.shopId, selectedCustomer.id, 'none')
+      } catch (error) {
+        window.alert(getErrorMessage(error))
+        return
+      }
+    }
+
+    setCustomers((current) =>
+      current.map((customer) =>
+        customer.id === selectedCustomer.id
+          ? { ...customer, profileStatus: 'verified', riskFlag: 'none', updatedAt: new Date().toISOString() }
+          : customer,
+      ),
+    )
+  }
+
   async function archiveSelectedCustomer() {
     if (!selectedCustomer) return
 
@@ -2221,7 +2254,8 @@ function PrivateApp() {
               onFormOpenChange={setExternalIsFormOpen}
               externalPickupDate={externalPickupDate}
               externalReturnDate={externalReturnDate}
-              onClearExternalDates={handleClearExternalDates}
+              externalPrefillCustomerId={externalPrefillCustomerId}
+              onConsumeExternalCreatePrefill={handleConsumeExternalCreateRentalPrefill}
               canManageMoney={currentPermissions.canManageMoney}
             />
           )}
@@ -2316,6 +2350,7 @@ function PrivateApp() {
               onMobileDetailOpenChange={setIsMobileDetailOpen}
               onStatusChange={updateSelectedStatus}
               onRiskChange={updateSelectedRisk}
+              onApproveCustomerDocuments={approveSelectedCustomerDocuments}
               onArchiveSelectedCustomer={currentPermissions.canManageDestructiveActions ? archiveSelectedCustomer : undefined}
               onDocumentUpload={addDocuments}
               onDocumentPreviewError={refreshCustomerDocumentUrls}
@@ -2343,6 +2378,8 @@ function PrivateApp() {
                 setPreviewCustomerDocOwnerId(null)
                 setPreviewCustomerDocError('')
               }}
+              onNavigateToCreateRental={(customerId) => handleNavigateToCreateRental('', '', customerId)}
+              rentals={rentals}
             />
           )}
 

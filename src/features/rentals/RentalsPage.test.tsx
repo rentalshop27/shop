@@ -226,6 +226,27 @@ describe('RentalsPage', () => {
     expect(screen.queryByText('ออเดอร์เกินกำหนดคืน')).toBeNull()
   })
 
+  it('consumes external customer prefills after applying them to the open form', () => {
+    const onConsumeExternalCreatePrefill = vi.fn()
+
+    render(
+      <RentalsPage
+        rentals={[]}
+        customers={[customer]}
+        stockItems={[stockItem]}
+        onCreateRentals={vi.fn()}
+        onUpdateRentalStatus={vi.fn()}
+        externalIsFormOpen
+        onFormOpenChange={vi.fn()}
+        externalPrefillCustomerId={customer.id}
+        onConsumeExternalCreatePrefill={onConsumeExternalCreatePrefill}
+      />
+    )
+
+    expect((screen.getByLabelText('ผู้เช่าชุด (พิมพ์ชื่อ หรือ รหัสลูกค้า) *') as HTMLInputElement).value).toBe('Somjai (CUS-001)')
+    expect(onConsumeExternalCreatePrefill).toHaveBeenCalledTimes(1)
+  })
+
   it('sums late-fee rates across grouped overdue rentals', () => {
     vi.setSystemTime(new Date('2026-07-06T10:00:00.000Z'))
 
