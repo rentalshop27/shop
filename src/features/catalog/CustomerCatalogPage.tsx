@@ -287,10 +287,6 @@ export function CustomerCatalogPage({
     }
   }, [selectedItem])
 
-  const categoryTabs: Array<{ label: string; value: string }> = [
-    { label: 'ทั้งหมด', value: 'all' },
-    ...categories.map((c) => ({ label: c, value: c })),
-  ]
 
   const canEditHeroBackground = Boolean(
     onUploadHeroBackground ||
@@ -489,22 +485,6 @@ export function CustomerCatalogPage({
         </div>
       </section>
 
-      {categoryTabs.length > 1 && (
-        <div className="prc-category-tabs">
-          <div className="prc-category-tabs-inner">
-            {categoryTabs.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                className={`prc-category-tab ${categoryFilter === tab.value ? 'prc-category-tab--active' : ''}`}
-                onClick={() => setCategoryFilter(tab.value)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="prc-results-bar">
         <span className="prc-results-count">
@@ -713,9 +693,11 @@ export function CustomerCatalogPage({
                   </span>
                 </div>
 
-                <div className="prc-modal-price">
-                  <span className="prc-modal-price-value">{formatTierRange(selectedItem.rentalTiers)}</span>
-                </div>
+                {hasValidPrice(selectedItem.rentalTiers) && (
+                  <div className="prc-modal-price">
+                    <span className="prc-modal-price-value">{formatTierRange(selectedItem.rentalTiers)}</span>
+                  </div>
+                )}
 
                 <div className="prc-modal-specs">
                   {selectedItem.sizeSummary ? (
@@ -885,6 +867,11 @@ function formatBaht(value: number) {
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value)
 }
 
+function hasValidPrice(tiers?: { price: number }[]) {
+  if (!tiers || tiers.length === 0) return false
+  return tiers.some(t => t.price > 0)
+}
+
 function formatTierRange(tiers?: { price: number }[]) {
   if (!tiers || tiers.length === 0) return '-'
   if (tiers.length === 1) return formatBaht(tiers[0].price)
@@ -958,7 +945,7 @@ function CatalogCardBase({
         <h2 className="prc-card-name">{item.productName}</h2>
         <div className="prc-card-footer">
           <div className="prc-card-price-block">
-            <span className="prc-card-price">{formatTierRange(item.rentalTiers)}</span>
+            {hasValidPrice(item.rentalTiers) && <span className="prc-card-price">{formatTierRange(item.rentalTiers)}</span>}
             {sizeDisplay && <span className="prc-card-size">ไซซ์ {sizeDisplay}</span>}
           </div>
           <div className="prc-card-actions">
