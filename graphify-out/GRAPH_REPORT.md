@@ -1,16 +1,16 @@
 # Graph Report - Precious-Shop-Test  (2026-07-08)
 
 ## Corpus Check
-- 135 files · ~124,642 words
+- 135 files · ~124,958 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1912 nodes · 3744 edges · 90 communities (82 shown, 8 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 40 edges (avg confidence: 0.8)
+- 1918 nodes · 3757 edges · 92 communities (79 shown, 13 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 41 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5e205a50`
+- Built from commit: `84a50af5`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -100,6 +100,8 @@
 - [[_COMMUNITY_Community 82|Community 82]]
 - [[_COMMUNITY_Community 83|Community 83]]
 - [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 85|Community 85]]
+- [[_COMMUNITY_Community 86|Community 86]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `RentalOrder` - 51 edges
@@ -108,7 +110,7 @@
 4. `StockItem` - 30 edges
 5. `StockItem` - 27 edges
 6. `RentalStatus` - 24 edges
-7. `What Changed` - 23 edges
+7. `What Changed` - 24 edges
 8. `FlatStockItem` - 21 edges
 9. `getErrorMessage()` - 20 edges
 10. `รายละเอียดสิ่งที่ทำเสร็จแล้ว (Completed Work)` - 17 edges
@@ -116,30 +118,26 @@
 ## Surprising Connections (you probably didn't know these)
 - `handleSubmit()` --calls--> `onEditRentalFields`  [INFERRED]
   src/features/rentals/RentalsPage.tsx → src/features/rentals/RentalsPage.test.tsx
+- `handleSaveCustomer()` --calls--> `parseOptionalNumber()`  [INFERRED]
+  src/App.tsx → src/features/customers/customerRemote.ts
 - `hasConnectedGoogleDrive()` --calls--> `Boolean()`  [INFERRED]
   src/features/customers/customerRemote.ts → src/App.tsx
 - `getGoogleOAuthSetupState()` --calls--> `Boolean()`  [INFERRED]
   src/features/google/googleOAuth.ts → src/App.tsx
-- `useInventoryController()` --calls--> `Boolean()`  [INFERRED]
-  src/features/inventory/useInventoryController.ts → src/App.tsx
-- `handleSaveStockItem()` --calls--> `parseOptionalNumber()`  [INFERRED]
-  src/App.tsx → src/features/customers/customerRemote.ts
+- `loadShopSettings()` --calls--> `Boolean()`  [INFERRED]
+  src/features/inventory/stockRemote.ts → src/App.tsx
 
-## Communities (90 total, 8 thin omitted)
+## Communities (92 total, 13 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (138): activeCustomers, activeSettingsSubTab, [activeStatusDropdownId, setActiveStatusDropdownId], [activeTab, setActiveTab], [auditLogs, setAuditLogs], [authUserEmail, setAuthUserEmail], [authUserId, setAuthUserId], authUserIdRef (+130 more)
+Nodes (139): ShopSettings, activeCustomers, activeSettingsSubTab, [activeStatusDropdownId, setActiveStatusDropdownId], [activeTab, setActiveTab], [auditLogs, setAuditLogs], [authUserEmail, setAuthUserEmail], [authUserId, setAuthUserId] (+131 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
 Nodes (67): calendarDays, CalendarPageProps, categories, [currentDate, setCurrentDate], currentWeekDays, dayEvents, DayRentalBuckets, DayRentalCategory (+59 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.06
-Nodes (54): ShopSummary, buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, customer, makeRental() (+46 more)
-
-### Community 3 - "Community 3"
 Cohesion: 0.03
 Nodes (51): activeIsFeatured, {
     attributes,
@@ -150,177 +148,181 @@ Nodes (51): activeIsFeatured, {
     isDragging
   }, availability, availabilityCounts, [availabilityFilter, setAvailabilityFilter], [brandFilter, setBrandFilter], brands, canEditHeroBackground (+43 more)
 
-### Community 4 - "Community 4"
+### Community 3 - "Community 3"
 Cohesion: 0.05
 Nodes (51): getUserFacingErrorMessage(), isPermissionDeniedError(), toMessageParts(), getErrorMessage(), [activeTab, setActiveTab], [brandError, setBrandError], [brandSuccess, setBrandSuccess], [categoryError, setCategoryError] (+43 more)
 
-### Community 5 - "Community 5"
+### Community 4 - "Community 4"
 Cohesion: 0.04
 Nodes (47): activeDateRange, [activeSubTab, setActiveSubTab], [brandFilter, setBrandFilter], brandsList, categoriesList, categoryChartColors, [categoryFilter, setCategoryFilter], categoryPieBackground (+39 more)
 
+### Community 5 - "Community 5"
+Cohesion: 0.08
+Nodes (38): buildCatalogSizeSummary(), CatalogSizeSummary, customer, stockItems, summary, getInventoryDisplayStatus(), item, itemRepair (+30 more)
+
 ### Community 6 - "Community 6"
-Cohesion: 0.05
-Nodes (34): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanURL (+26 more)
+Cohesion: 0.08
+Nodes (42): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+34 more)
 
 ### Community 7 - "Community 7"
+Cohesion: 0.07
+Nodes (39): TextField(), handleLogout(), buildGoogleOAuthStartUrl(), getGoogleOAuthCallbackUrl(), getGoogleOAuthClientId(), getGoogleOAuthReturnUrl(), getGoogleOAuthSetupState(), getStartFunctionUrl() (+31 more)
+
+### Community 8 - "Community 8"
 Cohesion: 0.04
 Nodes (40): allCostumesHaveSelectedTier, [basePriceFromTier, setBasePriceFromTier], customerToPrefill, disc, [editFormError, setEditFormError], [editingRentalId, setEditingRentalId], [editMode, setEditMode], [extraFineAmount, setExtraFineAmount] (+32 more)
 
-### Community 8 - "Community 8"
-Cohesion: 0.07
-Nodes (38): handleLogout(), buildGoogleOAuthStartUrl(), getGoogleOAuthCallbackUrl(), getGoogleOAuthClientId(), getGoogleOAuthReturnUrl(), getGoogleOAuthSetupState(), getStartFunctionUrl(), GoogleOAuthConnection (+30 more)
-
 ### Community 9 - "Community 9"
-Cohesion: 0.05
-Nodes (43): bulkUpdateRemoteDisplayOrder(), createSignedUrl, createSignedUrlByBucket, deletedIds, deleteFilterQuery, deleteFilters, deleteQuery, eq (+35 more)
+Cohesion: 0.08
+Nodes (44): [collectedAmount, setCollectedAmount], costumeContainerRef, costumeImageUrl, [costumeSearch, setCostumeSearch], [currentPage, setCurrentPage], customerContainerRef, [customerSearch, setCustomerSearch], [depositAmount, setDepositAmount] (+36 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.09
-Nodes (38): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanupOutdatedCaches() (+30 more)
+Cohesion: 0.07
+Nodes (40): allocateFineAmount(), createRemoteRental(), createRemoteRentals(), deleteRemoteRental(), loadRentals(), mapRentalRow(), RentalDepositResolutionUpdate, RentalFineUpdate (+32 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.09
-Nodes (42): [collectedAmount, setCollectedAmount], costumeContainerRef, costumeImageUrl, [costumeSearch, setCostumeSearch], [currentPage, setCurrentPage], customerContainerRef, [customerSearch, setCustomerSearch], [depositAmount, setDepositAmount] (+34 more)
+Cohesion: 0.06
+Nodes (32): additionalURLs, addRoute(), cacheMatchIgnoreParams(), _cacheNameDetails, cacheNames, cacheWillUpdate(), canConstructResponseFromBodyStream(), cleanURL (+24 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.09
-Nodes (36): baseClient, headers, response, url, headers, response, availableSortOrders, customerId (+28 more)
+Cohesion: 0.06
+Nodes (41): createSignedUrl, createSignedUrlByBucket, deletedIds, deleteFilterQuery, deleteFilters, deleteQuery, eq, file (+33 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.08
-Nodes (34): buildReportValues(), calculateNetRevenue(), countBy(), createSpreadsheet(), CustomerRow, getOrCreateReportSpreadsheet(), getSpreadsheet(), IntegrationRow (+26 more)
+Cohesion: 0.07
+Nodes (35): buildReportValues(), calculateNetRevenue(), countBy(), createSpreadsheet(), CustomerRow, ensureReportSheets(), getOrCreateReportSpreadsheet(), getSpreadsheet() (+27 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.08
-Nodes (31): createRemoteRental(), createRemoteRentals(), deleteRemoteRental(), loadRentals(), mapRentalRow(), RentalDepositResolutionUpdate, RentalFineUpdate, RentalRow (+23 more)
-
-### Community 15 - "Community 15"
 Cohesion: 0.06
 Nodes (29): [activeStatusDropdownId, setActiveStatusDropdownId], baseSku, count, current, [currentPage, setCurrentPage], currentProducts, dropdownRef, fileInputRef (+21 more)
 
-### Community 16 - "Community 16"
+### Community 15 - "Community 15"
 Cohesion: 0.14
 Nodes (28): [actionFilter, setActionFilter], actionTranslations, allKeys, AuditLogPageProps, [currentPage, setCurrentPage], fieldTranslations, filteredLogs, formatDateTime() (+20 more)
 
+### Community 16 - "Community 16"
+Cohesion: 0.07
+Nodes (30): loadAccessibleShops(), loadCustomerSummaries(), body, calls, createObjectURL, customer, eq, fetchSpy (+22 more)
+
 ### Community 17 - "Community 17"
-Cohesion: 0.16
-Nodes (33): updateShopSettings(), getErrorMessage(), updateRemoteRentalDepositResolution(), archiveSelectedCustomer(), cloneRentalPriceTiers(), ensureCustomerDocumentPreview(), ensureExistingDocumentPreview(), fileToDataUrl() (+25 more)
+Cohesion: 0.11
+Nodes (30): CategoryMultiSelectDropdown(), cleanupDeletedProductImagePaths(), cleanupDeletedProductImageRefs(), cleanupUploadedProductImagePaths(), countRemoteRentalsForStockItem(), createProductImageDisplayUrl(), createProductWithVariants(), createSignedStorageUrl() (+22 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.08
-Nodes (28): body, calls, createObjectURL, customer, eq, fetchSpy, file, filters (+20 more)
+Cohesion: 0.1
+Nodes (23): demoCustomers, [activeTab, setActiveTab], customerInsights, CustomersPageProps, DraftCustomerDocument, rentalGuard, StatusFilter, customer (+15 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.14
-Nodes (24): calculateReturnDate(), canDeleteRentalGroup(), findConflictingRentalForStockItemId(), findConflictingRentalForStockSku(), findOpenRentalConflict(), findOpenRentalConflictByStockItemIds(), findOpenRentalForStockSku(), fullRentalEditFields (+16 more)
+Cohesion: 0.11
+Nodes (27): headers, response, availableSortOrders, customerId, files, headers, response, rows (+19 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.12
-Nodes (20): TextField(), demoCustomers, [activeTab, setActiveTab], customerInsights, CustomersPageProps, DraftCustomerDocument, rentalGuard, StatusFilter (+12 more)
+Cohesion: 0.14
+Nodes (25): RentalTier, calculateReturnDate(), canDeleteRentalGroup(), findConflictingRentalForStockItemId(), findConflictingRentalForStockSku(), findOpenRentalConflict(), findOpenRentalConflictByStockItemIds(), findOpenRentalForStockSku() (+17 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.09
-Nodes (16): InventoryControllerPageProps, InventoryPageProps, addStockToVariant(), countRemoteRentalsForStockItem(), updateRemoteProductPublicVisibility(), updateRemoteStockItemPublicVisibility(), updateRemoteStockItemStatus(), emptyProductDraft (+8 more)
+Cohesion: 0.18
+Nodes (29): updateShopSettings(), getErrorMessage(), addDocuments(), archiveSelectedCustomer(), cloneRentalPriceTiers(), ensureCustomerDocumentPreview(), ensureExistingDocumentPreview(), fileToDataUrl() (+21 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.13
-Nodes (25): CategoryMultiSelectDropdown(), cleanupDeletedProductImagePaths(), cleanupDeletedProductImageRefs(), cleanupUploadedProductImagePaths(), countRemoteRentalsForProduct(), createProductImageDisplayUrl(), createProductWithVariants(), DEFAULT_SHOP_RENTAL_PRICES (+17 more)
-
-### Community 23 - "Community 23"
-Cohesion: 0.14
-Nodes (23): getShopPermissions(), normalizeShopRole(), ShopPermissions, ShopRole, permissions, cleanupUploadedCustomerDocumentPaths(), createFunctionError(), createGoogleDrivePreviewUrl() (+15 more)
-
-### Community 24 - "Community 24"
 Cohesion: 0.08
 Nodes (20): allStockIds, bookedSkus, bookedStockIds, catalogKey, corsHeaders, isRented, PRODUCT_IMAGE_BUCKETS, ProductRow (+12 more)
 
+### Community 23 - "Community 23"
+Cohesion: 0.09
+Nodes (15): InventoryControllerPageProps, InventoryPageProps, addStockToVariant(), countRemoteRentalsForProduct(), updateRemoteStockItemPublicVisibility(), updateRemoteStockItemStatus(), emptyProductDraft, emptyStockDraft (+7 more)
+
+### Community 24 - "Community 24"
+Cohesion: 0.16
+Nodes (21): getShopPermissions(), normalizeShopRole(), ShopPermissions, ShopRole, permissions, cleanupUploadedCustomerDocumentPaths(), createFunctionError(), createGoogleDrivePreviewUrl() (+13 more)
+
 ### Community 25 - "Community 25"
-Cohesion: 0.19
-Nodes (5): getFriendlyURL(), PrecacheStrategy, Strategy, StrategyHandler, toRequest()
+Cohesion: 0.11
+Nodes (20): [completedCrop, setCompletedCrop], [crop, setCrop], [croppedAreaPixels, setCroppedAreaPixels], getCroppedImage(), handleSave(), ImageCropperModalProps, imgRef, [imgSrc, setImgSrc] (+12 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.11
-Nodes (19): customer, rental, stockItem, FlatStockItem, Product, ProductDraft, ProductWithStockSummary, RentalTier (+11 more)
-
-### Community 27 - "Community 27"
-Cohesion: 0.13
-Nodes (21): alertSpy, availableCostume, CreateRentalsHandler, customer, existingRental, heading, image, makeRental() (+13 more)
-
-### Community 28 - "Community 28"
 Cohesion: 0.09
 Nodes (22): Cloudflare Pages, code:bash (npm install), code:bash (VITE_SUPABASE_URL=https://your-project.supabase.co), code:bash (npm run test), Development, Features, Precious Shop, Supabase (+14 more)
 
+### Community 27 - "Community 27"
+Cohesion: 0.17
+Nodes (21): [activeContactUser, setActiveContactUser], [activeSlipToReview, setActiveSlipToReview], BankSlip, dynamicRevenue, [extraRevenue, setExtraRevenue], handleApproveSlip(), handleMarkPickedUp(), handleMarkReturned() (+13 more)
+
+### Community 28 - "Community 28"
+Cohesion: 0.13
+Nodes (21): alertSpy, availableCostume, CreateRentalsHandler, customer, existingRental, heading, image, makeRental() (+13 more)
+
 ### Community 29 - "Community 29"
-Cohesion: 0.19
-Nodes (13): buildCatalogSizeSummary(), CatalogSizeSummary, customer, stockItems, summary, getInventoryDisplayStatus(), StockItem, demoFlatStockItemsForRentals (+5 more)
+Cohesion: 0.12
+Nodes (21): ShopSummary, buildDashboardMetrics(), getDaysOverdue(), getLocalDateString(), OverdueRental, RentalSchedule, toUtcDay(), aggregatedMetrics (+13 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.19
-Nodes (19): authUrl, corsHeaders, url, base64UrlDecode(), base64UrlEncode(), buildGoogleConsentUrl(), buildState(), createRedirectResponse() (+11 more)
+Cohesion: 0.15
+Nodes (20): addMonths(), buildDateRangeFromDates(), buildGeneralStoreMetrics(), buildMonthlyDepositSummary(), buildMonthlyRevenueTrends(), buildMonthRange(), buildReportsDateRange(), buildRevenueByCategory() (+12 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.16
-Nodes (19): addMonths(), buildDateRangeFromDates(), buildGeneralStoreMetrics(), buildMonthlyDepositSummary(), buildMonthlyRevenueTrends(), buildMonthRange(), buildReportsDateRange(), buildRevenueByCategory() (+11 more)
+Cohesion: 0.12
+Nodes (16): DressReportItem, customer, exportDressReportsToCSVMock, rentals, stockItem, stockItems, supabase, downloadCsv() (+8 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.13
-Nodes (16): [completedCrop, setCompletedCrop], [crop, setCrop], handleSave(), ImageCropperModalProps, imgRef, [imgSrc, setImgSrc], [isSaving, setIsSaving], onImageLoad() (+8 more)
+Cohesion: 0.1
+Nodes (21): 1. Database & Migrations, 1. Interactive KPI Dashboard (ส่วนบน), 2. Hybrid Table / Mini-Card List (แผงด้านซ้าย), 2. TypeScript Types & Core APIs, 2. TypeScript Types & Core Rules, 3. API & Controller, 3. Smart Search (รองรับ Barcode), 3. User Interface (UI Redesign) (+13 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.13
-Nodes (15): disconnectedStatus(), GoogleIntegrationRow, GoogleSheetsReportStatus, loadGoogleSheetsReportStatus(), syncGoogleSheetsReport(), SyncResponse, invoke, query (+7 more)
+Cohesion: 0.25
+Nodes (20): code:bash (supabase migration up), Current Status, Current Worktree Signals, Dirty Worktree Notes, Handoff: เพิ่มจุดเปลี่ยนรหัสผ่านในหน้าโปรไฟล์พนักงาน, Handoff: ปรับปรุงหน้าตาแผงควบคุมข้อมูลลูกค้า (Customer Details Side Panel), Handoff: ปรับปรุงหน้ารายชื่อลูกค้า (Customer Profile & KYC Enhancements), Handoff: ถอดระบบซิงก์ Google Sheets และเพิ่มระบบ Export CSV สำหรับรายงาน (+12 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.2
-Nodes (5): executeQuotaErrorCallbacks(), Strategy, StrategyHandler, timeout(), toRequest()
+Nodes (18): authUrl, corsHeaders, url, base64UrlDecode(), base64UrlEncode(), buildGoogleConsentUrl(), buildState(), createRedirectResponse() (+10 more)
 
 ### Community 35 - "Community 35"
-Cohesion: 0.22
-Nodes (17): archiveRemoteCustomer(), createRemoteCustomer(), CustomerDocumentRow, CustomerRow, deleteRemoteCustomerDocuments(), loadCustomers(), loadOwnerShopId(), mapCustomerRow() (+9 more)
+Cohesion: 0.27
+Nodes (15): canAddMoreDocuments(), canCreateRentalForCustomer(), findPhoneDuplicate(), formatMeasurements(), normalizeThaiPhone(), profileStatusLabel, profileStatusTone, resolveInitialProfileStatus() (+7 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.26
-Nodes (17): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), createRemoteStockItems(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadStockItems() (+9 more)
+Cohesion: 0.28
+Nodes (17): cleanupUnusedImages(), countRemoteRentalsForStockSku(), createRemoteStockItem(), createRemoteStockItems(), dataURLtoFile(), deleteRemoteStockItem(), getPathFromUrl(), loadShopSettings() (+9 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.24
-Nodes (19): code:bash (supabase migration up), Current Status, Current Worktree Signals, Dirty Worktree Notes, Handoff: เพิ่มจุดเปลี่ยนรหัสผ่านในหน้าโปรไฟล์พนักงาน, Handoff: ปรับปรุงหน้ารายชื่อลูกค้า (Customer Profile & KYC Enhancements), Handoff: ถอดระบบซิงก์ Google Sheets และเพิ่มระบบ Export CSV สำหรับรายงาน, Handoff: สร้างระบบ Image Cropper Modal สำหรับอัปโหลดรูปแบนเนอร์ร้าน (+11 more)
+Cohesion: 0.26
+Nodes (5): executeQuotaErrorCallbacks(), PrecacheStrategy, StrategyHandler, timeout(), toRequest()
 
 ### Community 38 - "Community 38"
-Cohesion: 0.12
-Nodes (18): 🎨 1. ฟีเจอร์ใหม่: Accordion Submenu ใน Sidebar, 🌟 1. ฟีเจอร์ใหม่: ตั้งค่าระบบราคาและค่าปรับเริ่มต้นส่วนกลาง (Global Rental Defaults), 🎨 1. ฟีเจอร์ใหม่: Settings Page Redesign (Vertical Tabs Architecture), 💰 2. ระบบ Auto-Pass สรุปเคสไร้มัดจำ และ Extra Fine Workflow, 🌟 2. สิ่งที่หน้า Settings นี้ยังเชื่อมกับของเดิมในระบบ, Application State & Business Logic, Application State & Data Access, Data Access Layer (Remote) (+10 more)
+Cohesion: 0.13
+Nodes (15): InventoryPageContainer(), [currentStockItems, setCurrentStockItems], [isSaving, setIsSaving], stockItems, user, InventoryControllerOptions, [currentStockItems, setCurrentStockItems], [isSaving, setIsSaving] (+7 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.18
-Nodes (15): allocateFineAmount(), allocateForfeitedDeposit(), DepositAllocation, DepositAllocationInput, DepositResolutionDraft, FineAllocation, FineAllocationInput, fromCents() (+7 more)
+Cohesion: 0.28
+Nodes (4): executeQuotaErrorCallbacks(), PrecacheStrategy, StrategyHandler, toRequest()
 
 ### Community 40 - "Community 40"
-Cohesion: 0.14
-Nodes (14): InventoryPageContainer(), [currentStockItems, setCurrentStockItems], [isSaving, setIsSaving], stockItems, user, InventoryControllerOptions, [currentStockItems, setCurrentStockItems], [isSaving, setIsSaving] (+6 more)
-
-### Community 41 - "Community 41"
 Cohesion: 0.16
 Nodes (7): getOrCreateDefaultRouter(), hasMethod(), isOneOf(), isType(), normalizeHandler(), Route, Router
 
-### Community 42 - "Community 42"
+### Community 41 - "Community 41"
 Cohesion: 0.12
 Nodes (17): 1. ระบบ Backend และความปลอดภัย (Edge Function & Migrations), 1. ระบบ Export Data และรองรับภาษาไทย (`src/utils/exportUtils.ts`), 1. ระบบ Tabs ประวัติการเช่าและสถิติ (Customer Insights), 2. Application Logic Layer, 2. โซนตรวจเอกสารยืนยันตัวตน (KYC/Document Verification), 2. ปรับปรุงหน้า UI รายงาน (`src/features/reports/ReportsPage.tsx`), 3. อัปเดตหน้าโปรไฟล์และ OAuth (`src/features/profile/ProfilePage.tsx`, `supabase/functions/google-oauth-start/index.ts`), 3. ปุ่มทางลัดเปิดบิลเช่าด่วน (Quick Rental Creation) (+9 more)
 
-### Community 43 - "Community 43"
+### Community 42 - "Community 42"
 Cohesion: 0.16
 Nodes (7): getOrCreateDefaultRouter(), hasMethod(), isOneOf(), isType(), normalizeHandler(), Route, Router
 
-### Community 44 - "Community 44"
+### Community 43 - "Community 43"
 Cohesion: 0.18
 Nodes (12): ErrorLike, getErrorMessage(), isDuplicateUserError(), toNonEmptyString(), adminClient, authHeader, corsHeaders, CreateShopMemberRequest (+4 more)
 
+### Community 44 - "Community 44"
+Cohesion: 0.25
+Nodes (14): archiveRemoteCustomer(), createRemoteCustomer(), CustomerDocumentRow, CustomerRow, loadCustomers(), loadOwnerShopId(), mapCustomerRow(), mapCustomerSummaryRow() (+6 more)
+
 ### Community 45 - "Community 45"
-Cohesion: 0.35
-Nodes (12): canAddMoreDocuments(), canCreateRentalForCustomer(), findPhoneDuplicate(), formatMeasurements(), normalizeThaiPhone(), profileStatusLabel, profileStatusTone, resolveInitialProfileStatus() (+4 more)
+Cohesion: 0.18
+Nodes (11): calculateCustomerInsights(), calculateCustomerStarRating(), clamp(), CustomerInsights, formatStarRating(), roundToHalf(), customer, insights (+3 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.18
-Nodes (11): calculateCustomerInsights(), calculateCustomerStarRating(), clamp(), CustomerInsights, formatStarRating(), roundToHalf(), customer, insights (+3 more)
+Nodes (14): allocateForfeitedDeposit(), DepositAllocation, DepositAllocationInput, DepositResolutionDraft, FineAllocation, FineAllocationInput, fromCents(), normalizeCurrencyAmount() (+6 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.18
@@ -335,10 +337,14 @@ Cohesion: 0.16
 Nodes (3): createCacheKey(), PrecacheController, waitUntil()
 
 ### Community 50 - "Community 50"
+Cohesion: 0.12
+Nodes (16): 📂 1. Database & Schema, 🌟 1. ฟีเจอร์ใหม่: ตั้งค่าระบบราคาและค่าปรับเริ่มต้นส่วนกลาง (Global Rental Defaults), 💰 2. ระบบ Auto-Pass สรุปเคสไร้มัดจำ และ Extra Fine Workflow, 📡 2. Data Access Layer (Remote), 🖥️ 3. Application State & Business Logic, 🎨 4. User Interface (UI / UX), Application State & Business Logic, Application State & Data Access (+8 more)
+
+### Community 51 - "Community 51"
 Cohesion: 0.16
 Nodes (3): createCacheKey(), PrecacheController, waitUntil()
 
-### Community 51 - "Community 51"
+### Community 52 - "Community 52"
 Cohesion: 0.13
 Nodes (12): alertSpy, {
   loadAccessibleShops,
@@ -420,29 +426,17 @@ Nodes (12): alertSpy, {
   supabase,
 } (+4 more)
 
-### Community 52 - "Community 52"
-Cohesion: 0.18
-Nodes (11): calculateNetRentalRevenue(), DressReportItem, downloadCsv(), exportDressReportsToCSV(), exportRentalsToCSV(), clickSpy, { clickSpy, getExportedBlob }, customer (+3 more)
-
 ### Community 53 - "Community 53"
-Cohesion: 0.13
-Nodes (15): 1. Database & Migrations, 1. Interactive KPI Dashboard (ส่วนบน), 2. Hybrid Table / Mini-Card List (แผงด้านซ้าย), 2. TypeScript Types & Core APIs, 2. TypeScript Types & Core Rules, 3. API & Controller, 3. Smart Search (รองรับ Barcode), 3. User Interface (UI Redesign) (+7 more)
-
-### Community 54 - "Community 54"
 Cohesion: 0.15
 Nodes (12): depositsCard, draft, field, item, onTogglePublicVisibility, pricedCard, product, productNameInput (+4 more)
 
+### Community 54 - "Community 54"
+Cohesion: 0.23
+Nodes (9): disconnectedStatus(), GoogleIntegrationRow, GoogleSheetsReportStatus, loadGoogleSheetsReportStatus(), syncGoogleSheetsReport(), SyncResponse, invoke, query (+1 more)
+
 ### Community 55 - "Community 55"
-Cohesion: 0.29
-Nodes (11): item, itemRepair, itemWash, makeRental(), makeStockItem(), rentals, rentalsActive, rentalsOverdue (+3 more)
-
-### Community 56 - "Community 56"
-Cohesion: 0.18
-Nodes (6): getFriendlyURL(), isArray(), isArrayOfClass(), isInstance(), NavigationRoute, RegExpRoute
-
-### Community 57 - "Community 57"
-Cohesion: 0.18
-Nodes (5): isArray(), isArrayOfClass(), isInstance(), NavigationRoute, RegExpRoute
+Cohesion: 0.22
+Nodes (8): canReuseExistingToken, error, refreshToken, supabase, url, appendResult(), fetchGoogleUserInfo(), resolveGoogleRefreshToken()
 
 ### Community 58 - "Community 58"
 Cohesion: 0.24
@@ -453,42 +447,46 @@ Cohesion: 0.2
 Nodes (9): หมายเหตุ, 1. สร้าง Google Cloud Project, 2. ตั้งค่า OAuth consent screen, 3. สร้าง OAuth client, 4. ใส่ค่าในแอป, 5. ค่า secret สำหรับ Edge Functions, code:bash (VITE_SUPABASE_URL=https://your-project-ref.supabase.co), code:bash (GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.goog) (+1 more)
 
 ### Community 61 - "Community 61"
-Cohesion: 0.24
-Nodes (7): canReuseExistingToken, error, refreshToken, supabase, url, appendResult(), resolveGoogleRefreshToken()
+Cohesion: 0.25
+Nodes (8): baseClient, headers, response, url, downloadDriveFile(), getBearerToken(), requireShopAccess(), createServiceClient()
 
 ### Community 62 - "Community 62"
 Cohesion: 0.42
 Nodes (7): customer, getTodayString(), makeRental(), makeStockItem(), onUpdateRentalStatus, stockItem, user
 
 ### Community 63 - "Community 63"
+Cohesion: 0.25
+Nodes (7): OverviewShopData, costume, makeCustomer(), makeRental(), onEnterShop, onLogout, shopsData
+
+### Community 64 - "Community 64"
+Cohesion: 0.39
+Nodes (6): customer, makeRental(), metrics, stockItem, RentalOrder, RentalStatus
+
+### Community 65 - "Community 65"
 Cohesion: 0.57
 Nodes (5): exports, registry, require(), singleRequire(), specialDeps
 
-### Community 64 - "Community 64"
+### Community 66 - "Community 66"
 Cohesion: 0.25
 Nodes (6): loadPublicCatalog(), [error, setError], [items, setItems], PublicCatalogRouteProps, [shopName, setShopName], [status, setStatus]
 
-### Community 65 - "Community 65"
-Cohesion: 0.29
-Nodes (6): CatalogDisplayItem, handleSaveCroppedImage(), catalogItems, items, onUploadHeroBackground, user
-
-### Community 66 - "Community 66"
+### Community 67 - "Community 67"
 Cohesion: 0.48
 Nodes (4): PublicCatalogResponse, hasSupabaseConfig, supabaseAnonKey, supabaseUrl
 
-### Community 67 - "Community 67"
-Cohesion: 0.38
-Nodes (6): Handoff Report: Order Tracking & Explicit Shipping Actions, Handoff Report: Rental Tier Pricing Redesign, Handoff Report: Rentals Page Hybrid Table & UI Redesign, สิ่งที่สามารถทำต่อได้ในอนาคต (Next Steps), สิ่งที่ต้องทำต่อไป (Next Steps / TODOs), สรุปภาพรวม (Overview)
-
 ### Community 68 - "Community 68"
+Cohesion: 0.29
+Nodes (6): CatalogDisplayItem, handleSaveCroppedImage(), catalogItems, items, onUploadHeroBackground, user
+
+### Community 69 - "Community 69"
+Cohesion: 0.29
+Nodes (7): 🎨 1. ฟีเจอร์ใหม่: Accordion Submenu ใน Sidebar, 🎨 1. ฟีเจอร์ใหม่: Settings Page Redesign (Vertical Tabs Architecture), 🌟 2. สิ่งที่หน้า Settings นี้ยังเชื่อมกับของเดิมในระบบ, Handoff: Settings Navigation Refactor (Accordion Submenu), Handoff: Settings Page Redesign, การปรับปรุง UI/UX ที่สำคัญ, โครงสร้าง UI/UX และ Accessibility
+
+### Community 70 - "Community 70"
 Cohesion: 0.47
 Nodes (6): closeDeliveryMethodModal(), getTransitionableRentalIds(), handleConfirmEmsDelivery(), handleConfirmMessengerDelivery(), handleConfirmStorefrontPickup(), updateRentalStatuses()
 
-### Community 69 - "Community 69"
-Cohesion: 0.33
-Nodes (6): createSignedStorageUrl(), deleteShopHeroImage(), loadShopSettings(), removeShopAssetPaths(), uploadShopHeroImage(), Boolean()
-
-### Community 70 - "Community 70"
+### Community 71 - "Community 71"
 Cohesion: 0.4
 Nodes (4): expectedToken, getRequiredEnv(), pingSupabaseDatabase(), responseHeaders
 
@@ -498,47 +496,39 @@ Nodes (5): buildCustomerDraftFromCustomer(), closeCustomerForm(), openEditCustom
 
 ### Community 73 - "Community 73"
 Cohesion: 0.4
-Nodes (5): canAccessTab(), handleEnterShop(), handleShopChange(), handleTabChange(), resetDocumentScroll()
+Nodes (5): getLastSelectedShopKey(), getLocalArray(), getLocalString(), getPreferredShopId(), safeLocalStorageGet()
 
 ### Community 74 - "Community 74"
 Cohesion: 0.4
-Nodes (5): getLastSelectedShopKey(), getLocalArray(), getLocalString(), getPreferredShopId(), safeLocalStorageGet()
+Nodes (5): canAccessTab(), handleEnterShop(), handleShopChange(), handleTabChange(), resetDocumentScroll()
 
 ### Community 75 - "Community 75"
 Cohesion: 0.4
-Nodes (5): getStatusBadge(), getTodayString(), handleSubmit(), setIsFormOpen(), splitAmountByWeights()
-
-### Community 76 - "Community 76"
-Cohesion: 0.4
-Nodes (5): 📂 1. Database & Schema, 📡 2. Data Access Layer (Remote), 🖥️ 3. Application State & Business Logic, 🎨 4. User Interface (UI / UX), Handoff: ระบบ Auto-Pass สรุปเคสไร้มัดจำ และ Extra Fine Workflow
-
-### Community 79 - "Community 79"
-Cohesion: 0.67
-Nodes (3): closeStockForm(), closeStockPreview(), handleDeleteStockItem()
+Nodes (3): isArray(), isArrayOfClass(), NavigationRoute
 
 ### Community 80 - "Community 80"
 Cohesion: 0.67
-Nodes (3): updateRemoteRentalFields(), getAllowedRentalEditFields(), handleEditRentalFields()
+Nodes (3): parseMoneyInput(), syncCollectedAmount(), syncDiscountAmount()
 
 ## Knowledge Gaps
-- **742 isolated node(s):** `url`, `baseClient`, `response`, `headers`, `response` (+737 more)
+- **746 isolated node(s):** `url`, `baseClient`, `response`, `headers`, `response` (+741 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `startGoogleOAuth()` connect `Community 8` to `Community 0`, `Community 12`?**
-  _High betweenness centrality (0.169) - this node is a cross-community bridge._
-- **Why does `RentalOrder` connect `Community 29` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 7`, `Community 11`, `Community 14`, `Community 15`, `Community 19`, `Community 20`, `Community 21`, `Community 26`, `Community 27`, `Community 31`, `Community 33`, `Community 46`, `Community 48`, `Community 52`, `Community 55`, `Community 58`, `Community 62`?**
-  _High betweenness centrality (0.039) - this node is a cross-community bridge._
-- **Why does `StrategyHandler` connect `Community 34` to `Community 56`, `Community 10`, `Community 12`, `Community 50`?**
+- **Why does `startGoogleOAuth()` connect `Community 7` to `Community 0`, `Community 39`?**
+  _High betweenness centrality (0.166) - this node is a cross-community bridge._
+- **Why does `RentalOrder` connect `Community 64` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 8`, `Community 9`, `Community 10`, `Community 14`, `Community 18`, `Community 20`, `Community 23`, `Community 27`, `Community 28`, `Community 29`, `Community 30`, `Community 31`, `Community 45`, `Community 48`, `Community 58`, `Community 62`, `Community 63`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
+- **Why does `StrategyHandler` connect `Community 39` to `Community 57`, `Community 51`, `Community 77`, `Community 6`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **What connects `url`, `baseClient`, `response` to the rest of the system?**
-  _742 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _746 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.01 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03 - nodes in this community are weakly interconnected._

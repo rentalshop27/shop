@@ -22,6 +22,16 @@ const customer: Customer = {
   updatedAt: '2026-07-01T00:00:00.000Z',
 }
 
+const customerDocument: Customer['documents'][number] = {
+  id: 'document_1',
+  customerId: 'customer_1',
+  storagePath: 'customer-documents/customer_1/document.jpg',
+  storageProvider: 'supabase_storage',
+  previewUrl: 'https://example.com/document.jpg',
+  sortOrder: 1,
+  createdAt: '2026-07-01T00:00:00.000Z',
+}
+
 const draft: CustomerDraft = {
   fullName: '',
   phone: '',
@@ -93,7 +103,12 @@ describe('CustomersPage', () => {
     const onApproveCustomerDocuments = vi.fn()
     const onStatusChange = vi.fn()
     const onRiskChange = vi.fn()
-    const selectedCustomer = { ...customer, profileStatus: 'pending_review' as const, riskFlag: 'has_risk' as const }
+    const selectedCustomer = {
+      ...customer,
+      profileStatus: 'pending_review' as const,
+      riskFlag: 'has_risk' as const,
+      documents: [customerDocument],
+    }
 
     render(
       <CustomersPage
@@ -142,7 +157,7 @@ describe('CustomersPage', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: '🟢 อนุมัติเอกสารผ่าน' }))
+    fireEvent.click(screen.getByRole('button', { name: 'อนุมัติ' }))
 
     expect(onApproveCustomerDocuments).toHaveBeenCalledTimes(1)
     expect(onStatusChange).not.toHaveBeenCalled()

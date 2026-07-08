@@ -656,16 +656,18 @@ function CustomerDetail({
             {initials}
           </div>
           <div className="profile-meta">
-            <h2>{customer.fullName}</h2>
-            <p>รหัส: {customer.customerCode}</p>
-            <p>LINE: {customer.lineAccount || '-'}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '4px' }}>
+              <h2 style={{ margin: 0 }}>{customer.fullName}</h2>
+              {customer.riskFlag === 'has_risk' ? (
+                <span className="status-pill danger" style={{ margin: 0 }}>มีสัญญาณความเสี่ยง</span>
+              ) : (
+                <StatusPill status={customer.profileStatus} />
+              )}
+            </div>
+            <p style={{ margin: 0 }}>รหัส: {customer.customerCode}</p>
+            <p style={{ margin: 0 }}>LINE: {customer.lineAccount || '-'}</p>
           </div>
         </div>
-        {customer.riskFlag === 'has_risk' ? (
-          <span className="status-pill danger">มีสัญญาณความเสี่ยง</span>
-        ) : (
-          <StatusPill status={customer.profileStatus} />
-        )}
       </div>
 
       <div className={`rental-guard ${rentalGuard.allowed ? 'warn' : 'block'}`}>
@@ -718,16 +720,31 @@ function CustomerDetail({
             onChange={(event) => onDocumentUpload(event.target.files)}
           />
         </label>
-        {customer.profileStatus !== 'verified' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <button className="primary-button" type="button" onClick={onApproveCustomerDocuments} style={{ minHeight: '40px', fontSize: '14px', background: 'var(--success-color)' }}>
-              🟢 อนุมัติเอกสารผ่าน
-            </button>
-            <button className="danger-button" type="button" onClick={() => { onStatusChange('suspended'); }} style={{ minHeight: '40px', fontSize: '14px', background: 'var(--danger-color)' }}>
-              🔴 ปฏิเสธ / บล็อกลูกค้า
-            </button>
-          </div>
-        )}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={onApproveCustomerDocuments}
+            disabled={customer.documents.length === 0 || customer.profileStatus === 'verified'}
+            style={{
+              minHeight: '40px',
+              fontSize: '14px',
+              background: (customer.documents.length === 0 || customer.profileStatus === 'verified') ? 'var(--bg-card)' : 'var(--success-color)',
+              opacity: (customer.documents.length === 0 || customer.profileStatus === 'verified') ? 0.5 : 1,
+              cursor: (customer.documents.length === 0 || customer.profileStatus === 'verified') ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {customer.profileStatus === 'verified' ? 'อนุมัติแล้ว' : 'อนุมัติ'}
+          </button>
+          <button
+            className={customer.profileStatus === 'suspended' ? "secondary-button" : "danger-button"}
+            type="button"
+            onClick={() => { onStatusChange(customer.profileStatus === 'suspended' ? 'pending_review' : 'suspended'); }}
+            style={{ minHeight: '40px', fontSize: '14px', background: customer.profileStatus === 'suspended' ? 'var(--bg-card)' : 'var(--danger-color)' }}
+          >
+            {customer.profileStatus === 'suspended' ? 'ปลดบล็อกลูกค้า' : 'บล็อกลูกค้า'}
+          </button>
+        </div>
       </section>
 
       <div className="tabs" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginTop: '16px', paddingBottom: '8px', overflowX: 'auto' }}>
@@ -786,22 +803,18 @@ function CustomerDetail({
             </div>
           </section>
 
-          <section className="detail-section controls-section">
-            <label className="field">
-              <span>สถานะโปรไฟล์</span>
-              <select value={customer.profileStatus} onChange={(event) => onStatusChange(event.target.value as CustomerProfileStatus)}>
-                <option value="incomplete">ข้อมูลไม่ครบ</option>
-                <option value="pending_review">รอตรวจ</option>
-                <option value="verified">ตรวจแล้ว</option>
-                <option value="suspended">ระงับ</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>สัญญาณความเสี่ยง</span>
-              <select value={customer.riskFlag} onChange={(event) => onRiskChange(event.target.value as RiskFlag)}>
-                <option value="none">ไม่มี</option>
-                <option value="has_risk">มี</option>
-              </select>
+          <section className="detail-section controls-section" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '14px', margin: 0 }}>
+              <span style={{ fontSize: '16px' }}>🔒</span> ข้อมูลความปลอดภัยระบบ
+            </h3>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', marginTop: '12px', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <input
+                type="checkbox"
+                checked={customer.riskFlag === 'has_risk'}
+                onChange={(e) => onRiskChange(e.target.checked ? 'has_risk' : 'none')}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--danger-color)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '14px', userSelect: 'none' }}>ติดเครื่องหมายเฝ้าระวังภัย (Flag as Risky User)</span>
             </label>
           </section>
         </>
