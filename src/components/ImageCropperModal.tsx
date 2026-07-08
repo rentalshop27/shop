@@ -1,8 +1,6 @@
-import { useState, useRef, useEffect, type SyntheticEvent } from 'react'
-import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop'
-import 'react-image-crop/dist/ReactCrop.css'
-import { X, Check } from 'lucide-react'
-import { buildCenteredAspectCrop, createCroppedImageFile } from './imageCropperUtils'
+import { useState, useCallback } from 'react'
+import Cropper, { type Area } from 'react-easy-crop'
+import { X, Check, ZoomIn, ZoomOut } from 'lucide-react'
 
 type ImageCropperModalProps = {
   isOpen: boolean
@@ -13,6 +11,45 @@ type ImageCropperModalProps = {
   title?: string
 }
 
+async function getCroppedImage(
+  imageSrc: string,
+  pixelCrop: Area,
+  originalFile: File,
+): Promise<File> {
+  const image = await createImageBitmap(await fetch(imageSrc).then((r) => r.blob()))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = pixelCrop.width
+  canvas.height = pixelCrop.height
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('No 2d context')
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height,
+  )
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/webp', 0.9)
+  })
+
+  if (!blob) throw new Error('Canvas is empty')
+
+  return new File(
+    [blob],
+    `cropped_${originalFile.name.replace(/\.[^/.]+$/, '')}.webp`,
+    { type: 'image/webp' },
+  )
+}
+
 export function ImageCropperModal({
   isOpen,
   onClose,
@@ -21,122 +58,203 @@ export function ImageCropperModal({
   onSave,
   title = 'ครอบตัดรูปภาพ',
 }: ImageCropperModalProps) {
-  const [imgSrc, setImgSrc] = useState('')
-  const imgRef = useRef<HTMLImageElement>(null)
-  const [crop, setCrop] = useState<Crop>()
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (imageFile) {
-      setCrop(undefined)
-      setCompletedCrop(undefined)
-      setSaveError(null)
-      const reader = new FileReader()
-      reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''))
-      reader.readAsDataURL(imageFile)
-    } else {
-      setImgSrc('')
-      setCompletedCrop(undefined)
-      setSaveError(null)
-    }
-  }, [imageFile])
+  const imageSrc = imageFile ? URL.createObjectURL(imageFile) : ''
 
-  function onImageLoad(e: SyntheticEvent<HTMLImageElement>) {
-    const { width, height } = e.currentTarget
-    setCompletedCrop(undefined)
-    setCrop(buildCenteredAspectCrop(width, height, aspectRatio))
-  }
+  const onCropComplete = useCallback((_: Area, areaPixels: Area) => {
+    setCroppedAreaPixels(areaPixels)
+  }, [])
 
   async function handleSave() {
-    if (!completedCrop || completedCrop.width <= 0 || completedCrop.height <= 0 || !imgRef.current || !imageFile) {
-      return
-    }
+    if (!croppedAreaPixels || !imageFile || !imageSrc) return
     setIsSaving(true)
-    setSaveError(null)
-
     try {
-      const file = await createCroppedImageFile(imgRef.current, completedCrop, imageFile.name)
+      const file = await getCroppedImage(imageSrc, croppedAreaPixels, imageFile)
       await onSave(file)
       onClose()
     } catch (err) {
       console.error('Failed to crop image', err)
-      setSaveError('ไม่สามารถครอบตัดและบันทึกรูปภาพได้ กรุณาลองใหม่อีกครั้ง')
+      // Fallback: pass original file
+      await onSave(imageFile)
+      onClose()
     } finally {
       setIsSaving(false)
     }
   }
 
-  const isSaveDisabled = isSaving || !completedCrop || completedCrop.width <= 0 || completedCrop.height <= 0
-
   if (!isOpen || !imageFile) return null
 
   return (
-    <div className="prc-modal-overlay" role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 9999 }}>
-      <div className="prc-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
-        <div className="prc-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{title}</h2>
-          <button className="prc-modal-close" type="button" onClick={onClose} aria-label="ปิด" style={{ position: 'static' }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          borderRadius: '12px',
+          width: 'min(760px, 94vw)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 20px',
+            borderBottom: '1px solid #e5e7eb',
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 600, color: '#111827' }}>
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ปิด"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#6b7280',
+              display: 'flex',
+              padding: '4px',
+            }}
+          >
             <X size={20} />
           </button>
         </div>
-        
-        <div className="prc-modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', maxHeight: '70vh', overflowY: 'auto' }}>
-           {imgSrc && (
-             <ReactCrop
-               crop={crop}
-               onChange={(_, percentCrop) => {
-                 setCrop(percentCrop)
-                 setSaveError(null)
-               }}
-               onComplete={(c) => setCompletedCrop(c)}
-               aspect={aspectRatio}
-               style={{ maxHeight: '60vh' }}
-             >
-               <img
-                 ref={imgRef}
-                 alt="Crop me"
-                 src={imgSrc}
-                 onLoad={onImageLoad}
-                 style={{ maxHeight: '60vh', width: 'auto', maxWidth: '100%' }}
-               />
-             </ReactCrop>
-           )}
-           <p style={{ marginTop: '16px', fontSize: '14px', color: '#6b7280', textAlign: 'center' }}>
-             ใช้เมาส์ลากหรือขยับกรอบเพื่อเลือกส่วนของรูปภาพที่ต้องการ
-           </p>
-           {saveError && (
-             <p role="alert" style={{ marginTop: '12px', fontSize: '14px', color: '#dc2626', textAlign: 'center' }}>
-               {saveError}
-             </p>
-           )}
+
+        {/* Crop area — fixed container, image pans inside */}
+        <div style={{ position: 'relative', height: '360px', background: '#111' }}>
+          <Cropper
+            image={imageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={aspectRatio}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            showGrid={true}
+            style={{
+              containerStyle: { borderRadius: 0 },
+              cropAreaStyle: {
+                border: '2px solid rgba(255,255,255,0.9)',
+                boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
+              },
+            }}
+          />
         </div>
 
-        <div className="prc-modal-footer" style={{ padding: '16px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-           <button type="button" className="prc-btn prc-btn-secondary" onClick={onClose} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #e5e7eb', background: 'white' }}>
-             ยกเลิก
-           </button>
-           <button 
-             type="button" 
-             onClick={handleSave} 
-             disabled={isSaveDisabled}
-             style={{ 
-               padding: '8px 16px', 
-               borderRadius: '6px', 
-               background: '#111827', 
-               color: 'white', 
-               border: 'none',
-               display: 'flex',
-               alignItems: 'center',
-               gap: '8px',
-               cursor: isSaveDisabled ? 'not-allowed' : 'pointer',
-               opacity: isSaveDisabled ? 0.7 : 1
-             }}
-           >
-             <Check size={16} />
-             {isSaving ? 'กำลังบันทึก...' : 'บันทึกรูปภาพ'}
-           </button>
+        {/* Zoom slider */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '16px 24px',
+            borderBottom: '1px solid #e5e7eb',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(1, z - 0.1))}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex' }}
+            aria-label="ซูมออก"
+          >
+            <ZoomOut size={18} />
+          </button>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.01}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            style={{ flex: 1, accentColor: '#111827' }}
+            aria-label="ซูม"
+          />
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(3, z + 0.1))}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex' }}
+            aria-label="ซูมเข้า"
+          >
+            <ZoomIn size={18} />
+          </button>
+        </div>
+
+        {/* Helper text + actions */}
+        <div
+          style={{
+            padding: '16px 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>
+            ลากรูปหรือเลื่อนสไลเดอร์เพื่อปรับตำแหน่ง — กรอบคงที่ตามสัดส่วนที่ล็อกไว้
+          </p>
+          <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '7px',
+                border: '1px solid #d1d5db',
+                background: 'white',
+                cursor: 'pointer',
+                fontSize: '14px',
+                color: '#374151',
+              }}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving || !croppedAreaPixels}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '7px',
+                background: isSaving || !croppedAreaPixels ? '#9ca3af' : '#111827',
+                color: 'white',
+                border: 'none',
+                cursor: isSaving || !croppedAreaPixels ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
+            >
+              <Check size={15} />
+              {isSaving ? 'กำลังบันทึก...' : 'บันทึกรูปภาพ'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
