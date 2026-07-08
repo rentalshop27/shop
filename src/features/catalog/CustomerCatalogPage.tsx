@@ -169,17 +169,7 @@ export function CustomerCatalogPage({
     return Array.from(sizeSet).sort((a, b) => a.localeCompare(b, 'th'))
   }, [customerReadyItems])
 
-  const availabilityCounts = useMemo(() => {
-    return customerReadyItems.reduce(
-      (counts, item) => {
-        const availability = getCatalogAvailability(item, rentals, today)
-        counts.all += 1
-        counts[availability] += 1
-        return counts
-      },
-      { all: 0, available: 0, unavailable: 0 },
-    )
-  }, [customerReadyItems, rentals, today])
+
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -468,14 +458,6 @@ export function CustomerCatalogPage({
                 {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </label>
-            <label className="prc-filter-field" htmlFor="filter-status">
-              <span>สถานะ</span>
-              <select id="filter-status" aria-label="สถานะ" value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value as CatalogAvailabilityFilter)}>
-                <option value="all">ทุกสถานะ ({availabilityCounts.all})</option>
-                <option value="available">พร้อมให้เช่า ({availabilityCounts.available})</option>
-                <option value="unavailable">ไม่ว่าง ({availabilityCounts.unavailable})</option>
-              </select>
-            </label>
           </div>
           {hasActiveFilter && (
             <button className="prc-clear-btn" type="button" onClick={clearFilters}>
@@ -688,12 +670,6 @@ export function CustomerCatalogPage({
                 <p className="prc-modal-brand">{selectedItem.brand?.toUpperCase() || 'PRECIOUS'}</p>
                 <h2 className="prc-modal-title">{selectedItem.productName}</h2>
 
-                <div className="prc-modal-status-row">
-                  <span className={`prc-badge prc-badge--${getCatalogAvailability(selectedItem, rentals, today)}`}>
-                    {getCatalogAvailability(selectedItem, rentals, today) === 'available' ? 'พร้อมให้เช่า' : 'ไม่ว่าง'}
-                  </span>
-                </div>
-
                 {hasValidPrice(selectedItem.rentalTiers) && (
                   <div className="prc-modal-price">
                     <span className="prc-modal-price-value">{formatTierRange(selectedItem.rentalTiers)}</span>
@@ -706,8 +682,8 @@ export function CustomerCatalogPage({
                       <span className="prc-modal-spec-label">ไซซ์ที่มีในคลัง</span>
                       <div className="prc-modal-size-badges">
                         {selectedItem.sizeSummary.map(s => (
-                          <span key={s.size} className={`prc-size-badge ${s.available > 0 ? 'available' : 'unavailable'}`}>
-                            {s.size} {s.available > 0 ? `(${s.available} ว่าง)` : '(ไม่ว่าง)'}
+                          <span key={s.size} className="prc-size-badge">
+                            {s.size}
                           </span>
                         ))}
                       </div>
@@ -778,25 +754,15 @@ export function CustomerCatalogPage({
           border-radius: 4px;
           font-size: 0.85rem;
           font-weight: 500;
-        }
-        .prc-size-badge.available {
-          background: rgba(74, 222, 128, 0.1);
-          color: #166534;
-          border: 1px solid rgba(74, 222, 128, 0.3);
-        }
-        .prc-size-badge.unavailable {
-          background: rgba(107, 114, 128, 0.1);
-          color: #4b5563;
-          border: 1px solid rgba(107, 114, 128, 0.2);
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #e5e7eb;
         }
         
-        [data-theme='dark'] .prc-size-badge.available {
-          background: rgba(74, 222, 128, 0.15);
-          color: #86efac;
-        }
-        [data-theme='dark'] .prc-size-badge.unavailable {
-          background: rgba(107, 114, 128, 0.15);
-          color: #9ca3af;
+        [data-theme='dark'] .prc-size-badge {
+          background: #374151;
+          color: #f3f4f6;
+          border: 1px solid #4b5563;
         }
       `}</style>
     </div>
