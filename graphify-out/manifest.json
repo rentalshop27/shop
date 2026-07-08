@@ -360,12 +360,12 @@
     "hash": "a8419a2259081f12187efeed7b26b643"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/CustomerCatalogPage.test.tsx": {
-    "mtime": 1783442864.891487,
-    "hash": "168cdc23f0bbf194b6ff31572a5db3e7"
+    "mtime": 1783498758.937389,
+    "hash": "016284be466153c6915be8f7121d0a89"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/CustomerCatalogPage.tsx": {
-    "mtime": 1783443307.2278435,
-    "hash": "9d31fce5ec72fbe5e0304cc0379db0b9"
+    "mtime": 1783498750.2987075,
+    "hash": "a10538aa3c492afa3e069307f9ddef22"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/catalog/publicCatalogRemote.ts": {
     "mtime": 1782836289.8265672,
@@ -479,6 +479,18 @@
     "mtime": 1783245721.5746338,
     "hash": "6424e456582169b37393660a2700927a"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/imageCropperUtils.ts": {
+    "mtime": 1783499038.471114,
+    "hash": "4b223067013c4b032ed0ed3efd4963ae"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/ImageCropperModal.tsx": {
+    "mtime": 1783499050.0238338,
+    "hash": "8fd477beb73d7c53d0f896ba2bf3c488"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/imageCropperUtils.test.ts": {
+    "mtime": 1783499106.2008686,
+    "hash": "792cf0227c6ab5bedc4366f9e93c687e"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/TextField.tsx": {
     "mtime": 1782292666.0313766,
     "hash": "bdeee20d03f34601edabbd20d8de1bcc"
@@ -516,8 +528,8 @@
     "hash": "8ee39dcfe68a23b3797b02648930d699"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/handoff.md": {
-    "mtime": 1783444598.9124756,
-    "hash": "ec30d024ce10f2a0bfbfc3b625ee2f4d"
+    "mtime": 1783498233.2755568,
+    "hash": "3e87b040e3f9510419d8c824ae61f8cc"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/docs/google-oauth-setup.md": {
     "mtime": 1783367536.2003806,

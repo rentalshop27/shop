@@ -3,7 +3,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   CustomerCatalogPage,
   reorderCatalogEditOrder,
@@ -132,6 +132,28 @@ describe('CustomerCatalogPage filters', () => {
     expect(screen.getByText('รูปมือถือแยก: 1080 x 720 px ใช้แสดงบนหน้าจอมือถือ')).toBeInTheDocument()
     expect(screen.getByText('อัปโหลดรูป Desktop BG')).toBeInTheDocument()
     expect(screen.getByText('อัปโหลดรูป Mobile BG')).toBeInTheDocument()
+  })
+
+  it('opens the crop modal before uploading a desktop hero background', async () => {
+    const user = userEvent.setup()
+    const onUploadHeroBackground = vi.fn()
+
+    render(
+      <CustomerCatalogPage
+        items={catalogItems}
+        rentals={[]}
+        onUploadHeroBackground={onUploadHeroBackground}
+      />,
+    )
+
+    const uploadInput = screen.getByLabelText('อัปโหลดรูป Desktop BG')
+    const file = new File(['hero'], 'hero-banner.png', { type: 'image/png' })
+
+    await user.upload(uploadInput, file)
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('ครอบตัดรูปภาพ Desktop BG')).toBeInTheDocument()
+    expect(onUploadHeroBackground).not.toHaveBeenCalled()
   })
 
   it('renders custom hero backgrounds through desktop and mobile CSS variables without an inline wash overlay', () => {

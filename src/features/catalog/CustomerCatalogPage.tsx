@@ -7,6 +7,7 @@ import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 import { parseProductCategories } from '../../lib/productCategories'
+import { ImageCropperModal } from '../../components/ImageCropperModal'
 
 export type CatalogDisplayItem = {
   id?: string
@@ -90,6 +91,11 @@ export function CustomerCatalogPage({
   const [orderedItemIds, setOrderedItemIds] = useState<string[]>([])
   const [hasOrderChanged, setHasOrderChanged] = useState(false)
   const [isSavingOrder, setIsSavingOrder] = useState(false)
+
+  // Cropper State
+  const [cropModalIsOpen, setCropModalIsOpen] = useState(false)
+  const [cropModalFile, setCropModalFile] = useState<File | null>(null)
+  const [cropModalType, setCropModalType] = useState<'desktop' | 'mobile'>('desktop')
 
   // Sync orderedItemIds when items change (e.g. initial load, after save)
   useEffect(() => {
@@ -301,14 +307,31 @@ export function CustomerCatalogPage({
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file || !onUploadHeroBackground) return
-    await onUploadHeroBackground(file)
+    setCropModalType('desktop')
+    setCropModalFile(file)
+    setCropModalIsOpen(true)
   }
 
   async function handleMobileHeroBackgroundChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file || !onUploadMobileHeroBackground) return
-    await onUploadMobileHeroBackground(file)
+    setCropModalType('mobile')
+    setCropModalFile(file)
+    setCropModalIsOpen(true)
+  }
+
+  function handleCloseCropModal() {
+    setCropModalIsOpen(false)
+    setCropModalFile(null)
+  }
+
+  async function handleSaveCroppedImage(croppedFile: File) {
+    if (cropModalType === 'desktop' && onUploadHeroBackground) {
+      await onUploadHeroBackground(croppedFile)
+    } else if (cropModalType === 'mobile' && onUploadMobileHeroBackground) {
+      await onUploadMobileHeroBackground(croppedFile)
+    }
   }
 
   return (
@@ -456,6 +479,19 @@ export function CustomerCatalogPage({
               <select id="filter-size" aria-label="ไซซ์" value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
                 <option value="all">ทุกไซซ์</option>
                 {sizes.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label className="prc-filter-field" htmlFor="filter-availability">
+              <span>สถานะ</span>
+              <select
+                id="filter-availability"
+                aria-label="สถานะ"
+                value={availabilityFilter}
+                onChange={(e) => setAvailabilityFilter(e.target.value as CatalogAvailabilityFilter)}
+              >
+                <option value="all">ทุกสถานะ</option>
+                <option value="available">พร้อมเช่า</option>
+                <option value="unavailable">ไม่พร้อมเช่า</option>
               </select>
             </label>
           </div>
@@ -736,6 +772,15 @@ export function CustomerCatalogPage({
         </div>
       )}
       
+      <ImageCropperModal
+        isOpen={cropModalIsOpen}
+        onClose={handleCloseCropModal}
+        imageFile={cropModalFile}
+        aspectRatio={cropModalType === 'desktop' ? 1600 / 600 : 1080 / 720}
+        onSave={handleSaveCroppedImage}
+        title={cropModalType === 'desktop' ? 'ครอบตัดรูปภาพ Desktop BG' : 'ครอบตัดรูปภาพ Mobile BG'}
+      />
+
       <style>{`
         .prc-modal-spec-full {
           width: 100%;
