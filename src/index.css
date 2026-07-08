@@ -7841,9 +7841,11 @@ select {
 }
 
 .prc-modal-price-label {
-  color: var(--prc-text);
-  font-size: 18px;
-  font-weight: 500;
+  color: var(--prc-text-light);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -7860,9 +7862,10 @@ select {
 }
 
 .prc-modal-price-tier {
-  background-color: #fff1f5;
+  background-color: var(--prc-cream-dark);
+  border: 1px solid var(--prc-border);
   border-radius: 6px;
-  padding: 8px 16px;
+  padding: 6px 12px;
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -7870,15 +7873,15 @@ select {
 }
 
 .prc-modal-price-amount {
-  color: #fb024b;
-  font-size: 22px;
+  color: var(--prc-gold-dark);
+  font-size: 18px;
   font-weight: 800;
 }
 
 .prc-modal-price-days {
-  color: #fb024b;
-  font-size: 16px;
-  font-weight: 400;
+  color: var(--prc-text-muted);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .prc-modal-specs {
