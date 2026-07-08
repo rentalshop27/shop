@@ -707,8 +707,18 @@ export function CustomerCatalogPage({
                 <h2 className="prc-modal-title">{selectedItem.productName}</h2>
 
                 {hasValidPrice(selectedItem.rentalTiers) && (
-                  <div className="prc-modal-price">
-                    <span className="prc-modal-price-value">{formatTierRange(selectedItem.rentalTiers)}</span>
+                  <div className="prc-modal-price-section">
+                    <span className="prc-modal-price-label">ราคาเช่า</span>
+                    <div className="prc-modal-price-tiers">
+                      {[...selectedItem.rentalTiers]
+                        .sort((a, b) => a.days - b.days)
+                        .map((tier) => (
+                          <div key={tier.days} className="prc-modal-price-tier">
+                            <span className="prc-modal-price-amount">฿{tier.price}</span>
+                            <span className="prc-modal-price-days"> / {tier.days} วัน</span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 )}
 

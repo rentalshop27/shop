@@ -7833,22 +7833,52 @@ select {
   position: static;
 }
 
-.prc-modal-price {
-  align-items: baseline;
+.prc-modal-price-section {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0 16px 0;
 }
 
-.prc-modal-price-value {
+.prc-modal-price-label {
   color: var(--prc-text);
-  font-size: 28px;
+  font-size: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.prc-modal-price-tiers {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.prc-modal-price-tiers::-webkit-scrollbar {
+  display: none;
+}
+
+.prc-modal-price-tier {
+  background-color: #fff1f5;
+  border-radius: 6px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.prc-modal-price-amount {
+  color: #fb024b;
+  font-size: 22px;
   font-weight: 800;
 }
 
-.prc-modal-price-unit {
-  color: var(--prc-text-muted);
-  font-size: 14px;
-  font-weight: 600;
+.prc-modal-price-days {
+  color: #fb024b;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .prc-modal-specs {
