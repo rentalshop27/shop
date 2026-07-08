@@ -427,10 +427,10 @@ export function CustomersPage({
                       style={{
                         position: 'relative',
                         margin: 0,
-                        cursor: !doc.previewUrl && doc.storageProvider === 'google_drive' ? 'pointer' : undefined,
+                        cursor: !doc.previewUrl ? 'pointer' : undefined,
                       }}
                       onClick={() => {
-                        if (!doc.previewUrl && doc.storageProvider === 'google_drive') {
+                        if (!doc.previewUrl) {
                           onPreviewExistingDocument(doc.id)
                         }
                       }}

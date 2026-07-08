@@ -366,27 +366,9 @@ function mapCustomerSummaryRow(row: CustomerRow, documents: CustomerDocument[] =
 }
 
 async function mapDocumentRow(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   row: CustomerDocumentRow,
 ): Promise<CustomerDocument> {
-  if (row.storage_provider === 'google_drive' && row.external_file_id) {
-    return {
-      id: row.id,
-      customerId: row.customer_id,
-      storagePath: row.storage_path,
-      storageProvider: row.storage_provider,
-      externalFileId: row.external_file_id,
-      mimeType: row.mime_type ?? undefined,
-      originalFileName: row.original_file_name ?? undefined,
-      sortOrder: row.sort_order,
-      createdAt: row.created_at,
-    }
-  }
-
-  const { data } = await supabase.storage
-    .from('customer-documents')
-    .createSignedUrl(row.storage_path, 60 * 5)
-
   return {
     id: row.id,
     customerId: row.customer_id,
@@ -395,7 +377,6 @@ async function mapDocumentRow(
     externalFileId: row.external_file_id ?? undefined,
     mimeType: row.mime_type ?? undefined,
     originalFileName: row.original_file_name ?? undefined,
-    previewUrl: data?.signedUrl,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
   }

@@ -162,7 +162,7 @@ describe('customer remote', () => {
     expect(supabase.storage.from).not.toHaveBeenCalled()
   })
 
-  it('does not download Google Drive documents while loading the customer list', async () => {
+  it('does not download document previews while loading the customer list', async () => {
     const row = {
       id: 'customer_1',
       shop_id: 'shop_1',
@@ -182,18 +182,32 @@ describe('customer remote', () => {
       archived_at: null,
       created_at: '2026-06-13T00:00:00.000Z',
       updated_at: '2026-06-13T00:00:00.000Z',
-      customer_documents: [{
-        id: 'document_1',
-        shop_id: 'shop_1',
-        customer_id: 'customer_1',
-        storage_path: 'Precious Rental/customer/document.png',
-        storage_provider: 'google_drive',
-        external_file_id: 'drive_file_1',
-        mime_type: 'image/png',
-        original_file_name: 'document.png',
-        sort_order: 1,
-        created_at: '2026-06-13T00:00:00.000Z',
-      }],
+      customer_documents: [
+        {
+          id: 'document_1',
+          shop_id: 'shop_1',
+          customer_id: 'customer_1',
+          storage_path: 'Precious Rental/customer/document.png',
+          storage_provider: 'google_drive',
+          external_file_id: 'drive_file_1',
+          mime_type: 'image/png',
+          original_file_name: 'document.png',
+          sort_order: 1,
+          created_at: '2026-06-13T00:00:00.000Z',
+        },
+        {
+          id: 'document_2',
+          shop_id: 'shop_1',
+          customer_id: 'customer_1',
+          storage_path: 'shop_1/customer_1/document-2.png',
+          storage_provider: 'supabase_storage',
+          external_file_id: null,
+          mime_type: 'image/png',
+          original_file_name: 'document-2.png',
+          sort_order: 2,
+          created_at: '2026-06-13T00:00:00.000Z',
+        },
+      ],
     }
     const order = vi.fn(() => ({ data: [row], error: null }))
     const is = vi.fn(() => ({ order }))
@@ -209,11 +223,17 @@ describe('customer remote', () => {
     const customers = await loadCustomers(supabase, 'shop_1')
 
     expect(fetchSpy).not.toHaveBeenCalled()
+    expect(supabase.storage.from).not.toHaveBeenCalled()
     expect(customers[0].documents[0]).toMatchObject({
       id: 'document_1',
       storageProvider: 'google_drive',
     })
     expect(customers[0].documents[0]).not.toHaveProperty('previewUrl')
+    expect(customers[0].documents[1]).toMatchObject({
+      id: 'document_2',
+      storageProvider: 'supabase_storage',
+    })
+    expect(customers[0].documents[1]).not.toHaveProperty('previewUrl')
   })
 
   it('downloads a Google Drive preview only when requested', async () => {
