@@ -31,7 +31,7 @@ describe('stockRemote', () => {
         product_name: 'Ruby Dress',
         brand: 'Precious',
         category: ['Evening'],
-        primary_color: 'Red',
+        primary_color: ['Red', 'Blue'],
         public_description: '',
         rental_tiers: [{days: 1, price: 2200}],
         late_fee_rule: '',
@@ -76,6 +76,7 @@ describe('stockRemote', () => {
       'https://cdn.example/shop_1/ruby-front.webp',
       'https://cdn.example/shop_1/ruby-back.webp',
     ])
+    expect(products[0].primaryColor).toBe('Red, Blue')
     expect(createSignedUrl).not.toHaveBeenCalled()
     expect(getPublicUrl).toHaveBeenNthCalledWith(1, 'shop_1/ruby-front.webp')
     expect(getPublicUrl).toHaveBeenNthCalledWith(2, 'shop_1/ruby-back.webp')
@@ -267,7 +268,7 @@ describe('stockRemote', () => {
       removedPaths.push({ bucket: 'costumes', paths })
       return { error: null }
     })
-    const updatePayloads: Array<{ image_urls: string[] }> = []
+    const updatePayloads: Array<{ image_urls: string[], primary_color: string[] }> = []
     const filters: Array<[string, string]> = []
     const updateQuery = {
       eq: vi.fn((column: string, value: string) => {
@@ -275,7 +276,7 @@ describe('stockRemote', () => {
         return updateQuery
       }),
     }
-    const update = vi.fn((payload: { image_urls: string[] }) => {
+    const update = vi.fn((payload: { image_urls: string[], primary_color: string[] }) => {
       updatePayloads.push(payload)
       return updateQuery
     })
@@ -294,7 +295,7 @@ describe('stockRemote', () => {
         productName: 'Ruby Dress',
         brand: 'Precious',
         category: 'Evening',
-        primaryColor: 'Red',
+        primaryColor: 'Red, Blue',
         publicDescription: '',
         rentalTiers: [{days: 1, price: 2200}],
         lateFeeRule: '',
@@ -315,6 +316,7 @@ describe('stockRemote', () => {
 
     expect(update).toHaveBeenCalledWith(expect.objectContaining({
       category: ['Evening'],
+      primary_color: ['Red', 'Blue'],
       image_urls: expect.arrayContaining(['shop_1/keep.webp']),
       public_visible: true,
     }))

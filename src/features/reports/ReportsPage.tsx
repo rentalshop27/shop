@@ -26,6 +26,7 @@ import {
 import type { DateRangeMode, DressReportItem } from './reportsMetrics'
 import { exportDressReportsToCSV, exportRentalsToCSV } from '../../utils/exportUtils'
 import { parseProductCategories } from '../../lib/productCategories'
+import { parseProductColors } from '../../lib/productColors'
 import './ReportsPage.css'
 
 // Helper to format currency
@@ -110,7 +111,9 @@ export function ReportsPage({
   }, [stockItems])
 
   const colorsList = useMemo(() => {
-    return Array.from(new Set(stockItems.map(item => item.primaryColor).filter(Boolean))).sort()
+    return Array.from(
+      new Set(stockItems.flatMap((item) => parseProductColors(item.primaryColor))),
+    ).sort()
   }, [stockItems])
 
   // Resolve active Date Range
@@ -158,7 +161,7 @@ export function ReportsPage({
       // Color match
       const matchColor =
         colorFilter === 'all' ||
-        item.stockItem.primaryColor === colorFilter
+        parseProductColors(item.stockItem.primaryColor).includes(colorFilter)
 
       return matchSearch && matchCategory && matchBrand && matchSize && matchColor
     })

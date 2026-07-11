@@ -7,6 +7,7 @@ import { getInventoryDisplayStatus } from '../inventory/inventoryStatus'
 import type { StockItem } from '../inventory/inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 import { parseProductCategories } from '../../lib/productCategories'
+import { parseProductColors } from '../../lib/productColors'
 import { ImageCropperModal } from '../../components/ImageCropperModal'
 
 export type CatalogDisplayItem = {
@@ -161,7 +162,7 @@ export function CustomerCatalogPage({
 
   const brands = useCatalogOptions(customerReadyItems, 'brand')
   const categories = useCatalogOptions(customerReadyItems, 'category', splitCatalogCategories)
-  const colors = useCatalogOptions(customerReadyItems, 'primaryColor')
+  const colors = useCatalogOptions(customerReadyItems, 'primaryColor', splitCatalogColors)
   
   // Custom hook for sizes since sizes can be in .size or .sizeSummary
   const sizes = useMemo(() => {
@@ -186,7 +187,8 @@ export function CustomerCatalogPage({
       const matchesBrand = brandFilter === 'all' || item.brand === brandFilter
       const itemCategories = splitCatalogCategories(item.category)
       const matchesCategory = categoryFilter === 'all' || itemCategories.includes(categoryFilter)
-      const matchesColor = colorFilter === 'all' || item.primaryColor === colorFilter
+      const itemColors = splitCatalogColors(item.primaryColor)
+      const matchesColor = colorFilter === 'all' || itemColors.includes(colorFilter)
       
       let itemSizes: string[] = []
       if (item.sizeSummary) itemSizes = item.sizeSummary.map(s => s.size)
@@ -200,7 +202,7 @@ export function CustomerCatalogPage({
         item.brand,
         item.category,
         ...itemSizes,
-        item.primaryColor,
+        ...itemColors,
         item.publicDescription,
       ]
         .join(' ')
@@ -856,6 +858,10 @@ export function reorderCatalogEditOrder(
 
 function splitCatalogCategories(value: string) {
   return parseProductCategories(value)
+}
+
+function splitCatalogColors(value: string) {
+  return parseProductColors(value)
 }
 
 function useCatalogOptions(

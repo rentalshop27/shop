@@ -1681,7 +1681,7 @@ export function RentalsPage({
                               {r.costume.productName}
                             </h4>
                             <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                              {r.costume.sku} | ไซส์: {r.costume.size} | สี: <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: r.costume.primaryColor }}></span>{r.costume.primaryColor}</span>
+                              {r.costume.sku} | ไซส์: {r.costume.size} | สี: {r.costume.primaryColor}
                             </p>
                           </div>
                           {onEditRentalFields && (r.status === 'booked' || r.status === 'overdue' || r.status === 'active') && (

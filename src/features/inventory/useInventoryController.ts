@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { InventoryControllerPageProps } from './InventoryPage'
 import { sanitizeNumericInput } from '../../lib/numericInput'
+import { formatProductColors } from '../../lib/productColors'
 import {
   countRemoteRentalsForProduct,
   countRemoteRentalsForStockItem,
@@ -178,7 +179,7 @@ export function useInventoryController({
       window.alert(`สามารถเพิ่มรูปชุดได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
     }
     const imageUrls = await Promise.all(
-      filesToUpload.map((file) => compressImageAsDataUrl(file, 'product'))
+      filesToUpload.map((file) => compressImageAsDataUrl(file, 'product')),
     )
     setDraft((current) => ({
       ...current,
@@ -489,7 +490,7 @@ function normalizeProductDraft(draft: ProductDraft): ProductDraft {
     productName: draft.productName.trim(),
     brand: draft.brand.trim(),
     category: draft.category.trim(),
-    primaryColor: draft.primaryColor.trim(),
+    primaryColor: formatProductColors(draft.primaryColor),
     publicDescription: draft.publicDescription.trim(),
     rentalTiers: draft.rentalTiers
       .map((tier) => ({

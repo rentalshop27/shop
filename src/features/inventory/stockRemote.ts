@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { FlatStockItem, ProductWithStockSummary, StockItemStatus, ProductDraft } from './inventoryTypes'
 import { formatProductCategories, parseProductCategories } from '../../lib/productCategories'
+import { formatProductColors, parseProductColors } from '../../lib/productColors'
 
 const COSTUMES_BUCKET = 'costumes'
 const LEGACY_STOCK_IMAGES_BUCKET = 'stock-images'
@@ -17,7 +18,7 @@ type ProductOverviewRow = {
   product_name: string
   brand: string | null
   category: unknown
-  primary_color: string | null
+  primary_color: string[] | string | null
   rental_tiers: unknown
   late_fee_rule: string | null
   deposit_amount: number | string | null
@@ -59,7 +60,7 @@ export async function loadProductsWithStock(supabase: SupabaseClient, shopId: st
     productName: row.product_name,
     brand: row.brand ?? '',
     category: formatProductCategories(row.category),
-    primaryColor: row.primary_color ?? '',
+    primaryColor: formatProductColors(row.primary_color),
     publicDescription: row.public_description ?? '',
     rentalTiers: Array.isArray(row.rental_tiers) ? row.rental_tiers : [],
     lateFeeRule: row.late_fee_rule ?? '',
@@ -129,7 +130,7 @@ export async function loadStockItemsForRentalMapping(
       productName: product.product_name,
       brand: product.brand ?? '',
       category: formatProductCategories(product.category),
-      primaryColor: product.primary_color ?? '',
+      primaryColor: formatProductColors(product.primary_color),
       rentalTiers: Array.isArray(product.rental_tiers) ? product.rental_tiers : [],
       lateFeeRule: product.late_fee_rule ?? '',
       depositAmount: Number(product.deposit_amount) || 0,
@@ -240,7 +241,7 @@ export async function createProductWithVariants(supabase: SupabaseClient, shopId
     product_name: draft.productName,
     brand: draft.brand,
     category: parseProductCategories(draft.category),
-    primary_color: draft.primaryColor,
+    primary_color: parseProductColors(draft.primaryColor),
     public_description: draft.publicDescription,
     rental_tiers: draft.rentalTiers,
     late_fee_rule: draft.lateFeeRule,
@@ -288,7 +289,7 @@ export async function updateRemoteProduct(
     product_name: draft.productName,
     brand: draft.brand,
     category: parseProductCategories(draft.category),
-    primary_color: draft.primaryColor,
+    primary_color: parseProductColors(draft.primaryColor),
     public_description: draft.publicDescription,
     rental_tiers: draft.rentalTiers,
     late_fee_rule: draft.lateFeeRule,

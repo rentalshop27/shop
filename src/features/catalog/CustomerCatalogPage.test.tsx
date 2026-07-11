@@ -104,6 +104,43 @@ describe('CustomerCatalogPage filters', () => {
     expect(screen.queryByText('Pearl Wedding Gown')).not.toBeInTheDocument()
   })
 
+  it('splits comma-separated colors into separate filter options and filters by each color', async () => {
+    const user = userEvent.setup()
+    render(
+      <CustomerCatalogPage
+        items={[
+          ...catalogItems,
+          {
+            productName: 'Aurora Party Dress',
+            brand: 'Precious',
+            category: 'ชุดราตรี',
+            size: 'M',
+            primaryColor: 'ฟ้า, เงิน',
+            publicDescription: 'Two colors in one field',
+            rentalTiers: [{ days: 1, price: 2800 }],
+            imageUrls: ['https://example.com/img4.jpg'],
+            publicVisible: true,
+            availabilityStatus: 'available',
+            createdAt: '2026-07-01T00:00:00.000Z',
+          },
+        ]}
+        rentals={[]}
+      />,
+    )
+
+    const colorFilter = screen.getByLabelText('สี')
+    const colorOptions = within(colorFilter).getAllByRole('option').map((option) => option.textContent)
+
+    expect(colorOptions).toContain('ฟ้า')
+    expect(colorOptions).toContain('เงิน')
+    expect(colorOptions).not.toContain('ฟ้า, เงิน')
+
+    await user.selectOptions(colorFilter, 'เงิน')
+    expect(screen.getByText('Aurora Party Dress')).toBeInTheDocument()
+    expect(screen.queryByText('Ruby Evening Dress')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pearl Wedding Gown')).not.toBeInTheDocument()
+  })
+
   it('keeps unavailable items visible when customers choose every status', async () => {
     const user = userEvent.setup()
     render(<CustomerCatalogPage items={catalogItems} rentals={[]} />)

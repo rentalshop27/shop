@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { sanitizeNumericInput } from '../../lib/numericInput'
 import { parseProductCategories } from '../../lib/productCategories'
+import { parseProductColors } from '../../lib/productColors'
 import { getInventoryDisplayStatus } from './inventoryStatus'
 import { StockManagementDrawer } from './StockManagementDrawer'
 import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
@@ -85,19 +86,19 @@ function formatDefaultLateFeeRule(finePerDay: number) {
   return finePerDay > 0 ? String(finePerDay) : ''
 }
 
-function CategoryMultiSelectDropdown({ 
-  categories, 
-  draftCategory, 
-  onChange 
-}: { 
-  categories: string[], 
-  draftCategory: string, 
-  onChange: (val: string) => void 
+function InventoryMultiSelectDropdown({
+  options,
+  selectedValues,
+  placeholder,
+  onChange,
+}: {
+  options: string[]
+  selectedValues: string[]
+  placeholder: string
+  onChange: (values: string[]) => void
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  const selectedCategories = parseProductCategories(draftCategory);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -121,30 +122,30 @@ function CategoryMultiSelectDropdown({
         aria-expanded={isOpen}
       >
         <span className="inventory-category-select__value">
-          {selectedCategories.length > 0 ? selectedCategories.join(', ') : '-- เลือกประเภทชุด --'}
+          {selectedValues.length > 0 ? selectedValues.join(', ') : placeholder}
         </span>
         <span className="inventory-category-select__caret" aria-hidden="true">{isOpen ? '▲' : '▼'}</span>
       </button>
       
       {isOpen && (
         <div className="inventory-category-select__menu" role="listbox" aria-multiselectable="true">
-          {categories.map((catName) => {
-            const isSelected = selectedCategories.includes(catName);
+          {options.map((optionName) => {
+            const isSelected = selectedValues.includes(optionName);
             return (
               <button
                 type="button"
-                key={catName} 
+                key={optionName}
                 className={`inventory-category-select__option ${isSelected ? 'is-selected' : ''}`}
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => {
-                  let current = [...selectedCategories];
+                  let current = [...selectedValues];
                   if (isSelected) {
-                    current = current.filter((category) => category !== catName);
+                    current = current.filter((value) => value !== optionName);
                   } else {
-                    current.push(catName);
+                    current.push(optionName);
                   }
-                  onChange(current.join(', '));
+                  onChange(current);
                 }}
               >
                 <input
@@ -155,7 +156,7 @@ function CategoryMultiSelectDropdown({
                   aria-hidden="true"
                   className="inventory-category-select__checkbox"
                 />
-                <span className="inventory-category-select__option-label">{catName}</span>
+                <span className="inventory-category-select__option-label">{optionName}</span>
               </button>
             );
           })}
@@ -579,12 +580,12 @@ export function InventoryPage({
                 />
                 <label className="field">
                   <span>สีหลัก</span>
-                  <select value={draft.primaryColor} onChange={(event) => onDraftChange('primaryColor', event.target.value)}>
-                    <option value="">-- เลือกสีหลัก --</option>
-                    {colors.map((colorName) => (
-                      <option key={colorName} value={colorName}>{colorName}</option>
-                    ))}
-                  </select>
+                  <InventoryMultiSelectDropdown
+                    options={colors}
+                    selectedValues={parseProductColors(draft.primaryColor)}
+                    placeholder="-- เลือกสีหลัก --"
+                    onChange={(values) => onDraftChange('primaryColor', values.join(', '))}
+                  />
                 </label>
                 <label className="field">
                   <span>แบรนด์</span>
@@ -597,10 +598,11 @@ export function InventoryPage({
                 </label>
                 <div className="field">
                   <span>หมวดหมู่/ประเภทชุด</span>
-                  <CategoryMultiSelectDropdown 
-                    categories={categories} 
-                    draftCategory={draft.category} 
-                    onChange={(val) => onDraftChange('category', val)} 
+                  <InventoryMultiSelectDropdown
+                    options={categories}
+                    selectedValues={parseProductCategories(draft.category)}
+                    placeholder="-- เลือกประเภทชุด --"
+                    onChange={(values) => onDraftChange('category', values.join(', '))}
                   />
                 </div>
               </div>

@@ -1,6 +1,9 @@
 /* @vitest-environment jsdom */
 
+import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InventoryPage } from './InventoryPage'
 import type { ProductWithStockSummary } from './inventoryTypes'
@@ -84,5 +87,79 @@ describe('InventoryPage', () => {
     )
 
     expect(screen.queryByTitle('ลบชุดหลัก')).toBeNull()
+  })
+
+  it('lets users select multiple colors in the product form', async () => {
+    const user = userEvent.setup()
+
+    function Harness() {
+      const [draft, setDraft] = useState({
+        baseSku: '',
+        productName: '',
+        brand: '',
+        category: '',
+        primaryColor: '',
+        publicDescription: '',
+        rentalTiers: [{ days: 1, price: 0 }],
+        lateFeeRule: '',
+        depositAmount: '',
+        imageUrls: [],
+        publicVisible: false,
+        isFeatured: false,
+        displayOrder: 0,
+        variants: [],
+      })
+
+      return (
+        <InventoryPage
+          products={[product]}
+          query=""
+          setQuery={vi.fn()}
+          summary={{ total: 0, sets: 1, deposits: 500, priced: 1 }}
+          isFormOpen
+          isEditing={false}
+          draft={draft}
+          formError=""
+          isSaving={false}
+          onOpenForm={vi.fn()}
+          onCloseForm={vi.fn()}
+          onEdit={vi.fn()}
+          onAddStock={vi.fn()}
+          onPreview={vi.fn()}
+          onDraftChange={(field, value) => {
+            setDraft((current) => ({ ...current, [field]: value }))
+          }}
+          onResetDraft={vi.fn()}
+          onImageUpload={vi.fn()}
+          onImageRemove={vi.fn()}
+          onSave={vi.fn()}
+          previewItem={null}
+          previewImageIndex={0}
+          onPreviewIndexChange={vi.fn()}
+          onClosePreview={vi.fn()}
+          brands={[]}
+          categories={[]}
+          colors={['ทอง', 'เงิน', 'ฟ้า']}
+          rentals={[]}
+          onUpdateStatus={vi.fn()}
+          onTogglePublicVisibility={vi.fn()}
+          onOpenCatalog={vi.fn()}
+          defaultRentalPrices={[{ days: 1, price: 1200 }]}
+          defaultDeposit={500}
+          defaultLateFinePerDay={100}
+        />
+      )
+    }
+
+    render(<Harness />)
+
+    const colorTrigger = screen.getByRole('button', { name: 'สีหลัก' })
+
+    await user.click(colorTrigger)
+    await user.click(screen.getByRole('option', { name: 'ทอง' }))
+    expect(colorTrigger).toHaveTextContent('ทอง')
+
+    await user.click(screen.getByRole('option', { name: 'เงิน' }))
+    expect(colorTrigger).toHaveTextContent('ทอง, เงิน')
   })
 })
