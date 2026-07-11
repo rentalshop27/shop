@@ -105,6 +105,7 @@ import {
   startGoogleOAuth,
   type GoogleOAuthConnection,
 } from './features/google/googleOAuth'
+import { compressImage } from './utils/imageCompression'
 
 const emptyDraft: CustomerDraft = {
   fullName: '',
@@ -288,18 +289,6 @@ function safeLocalStorageRemove(key: string) {
   } catch (error) {
     console.warn(`Failed to remove localStorage key "${key}"`, error)
   }
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') resolve(reader.result)
-      else reject(new Error('อ่านไฟล์รูปไม่สำเร็จ'))
-    }
-    reader.onerror = () => reject(reader.error ?? new Error('อ่านไฟล์รูปไม่สำเร็จ'))
-    reader.readAsDataURL(file)
-  })
 }
 
 function getLastSelectedShopKey(userId: string) {
@@ -517,11 +506,11 @@ function PrivateApp() {
 
     const newDocs = await Promise.all(
       filesToUpload.map(async (file) => {
-        const previewUrl = await readFileAsDataUrl(file)
+        const compressed = await compressImage(file, 'customerDocument')
         return {
           id: crypto.randomUUID(),
-          file,
-          previewUrl,
+          file: compressed.file,
+          previewUrl: compressed.dataUrl,
         }
       })
     )
@@ -806,16 +795,16 @@ function PrivateApp() {
   const handleCatalogHeroImageUpload = async (file: File) => {
     try {
       setIsCatalogHeroUploading(true)
+      const compressed = await compressImage(file, 'heroDesktop')
 
       if (supabase && isAuthenticated && shopId) {
-        const nextUrl = await uploadShopHeroImage(supabase, shopId, file, catalogHeroImageUrl)
+        const nextUrl = await uploadShopHeroImage(supabase, shopId, compressed.file, catalogHeroImageUrl)
         setCatalogHeroImageUrl(nextUrl)
         await saveShopSettings(getShopSettings({ catalogHeroImageUrl: nextUrl }))
         return
       }
 
-      const nextUrl = await fileToDataUrl(file)
-      setCatalogHeroImageUrl(nextUrl)
+      setCatalogHeroImageUrl(compressed.dataUrl)
     } catch (error) {
       console.error('Failed to upload catalog hero image:', error)
       window.alert('อัปโหลดรูปพื้นหลังไม่สำเร็จ: ' + getErrorMessage(error))
@@ -850,16 +839,22 @@ function PrivateApp() {
   const handleCatalogMobileHeroImageUpload = async (file: File) => {
     try {
       setIsCatalogMobileHeroUploading(true)
+      const compressed = await compressImage(file, 'heroMobile')
 
       if (supabase && isAuthenticated && shopId) {
-        const nextUrl = await uploadShopHeroImage(supabase, shopId, file, catalogMobileHeroImageUrl, 'mobile')
+        const nextUrl = await uploadShopHeroImage(
+          supabase,
+          shopId,
+          compressed.file,
+          catalogMobileHeroImageUrl,
+          'mobile',
+        )
         setCatalogMobileHeroImageUrl(nextUrl)
         await saveShopSettings(getShopSettings({ catalogMobileHeroImageUrl: nextUrl }))
         return
       }
 
-      const nextUrl = await fileToDataUrl(file)
-      setCatalogMobileHeroImageUrl(nextUrl)
+      setCatalogMobileHeroImageUrl(compressed.dataUrl)
     } catch (error) {
       console.error('Failed to upload catalog mobile hero image:', error)
       window.alert('อัปโหลดรูปพื้นหลังมือถือไม่สำเร็จ: ' + getErrorMessage(error))
@@ -2837,15 +2832,6 @@ function PageLoadingFallback({ activeTab }: { activeTab: ViewKey }) {
 function parseOptionalNumber(value: string) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && value.trim() ? parsed : undefined
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
-    reader.onerror = () => reject(new Error(`ไม่สามารถอ่านไฟล์ ${file.name} ได้`))
-    reader.readAsDataURL(file)
-  })
 }
 
 function getErrorMessage(error: unknown) {

@@ -62,6 +62,7 @@ export function ImageCropperModal({
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const imageSrc = imageFile ? URL.createObjectURL(imageFile) : ''
 
@@ -72,15 +73,14 @@ export function ImageCropperModal({
   async function handleSave() {
     if (!croppedAreaPixels || !imageFile || !imageSrc) return
     setIsSaving(true)
+    setSaveError(null)
     try {
       const file = await getCroppedImage(imageSrc, croppedAreaPixels, imageFile)
       await onSave(file)
       onClose()
     } catch (err) {
       console.error('Failed to crop image', err)
-      // Fallback: pass original file
-      await onSave(imageFile)
-      onClose()
+      setSaveError('ไม่สามารถครอบตัดรูปได้ กรุณาลองใหม่')
     } finally {
       setIsSaving(false)
     }
@@ -214,9 +214,12 @@ export function ImageCropperModal({
             gap: '12px',
           }}
         >
-          <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>
-            ลากรูปหรือเลื่อนสไลเดอร์เพื่อปรับตำแหน่ง — กรอบคงที่ตามสัดส่วนที่ล็อกไว้
-          </p>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>
+              ลากรูปหรือเลื่อนสไลเดอร์เพื่อปรับตำแหน่ง — กรอบคงที่ตามสัดส่วนที่ล็อกไว้
+            </p>
+            {saveError && <p role="alert" style={{ margin: '6px 0 0', fontSize: '13px', color: '#b91c1c' }}>{saveError}</p>}
+          </div>
           <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
             <button
               type="button"

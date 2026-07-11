@@ -18,6 +18,7 @@ import {
 import type { ProductDraft, ProductWithStockSummary, StockItemStatus } from './inventoryTypes'
 import type { RentalOrder } from '../rentals/rentalTypes'
 import { getUserFacingErrorMessage } from '../../lib/errorMessages'
+import { compressImageAsDataUrl } from '../../utils/imageCompression'
 
 const emptyProductDraft: ProductDraft = {
   baseSku: '',
@@ -176,7 +177,9 @@ export function useInventoryController({
     if (incomingFiles.length > remainingSlots) {
       window.alert(`สามารถเพิ่มรูปชุดได้อีกเพียง ${remainingSlots} รูป ระบบจะทำการเลือกเฉพาะ ${remainingSlots} รูปแรก`)
     }
-    const imageUrls = await Promise.all(filesToUpload.map((file) => readFileAsDataUrl(file)))
+    const imageUrls = await Promise.all(
+      filesToUpload.map((file) => compressImageAsDataUrl(file, 'product'))
+    )
     setDraft((current) => ({
       ...current,
       imageUrls: [...current.imageUrls, ...imageUrls],
@@ -642,15 +645,6 @@ function createLocalStockItems({
 function parseOptionalNumber(value: string | number) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && String(value).trim() ? parsed : undefined
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
-    reader.onerror = () => reject(new Error(`ไม่สามารถอ่านไฟล์ ${file.name} ได้`))
-    reader.readAsDataURL(file)
-  })
 }
 
 function getErrorMessage(error: unknown) {

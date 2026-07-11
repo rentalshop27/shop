@@ -208,8 +208,8 @@
     "hash": "64a42c3dee565c68987f8175e542df94"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/App.tsx": {
-    "mtime": 1783452596.7060597,
-    "hash": "72dcc801e934cf2359466618cff9c68a"
+    "mtime": 1783740855.3920321,
+    "hash": "f3f46e9a8df51a50471932606178cf32"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/main.tsx": {
     "mtime": 1783245721.582826,
@@ -448,8 +448,8 @@
     "hash": "be2268d18e3b58ce986229b3872a82b8"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/inventory/useInventoryController.ts": {
-    "mtime": 1783436348.3225033,
-    "hash": "8f20a9b4c9af456efa2a87a6405e1c4a"
+    "mtime": 1783740843.9210892,
+    "hash": "3960f34f8759bca2fcfb0ddb5a4553ac"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/features/reports/ReportsPage.tsx": {
     "mtime": 1783449388.8042333,
@@ -467,6 +467,10 @@
     "mtime": 1783449398.6533406,
     "hash": "959aab74189477f8ffa54aa1881b464d"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/utils/imageCompression.test.ts": {
+    "mtime": 1783741666.548885,
+    "hash": "e0f952e493d6af691b038100b3cea73f"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/utils/exportUtils.test.ts": {
     "mtime": 1783409454.4187844,
     "hash": "10d3877d814062a02d3b83f227ececf2"
@@ -475,17 +479,25 @@
     "mtime": 1783409409.47326,
     "hash": "bb60f983929150397e442bccfae03d5d"
   },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/utils/imageCompression.ts": {
+    "mtime": 1783741666.5475948,
+    "hash": "b8e8411b97287bba5488f5fed6353002"
+  },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/AppErrorBoundary.tsx": {
     "mtime": 1783245721.5746338,
     "hash": "6424e456582169b37393660a2700927a"
+  },
+  "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/ImageCropperModal.test.tsx": {
+    "mtime": 1783741699.8442004,
+    "hash": "4f57809cec50db6d2ebb7734207f8b3c"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/imageCropperUtils.ts": {
     "mtime": 1783499038.471114,
     "hash": "4b223067013c4b032ed0ed3efd4963ae"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/ImageCropperModal.tsx": {
-    "mtime": 1783510778.6035757,
-    "hash": "e33dfbb7c8ea0a180a7c4b3776935362"
+    "mtime": 1783741756.3263721,
+    "hash": "796e0fe4fcc60632f94577e336d8686e"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/src/components/imageCropperUtils.test.ts": {
     "mtime": 1783499106.2008686,
@@ -528,8 +540,8 @@
     "hash": "8ee39dcfe68a23b3797b02648930d699"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/handoff.md": {
-    "mtime": 1783518633.0710797,
-    "hash": "697a51f006a560deb4d2e145a67d642f"
+    "mtime": 1783571685.4299235,
+    "hash": "a378946471a122125ecbae1cfd1e2f61"
   },
   "/Users/bhusitt./Downloads/Precious-Shop-Test/docs/google-oauth-setup.md": {
     "mtime": 1783367536.2003806,
