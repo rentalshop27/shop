@@ -264,50 +264,6 @@ describe('customer remote', () => {
     expect(result.previewUrl).toBe('blob:drive-preview')
   })
 
-  it('removes uploaded document files when document row insert fails', async () => {
-    const uploadedPaths: string[] = []
-    const removedPaths: string[][] = []
-    const upload = vi.fn((path: string) => {
-      uploadedPaths.push(path)
-      return { error: null }
-    })
-    const remove = vi.fn((paths: string[]) => {
-      removedPaths.push(paths)
-      return { error: null }
-    })
-    const insert = vi.fn(() => ({ error: new Error('insert failed') }))
-    const maybeSingle = vi.fn(() => ({ data: null, error: null }))
-    const integrationEqStatus = vi.fn(() => ({ maybeSingle }))
-    const integrationEqProvider = vi.fn(() => ({ eq: integrationEqStatus }))
-    const integrationEqShop = vi.fn(() => ({ eq: integrationEqProvider }))
-    const integrationSelect = vi.fn(() => ({ eq: integrationEqShop }))
-    const supabase = {
-      storage: {
-        from: vi.fn(() => ({ upload, remove })),
-      },
-      auth: {
-        getSession: vi.fn(),
-      },
-      from: vi.fn((table: string) => {
-        if (table === 'customer_documents') return { insert }
-        if (table === 'shop_google_integrations') return { select: integrationSelect }
-        throw new Error(`Unexpected table ${table}`)
-      }),
-    } as unknown as SupabaseClient
-
-    await expect(
-      uploadRemoteCustomerDocuments(supabase, customer, [
-        new File(['front'], 'id-card-front.png', { type: 'image/png' }),
-        new File(['back'], 'id-card-back.png', { type: 'image/png' }),
-      ])
-    ).rejects.toThrow('insert failed')
-
-    expect(upload).toHaveBeenCalledTimes(2)
-    expect(insert).toHaveBeenCalledTimes(1)
-    expect(remove).toHaveBeenCalledTimes(1)
-    expect(removedPaths[0]).toEqual(uploadedPaths)
-  })
-
   it('scopes customer edits by id and selected shop id', async () => {
     const filters: Array<[string, string]> = []
     const row = {
@@ -437,13 +393,8 @@ describe('customer remote', () => {
     ])
   })
 
-  it('uploads customer documents through the Google Drive function when the shop is connected', async () => {
+  it('uploads customer documents through the central Google Drive function', async () => {
     const file = new File(['front'], 'id-card-front.png', { type: 'image/png' })
-    const maybeSingle = vi.fn(() => ({ data: { id: 'integration_1' }, error: null }))
-    const integrationEqStatus = vi.fn(() => ({ maybeSingle }))
-    const integrationEqProvider = vi.fn(() => ({ eq: integrationEqStatus }))
-    const integrationEqShop = vi.fn(() => ({ eq: integrationEqProvider }))
-    const integrationSelect = vi.fn(() => ({ eq: integrationEqShop }))
     const getSession = vi.fn(async () => ({
       data: { session: { access_token: 'session-token' } },
       error: null,
@@ -454,10 +405,6 @@ describe('customer remote', () => {
 
     const supabase = {
       auth: { getSession },
-      from: vi.fn((table: string) => {
-        if (table === 'shop_google_integrations') return { select: integrationSelect }
-        throw new Error(`Unexpected table ${table}`)
-      }),
     } as unknown as SupabaseClient
 
     await uploadRemoteCustomerDocuments(supabase, customer, [file])

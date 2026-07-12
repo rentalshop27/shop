@@ -13,6 +13,12 @@ type DriveTokenRow = {
   expires_at: string | null
 }
 
+class GoogleDriveError extends Error {
+  constructor(message: string, readonly status: number = 500) {
+    super(message)
+  }
+}
+
 function getBearerToken(request: Request) {
   const authHeader = request.headers.get('Authorization') || ''
   if (!authHeader.startsWith('Bearer ')) {
@@ -36,7 +42,6 @@ export async function requireShopAccess(request: Request, shopId: string) {
     .select('shop_id')
     .eq('shop_id', shopId)
     .eq('user_id', data.user.id)
-    .eq('role', 'owner')
     .maybeSingle()
 
   if (membershipError) {
@@ -50,50 +55,49 @@ export async function requireShopAccess(request: Request, shopId: string) {
   return { supabase, user: data.user }
 }
 
-export async function getDriveAccessToken(supabase: ReturnType<typeof createServiceClient>, shopId: string) {
+export async function getDriveAccessToken(supabase: ReturnType<typeof createServiceClient>) {
+  const centralShopId = getRequiredEnv('CENTRAL_GOOGLE_DRIVE_SHOP_ID')
   const { data: integration, error: integrationError } = await supabase
     .from('shop_google_integrations')
     .select('id, connection_status')
-    .eq('shop_id', shopId)
+    .eq('shop_id', centralShopId)
     .eq('provider', 'google')
     .maybeSingle()
 
   if (integrationError) throw integrationError
   if (!integration || integration.connection_status !== 'connected') {
-    throw new Error('ร้านนี้ยังไม่ได้เชื่อม Google Drive')
+    throw new GoogleDriveError('บัญชี Google Drive กลางของระบบยังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแลระบบ', 503)
   }
 
   const { data: tokenRow, error: tokenError } = await supabase
     .from('shop_google_integration_tokens')
     .select('integration_id, refresh_token, access_token, token_type, expires_at')
-    .eq('shop_id', shopId)
+    .eq('shop_id', centralShopId)
     .eq('integration_id', integration.id)
     .single()
 
   if (tokenError) throw tokenError
 
-  const normalizedToken = tokenRow as DriveTokenRow
-  const expiresAt = normalizedToken.expires_at ? new Date(normalizedToken.expires_at).getTime() : 0
-  const needsRefresh = !normalizedToken.access_token || !expiresAt || expiresAt <= Date.now() + 60_000
-
-  if (!needsRefresh) {
-    return normalizedToken.access_token
+  const token = tokenRow as DriveTokenRow
+  const expiresAt = token.expires_at ? new Date(token.expires_at).getTime() : 0
+  if (token.access_token && expiresAt > Date.now() + 60_000) {
+    return token.access_token
   }
 
-  const refreshed = await refreshDriveAccessToken(normalizedToken.refresh_token)
-  const nextExpiresAt = refreshed.expires_in
+  const refreshed = await refreshDriveAccessToken(token.refresh_token)
+  const expiresAtNext = refreshed.expires_in
     ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
     : null
-
   const { error: updateError } = await supabase
     .from('shop_google_integration_tokens')
     .update({
       access_token: refreshed.access_token,
-      token_type: refreshed.token_type ?? normalizedToken.token_type,
-      expires_at: nextExpiresAt,
+      token_type: refreshed.token_type ?? token.token_type,
+      expires_at: expiresAtNext,
       updated_at: new Date().toISOString(),
     })
-    .eq('integration_id', normalizedToken.integration_id)
+    .eq('integration_id', token.integration_id)
+    .eq('shop_id', centralShopId)
 
   if (updateError) throw updateError
   return refreshed.access_token
@@ -112,7 +116,7 @@ async function refreshDriveAccessToken(refreshToken: string) {
   })
 
   if (!response.ok) {
-    throw new Error(`Google refresh token failed: ${response.status}`)
+    throw new GoogleDriveError('ตั้งค่า Google Drive ของระบบไม่ถูกต้องหรือหมดอายุ กรุณาติดต่อผู้ดูแลระบบ', 503)
   }
 
   return await response.json() as {
@@ -141,7 +145,7 @@ export async function uploadFileToDrive(accessToken: string, file: File, metadat
   })
 
   if (!response.ok) {
-    throw new Error(`Google Drive upload failed: ${response.status}`)
+    throw await toGoogleDriveError(response, 'อัปโหลดรูปไป Google Drive ไม่สำเร็จ')
   }
 
   return await response.json() as {
@@ -211,7 +215,7 @@ async function findDriveFolder(
   })
 
   if (!response.ok) {
-    throw new Error(`Google Drive folder search failed: ${response.status}`)
+    throw await toGoogleDriveError(response, 'ค้นหาโฟลเดอร์ Google Drive ไม่สำเร็จ')
   }
 
   const result = await response.json() as {
@@ -248,7 +252,7 @@ async function createDriveFolder(
   })
 
   if (!response.ok) {
-    throw new Error(`Google Drive folder create failed: ${response.status}`)
+    throw await toGoogleDriveError(response, 'สร้างโฟลเดอร์ Google Drive ไม่สำเร็จ')
   }
 
   return await response.json() as {
@@ -267,7 +271,7 @@ export async function deleteFileFromDrive(accessToken: string, fileId: string) {
 
   if (response.status === 404) return
   if (!response.ok) {
-    throw new Error(`Google Drive delete failed: ${response.status}`)
+    throw await toGoogleDriveError(response, 'ลบรูปจาก Google Drive ไม่สำเร็จ')
   }
 }
 
@@ -279,7 +283,7 @@ export async function downloadDriveFile(accessToken: string, fileId: string) {
   })
 
   if (!response.ok) {
-    throw new Error(`Google Drive download failed: ${response.status}`)
+    throw await toGoogleDriveError(response, 'โหลดรูปจาก Google Drive ไม่สำเร็จ')
   }
 
   return response
@@ -298,7 +302,8 @@ export function sanitizeDriveFolderName(value: string) {
 
 export function functionErrorResponse(error: unknown, fallbackMessage: string, status = 500) {
   const message = error instanceof Error ? error.message : fallbackMessage
-  return createJsonResponse({ error: message || fallbackMessage }, status)
+  const errorStatus = error instanceof GoogleDriveError ? error.status : status
+  return createJsonResponse({ error: message || fallbackMessage }, errorStatus)
 }
 
 export function createCorsHeaders(request: Request) {
@@ -321,4 +326,20 @@ export function createOptionsResponse(request: Request) {
 
 function escapeDriveQueryValue(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+async function toGoogleDriveError(response: Response, fallbackMessage: string) {
+  let reason = ''
+  try {
+    const body = await response.json() as { error?: { errors?: Array<{ reason?: string }> } }
+    reason = body.error?.errors?.[0]?.reason ?? ''
+  } catch {
+    // Preserve the user-facing fallback if Google returns a non-JSON error.
+  }
+
+  if (reason === 'storageQuotaExceeded') {
+    return new GoogleDriveError('พื้นที่ Google Drive ของระบบเต็ม กรุณาติดต่อผู้ดูแลระบบ', 507)
+  }
+
+  return new GoogleDriveError(fallbackMessage, response.status >= 500 ? 503 : 500)
 }

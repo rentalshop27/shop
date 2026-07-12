@@ -13,8 +13,6 @@ const {
   loadRentals,
   loadAuditLogs,
   loadPublicCatalog,
-  loadGoogleOAuthConnection,
-  startGoogleOAuth,
   updateShopSettings,
   updateRemoteProductPublicVisibility,
   authStateChange,
@@ -34,8 +32,6 @@ const {
     loadRentals: vi.fn(),
     loadAuditLogs: vi.fn(),
     loadPublicCatalog: vi.fn(),
-    loadGoogleOAuthConnection: vi.fn(),
-    startGoogleOAuth: vi.fn(),
     updateShopSettings: vi.fn(),
     updateRemoteProductPublicVisibility: vi.fn(),
     authStateChange,
@@ -67,21 +63,6 @@ vi.mock('./lib/supabase', () => ({
 
 vi.mock('./features/catalog/publicCatalogRemote', () => ({
   loadPublicCatalog,
-}))
-
-vi.mock('./features/google/googleOAuth', () => ({
-  getGoogleOAuthSetupState: vi.fn((shopId: string | null) => ({
-    clientId: '',
-    callbackUrl: '',
-    returnUrl: shopId ? `http://localhost:3000/?tab=profile&shopId=${shopId}` : 'http://localhost:3000/?tab=profile',
-    startUrl: 'https://example.supabase.co/functions/v1/google-oauth-start',
-    hasClientId: false,
-    hasCallbackUrl: false,
-    hasSelectedShop: Boolean(shopId),
-    canStartOAuth: Boolean(shopId),
-  })),
-  loadGoogleOAuthConnection,
-  startGoogleOAuth,
 }))
 
 vi.mock('./features/customers/customerRemote', () => ({
@@ -234,8 +215,6 @@ describe('App shop selection', () => {
     })
     updateShopSettings.mockResolvedValue(undefined)
     updateRemoteProductPublicVisibility.mockResolvedValue(undefined)
-    loadGoogleOAuthConnection.mockResolvedValue({ status: 'idle', googleEmail: null })
-    startGoogleOAuth.mockResolvedValue('https://accounts.google.com/o/oauth2/v2/auth')
     supabase.auth.signOut.mockResolvedValue({ error: null })
   })
 
@@ -359,13 +338,12 @@ describe('App shop selection', () => {
     expect(screen.queryByText('ร้านที่ใช้งาน')).toBeNull()
   })
 
-  it('re-enters the requested shop and profile tab after the OAuth callback return', async () => {
-    window.history.pushState({}, '', '/?tab=profile&shopId=shop_2&google_oauth=success&google_email=owner%40gmail.com')
+  it('re-enters the requested shop and profile tab from the URL', async () => {
+    window.history.pushState({}, '', '/?tab=profile&shopId=shop_2')
 
     render(<App />)
 
     expect(await screen.findByRole('heading', { name: 'โปรไฟล์' })).toBeTruthy()
-    expect(await screen.findByText('เชื่อม Google สำเร็จแล้ว: owner@gmail.com')).toBeTruthy()
     expect((await screen.findByLabelText('ร้านที่กำลังใช้งาน')).textContent).toContain('Precious Silom')
   })
 
@@ -525,14 +503,7 @@ describe('App shop selection', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'สิทธิ์พนักงาน' }))
     expect(screen.getByText('เพิ่มพนักงานใหม่')).toBeTruthy()
 
-    for (const label of ['การแจ้งเตือน', 'เชื่อมต่อระบบ']) {
-      const matchingButtons = screen.getAllByRole('button', { name: new RegExp(label) })
-      expect(matchingButtons.length).toBeGreaterThan(0)
-      matchingButtons.forEach((button) => {
-        expect((button as HTMLButtonElement).disabled).toBe(true)
-        expect(button.getAttribute('role')).toBeNull()
-      })
-    }
+    expect(screen.queryByRole('button', { name: /การแจ้งเตือน|เชื่อมต่อระบบ/ })).toBeNull()
   })
 
   it('lets settings switch to inventory from the in-page tab list', async () => {

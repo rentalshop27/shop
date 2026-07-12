@@ -98,11 +98,6 @@ import { buildCatalogSizeSummary } from './features/catalog/catalogAvailability'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { getUserFacingErrorMessage } from './lib/errorMessages'
 import { formatProductCategories } from './lib/productCategories'
-import {
-  loadGoogleOAuthConnection,
-  startGoogleOAuth,
-  type GoogleOAuthConnection,
-} from './features/google/googleOAuth'
 import { compressImage } from './utils/imageCompression'
 
 const emptyDraft: CustomerDraft = {
@@ -1294,8 +1289,6 @@ function PrivateApp() {
   const [shopId, setShopId] = useState<string | null>(null)
   const [overviewShopsData, setOverviewShopsData] = useState<OverviewShopData[]>([])
   const [remoteError, setRemoteError] = useState('')
-  const [googleOAuthConnection, setGoogleOAuthConnection] = useState<GoogleOAuthConnection | null>(null)
-  const [isGoogleOAuthConnectionLoading, setIsGoogleOAuthConnectionLoading] = useState(false)
   const currentShop = availableShops.find((shop) => shop.id === shopId) ?? null
   const currentPermissions = getShopPermissions(currentShop?.role)
   const activeSettingsSubTab = normalizeSettingsSubTabForPermissions(settingsSubTab, currentPermissions)
@@ -1430,11 +1423,6 @@ function PrivateApp() {
     if (error) throw error
   }
 
-  async function handleStartGoogleOAuth(nextShopId: string) {
-    if (!supabase) return
-    await startGoogleOAuth(supabase, nextShopId)
-  }
-
   async function handlePasswordChange(currentPassword: string, nextPassword: string) {
     if (!supabase) return
     if (!authUserEmail) {
@@ -1455,39 +1443,6 @@ function PrivateApp() {
     if (!authUserId || !shopId) return
     safeLocalStorageSet(getLastSelectedShopKey(authUserId), shopId)
   }, [authUserId, shopId])
-
-  useEffect(() => {
-    if (!supabase || !isAuthenticated || !shopId || currentShop?.role !== 'owner') {
-      setGoogleOAuthConnection(null)
-      setIsGoogleOAuthConnectionLoading(false)
-      return
-    }
-
-    let cancelled = false
-
-    setIsGoogleOAuthConnectionLoading(true)
-    loadGoogleOAuthConnection(supabase, shopId)
-      .then((connection) => {
-        if (!cancelled) {
-          setGoogleOAuthConnection(connection)
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          console.warn('Failed to load Google OAuth connection state:', error)
-          setGoogleOAuthConnection(null)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsGoogleOAuthConnectionLoading(false)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [currentShop?.role, isAuthenticated, shopId])
 
   useEffect(() => {
     if (!supabase || !isAuthenticated || availableShops.length <= 1 || shopId) {
@@ -2505,11 +2460,8 @@ function PrivateApp() {
               email={authUserEmail}
               availableShops={availableShops}
               selectedShopId={shopId}
-              googleOAuthConnection={googleOAuthConnection}
-              isGoogleOAuthConnectionLoading={isGoogleOAuthConnectionLoading}
               onShopChange={handleShopChange}
               onChangePassword={hasSupabaseConfig && authUserEmail ? handlePasswordChange : undefined}
-              onStartGoogleOAuth={hasSupabaseConfig ? handleStartGoogleOAuth : undefined}
               onLogout={hasSupabaseConfig ? handleLogout : undefined}
             />
           )}

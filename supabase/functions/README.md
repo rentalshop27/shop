@@ -4,8 +4,6 @@
 
 - `health` สำหรับ cron keepalive/uptime checks
 - `create-shop-member`
-- `google-oauth-start`
-- `google-oauth-callback`
 - `google-drive-customer-documents-upload`
 - `r2-images` - private R2 upload/delete proxy for product images
 - `google-drive-customer-documents-delete`
@@ -30,17 +28,21 @@ SUPABASE_KEEPALIVE_TOKEN=replace-with-the-same-token
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-## Google OAuth secrets
+## Google Drive secrets
 
 ตั้งค่าใน Supabase Dashboard > Edge Functions > Secrets หรือผ่าน CLI:
 
 ```bash
 GOOGLE_OAUTH_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=your-google-oauth-client-secret
-GOOGLE_OAUTH_STATE_SECRET=replace-with-a-long-random-secret
+CENTRAL_GOOGLE_DRIVE_SHOP_ID=your-central-shop-uuid
 ```
 
-ฟังก์ชัน Google OAuth จะใช้ค่า built-in ของ Supabase เพิ่มเติม:
+ระบบใช้ refresh token ของบัญชี Google Drive ที่เชื่อมอยู่เดิมของร้านที่กำหนดใน `CENTRAL_GOOGLE_DRIVE_SHOP_ID` เป็นบัญชีกลาง จึงไม่ต้องสร้างหรือเก็บ refresh token ใหม่ใน secret และผู้ใช้ไม่ต้องกดเชื่อม Google อีก
+
+โฟลเดอร์รูปของแต่ละร้านจะใช้ชื่อ `Precious Rental - <shop name> (<shop_id>) - Customer Documents` เพื่อกันชื่อร้านซ้ำ และหาก Drive เต็มระบบจะตอบข้อความที่ใช้งานได้แทนการค้าง
+
+ฟังก์ชัน Google Drive จะใช้ค่า built-in ของ Supabase เพิ่มเติม:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -60,8 +62,6 @@ GOOGLE_OAUTH_STATE_SECRET=replace-with-a-long-random-secret
 ```bash
 supabase functions deploy health --no-verify-jwt
 supabase functions deploy create-shop-member
-supabase functions deploy google-oauth-start --no-verify-jwt
-supabase functions deploy google-oauth-callback --no-verify-jwt
 supabase functions deploy google-drive-customer-documents-upload --no-verify-jwt
 supabase functions deploy google-drive-customer-documents-delete --no-verify-jwt
 supabase functions deploy google-drive-customer-document --no-verify-jwt

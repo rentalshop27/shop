@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Building2, Check, Link2, LogOut } from 'lucide-react'
+import { Building2, Check, LogOut } from 'lucide-react'
 import type { ShopSummary } from '../customers/customerRemote'
-import { getGoogleOAuthSetupState, type GoogleOAuthConnection } from '../google/googleOAuth'
 import { TextField } from '../../components/TextField'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -14,11 +13,8 @@ interface ProfilePageProps {
   email: string | null
   availableShops: ShopSummary[]
   selectedShopId: string | null
-  googleOAuthConnection?: GoogleOAuthConnection | null
-  isGoogleOAuthConnectionLoading?: boolean
   onShopChange: (shopId: string | null) => void
   onChangePassword?: (currentPassword: string, nextPassword: string) => Promise<void>
-  onStartGoogleOAuth?: (shopId: string) => Promise<void>
   onLogout?: () => Promise<void>
 }
 
@@ -26,11 +22,8 @@ export function ProfilePage({
   email,
   availableShops,
   selectedShopId,
-  googleOAuthConnection = null,
-  isGoogleOAuthConnectionLoading = false,
   onShopChange,
   onChangePassword,
-  onStartGoogleOAuth,
   onLogout,
 }: ProfilePageProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -41,33 +34,7 @@ export function ProfilePage({
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordError, setPasswordError] = useState('')
   const [passwordSuccess, setPasswordSuccess] = useState('')
-  const [isStartingGoogleOAuth, setIsStartingGoogleOAuth] = useState(false)
-  const [googleOAuthActionError, setGoogleOAuthActionError] = useState('')
   const currentShop = availableShops.find((shop) => shop.id === selectedShopId) ?? null
-  const googleOAuth = getGoogleOAuthSetupState(selectedShopId)
-  const googleOAuthResult = (() => {
-    if (typeof window === 'undefined') return null
-
-    const params = new URLSearchParams(window.location.search)
-    const status = params.get('google_oauth')
-    if (!status) return null
-
-    if (status === 'success') {
-      const googleEmail = params.get('google_email') || ''
-      return {
-        tone: 'ready' as const,
-        message: googleEmail
-          ? `เชื่อม Google สำเร็จแล้ว: ${googleEmail}`
-          : 'เชื่อม Google สำเร็จแล้ว',
-      }
-    }
-
-    const reason = params.get('reason') || 'unknown_error'
-    return {
-      tone: 'warning' as const,
-      message: `เชื่อม Google ไม่สำเร็จ: ${reason}`,
-    }
-  })()
 
   async function handleLogout() {
     if (!onLogout || isLoggingOut) return
@@ -134,35 +101,6 @@ export function ProfilePage({
       setIsChangingPassword(false)
     }
   }
-
-  async function handleStartGoogleOAuth() {
-    if (!onStartGoogleOAuth || !selectedShopId || isStartingGoogleOAuth) return
-
-    setGoogleOAuthActionError('')
-    setIsStartingGoogleOAuth(true)
-    try {
-      await onStartGoogleOAuth(selectedShopId)
-    } catch (error) {
-      setGoogleOAuthActionError(error instanceof Error ? error.message : 'เริ่มเชื่อม Google ไม่สำเร็จ กรุณาลองใหม่')
-      setIsStartingGoogleOAuth(false)
-    }
-  }
-
-  const googleStatusTone = googleOAuthResult?.tone
-    ?? (googleOAuthConnection?.status === 'connected' ? 'ready' : googleOAuthConnection?.status === 'error' ? 'warning' : 'muted')
-  const googleStatusLabel = isGoogleOAuthConnectionLoading
-    ? 'กำลังตรวจสอบ...'
-    : googleOAuthConnection?.status === 'connected'
-      ? 'เชื่อมต่อแล้ว'
-      : googleOAuthConnection?.status === 'error'
-        ? 'เชื่อมต่อมีปัญหา'
-        : googleOAuthConnection?.status === 'revoked'
-          ? 'ต้องเชื่อมต่อใหม่'
-          : 'ยังไม่ได้เชื่อมต่อ'
-  const googleConnectionMessage = googleOAuthResult?.message
-    ?? (googleOAuthConnection?.status === 'connected' && googleOAuthConnection.googleEmail
-      ? `บัญชีที่เชื่อมอยู่: ${googleOAuthConnection.googleEmail}`
-      : '')
 
   return (
     <main className="profile-page">
@@ -293,62 +231,6 @@ export function ProfilePage({
                     {isChangingPassword ? 'กำลังเปลี่ยน...' : 'เปลี่ยนรหัสผ่าน'}
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {currentShop?.role === 'owner' && (
-            <div className="profile-card">
-              <h2 style={{ fontSize: '18px', margin: '0 0 8px 0', color: 'var(--text-bright)' }}>Google OAuth</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>เชื่อม Google Drive เพื่อ sync เอกสารของร้าน</p>
-
-              <div className="profile-oauth-stack">
-                <div style={{ marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
-                    สถานะ: <strong style={{ color: googleStatusTone === 'ready' ? 'var(--text-bright)' : 'var(--text-muted)' }}>
-                      {googleStatusLabel}
-                    </strong>
-                  </span>
-
-                  <button
-                    className={`primary-button ${!googleOAuth.canStartOAuth ? 'disabled' : ''}`}
-                    style={{ width: 'fit-content' }}
-                    type="button"
-                    aria-disabled={!googleOAuth.canStartOAuth}
-                    onClick={handleStartGoogleOAuth}
-                    disabled={!googleOAuth.canStartOAuth || isStartingGoogleOAuth}
-                  >
-                    <Link2 size={18} />
-                    {isStartingGoogleOAuth
-                      ? 'กำลังเปิด Google...'
-                      : googleOAuthConnection?.status === 'connected' || googleOAuthResult?.tone === 'ready'
-                        ? 'เชื่อม Google ใหม่'
-                        : 'เชื่อม Google'}
-                  </button>
-                </div>
-
-                <div
-                  className={`profile-oauth-note ${googleOAuth.canStartOAuth ? 'ready' : 'warning'}`}
-                  role="status"
-                  style={{ marginTop: '8px' }}
-                >
-                  <strong style={{ display: 'block', marginBottom: '4px' }}>คำเตือน:</strong>
-                  {!googleOAuth.hasSelectedShop
-                    ? 'เลือกร้านก่อน แล้วค่อยใช้ค่าชุดนี้สำหรับปุ่มเชื่อม Google ของร้านนั้น'
-                    : 'ตั้งค่า env และ callback URL ให้ตรงกับ Google Cloud ก่อนใช้งาน'}
-                </div>
-
-                {googleConnectionMessage && (
-                  <div className={`profile-oauth-note ${googleStatusTone === 'ready' ? 'ready' : 'warning'}`} role="status">
-                    {googleConnectionMessage}
-                  </div>
-                )}
-
-                {googleOAuthActionError && (
-                  <div className="profile-oauth-note warning" role="alert">
-                    {googleOAuthActionError}
-                  </div>
-                )}
               </div>
             </div>
           )}

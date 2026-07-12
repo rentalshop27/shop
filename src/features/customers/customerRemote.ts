@@ -267,68 +267,7 @@ export async function uploadRemoteCustomerDocuments(
   customer: Customer,
   files: File[],
 ) {
-  if (await hasConnectedGoogleDrive(supabase, customer.shopId)) {
-    await uploadGoogleDriveCustomerDocuments(supabase, customer, files)
-    return
-  }
-
-  const existingCount = customer.documents.length
-  const uploadedPaths: string[] = []
-  const rows: Array<{
-    shop_id: string
-    customer_id: string
-    storage_path: string
-    storage_provider: CustomerDocument['storageProvider']
-    external_file_id: string | null
-    mime_type: string
-    original_file_name: string
-    sort_order: number
-  }> = []
-
-  try {
-    for (const [index, file] of files.entries()) {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
-      const storagePath = `${customer.shopId}/${customer.id}/${crypto.randomUUID()}-${safeName}`
-      const { error: uploadError } = await supabase.storage
-        .from('customer-documents')
-        .upload(storagePath, file, { upsert: false })
-
-      if (uploadError) throw uploadError
-
-      uploadedPaths.push(storagePath)
-      rows.push({
-        shop_id: customer.shopId,
-        customer_id: customer.id,
-        storage_path: storagePath,
-        storage_provider: 'supabase_storage',
-        external_file_id: null,
-        mime_type: file.type,
-        original_file_name: file.name,
-        sort_order: existingCount + index + 1,
-      })
-    }
-
-    const { error } = await supabase.from('customer_documents').insert(rows)
-    if (error) throw error
-  } catch (error) {
-    await cleanupUploadedCustomerDocumentPaths(supabase, uploadedPaths)
-    throw error
-  }
-}
-
-async function cleanupUploadedCustomerDocumentPaths(
-  supabase: SupabaseClient,
-  storagePaths: string[],
-) {
-  if (storagePaths.length === 0) return
-
-  const { error } = await supabase.storage
-    .from('customer-documents')
-    .remove(storagePaths)
-
-  if (error) {
-    console.warn('Failed to delete customer documents after upload error:', storagePaths, error)
-  }
+  await uploadGoogleDriveCustomerDocuments(supabase, customer, files)
 }
 
 async function mapCustomerRow(supabase: SupabaseClient, row: CustomerRow): Promise<Customer> {
@@ -445,19 +384,6 @@ export async function deleteRemoteCustomerDocuments(
 function parseOptionalNumber(value: string) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && value.trim() ? parsed : null
-}
-
-async function hasConnectedGoogleDrive(supabase: SupabaseClient, shopId: string) {
-  const { data, error } = await supabase
-    .from('shop_google_integrations')
-    .select('id')
-    .eq('shop_id', shopId)
-    .eq('provider', 'google')
-    .eq('connection_status', 'connected')
-    .maybeSingle()
-
-  if (error) throw error
-  return Boolean(data?.id)
 }
 
 async function getAuthAccessToken(supabase: SupabaseClient) {

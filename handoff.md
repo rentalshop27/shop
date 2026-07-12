@@ -1,28 +1,63 @@
-# Handoff: ระบบบีบอัดรูปภาพอัตโนมัติ (WebP Auto-Compression)
+# Handoff: Central Google Drive for customer documents
 
-## Summary
-- เพิ่มระบบบีบอัดรูปภาพฝั่งหน้าบ้าน (Frontend) อัตโนมัติ เพื่อแปลงไฟล์ภาพเป็นสกุล `.webp` และลดขนาดไฟล์ตามประเภทก่อนส่งไปยัง Supabase Storage
-- ช่วยลดปัญหาพื้นที่จัดเก็บเต็มไวและเพิ่มความเร็วในการโหลดภาพบนแอปพลิเคชัน
+## User intent
 
-## User Intent
-- ผู้ใช้ต้องการประหยัดพื้นที่จัดเก็บข้อมูลรูปภาพสินค้าและเอกสารลูกค้า โดยให้ระบบบีบอัดรูปอัตโนมัติ แต่ยังคงความชัดเจนของรูปภาพและขนาดแสดงผลของภาพพื้นหลังไว้ โดยไม่ต้องตั้งค่าฝั่งหลังบ้านเพิ่ม
+Customer images/documents must upload directly to Google Drive through the backend. Staff must not need to connect Google in the application. Reuse the already-connected central Google account; do not create a new refresh token or expose credentials in the frontend.
 
-## What Changed
-- **สร้าง Utility `src/utils/imageCompression.ts`**:
-  - `compressImageAsDataUrl`: ฟังก์ชันรับไฟล์รูปภาพและแปลงเป็น Data URL ในฟอร์แมต `image/webp` โดยทำการปรับลดขนาด (Max Width/Height 1280px) และปรับ Quality ลงจนกว่าจะได้ขนาดไฟล์ที่เหมาะสม
-  - `compressImageAsFile`: ฟังก์ชันสำหรับบีบอัดแล้วแปลงกลับมาเป็นอ็อบเจ็กต์ `File` สำหรับคอมโพเนนต์ที่ต้องการใช้ `File` ตรงๆ
-  - Preset: รูปสินค้า 250 KB, เอกสารลูกค้า 500 KB, Desktop BG 600 KB ที่ขั้นต่ำ 1600 x 600 px, Mobile BG 350 KB ที่ขั้นต่ำ 1080 x 720 px
+## Delivered state
 
-- **นำระบบบีบอัดไปใช้ในจุดต่างๆ ของแอปพลิเคชัน**:
-  - **อัปโหลดรูปภาพสินค้า (`useInventoryController.ts`)**: แก้ไขฟังก์ชัน `addImages` โดยแทนที่ `readFileAsDataUrl` เดิม ด้วย `compressImageAsDataUrl`
-  - **อัปโหลดเอกสารลูกค้า (`App.tsx`)**: แก้ไขส่วนการอัปโหลดเอกสารใน `handleCustomerDocumentUpload` ให้บีบอัดเป็น `File` นามสกุล `.webp` และทำ `previewUrl` ก่อนเก็บเข้า State และแก้ไข `readFileAsDataUrl` ให้ใช้ระบบบีบอัดแทน
-  - **อัปโหลดภาพพื้นหลังหน้าลูกค้า (`App.tsx`)**: บีบอัด Desktop/Mobile BG แยก preset และปฏิเสธภาพที่เล็กกว่าขนาดแสดงผลขั้นต่ำ
+- Customer-document uploads now always call the Google Drive Edge Function; the previous new-upload fallback to Supabase Storage has been removed.
+- The Profile-page Google OAuth connect card and its App state/helpers have been removed, so there is no user-facing Google connection action.
+- The three customer-document Edge Functions use the existing OAuth token stored for the shop configured in the backend-only `CENTRAL_GOOGLE_DRIVE_SHOP_ID` secret. Do not copy its value into docs, client code, or logs.
+- The backend refreshes and persists the central account access token while retaining the existing refresh token in `shop_google_integration_tokens`.
+- Access is still tenant-scoped: the caller must be an authenticated member of the requested shop before document upload/download/delete. Drive credential choice is global, but customer-document metadata and folders remain shop-scoped.
+- Root folder names include `shop_id`: `Precious Rental - <shop name> (<shop_id>) - Customer Documents`.
+- Drive quota errors are returned as a clear Thai message, with HTTP 507 rather than leaving the UI waiting.
+- Customer-document slot allocation is serialized per customer in the database, so concurrent uploads cannot claim the same `sort_order`.
+- Google Drive files are deleted before their metadata rows; a Drive failure remains retryable instead of leaving an untracked file behind.
+- Existing Supabase Storage document rows remain readable/deletable for backward compatibility; only future uploads are Drive-only.
 
-## Current Status
-- เขียนระบบบีบอัดรูปภาพและผูกการทำงานเข้ากับโค้ดหลักเสร็จสิ้น
-- ทำการรัน Type Check (`npx tsc --noEmit`) เรียบร้อยแล้ว ไม่พบข้อผิดพลาด
-- โค้ดยังไม่ได้ commit ลงใน Git
+## Hosted deployment
 
-## Recommended Next Session
-- **ทดสอบ Runtime**: ลองเพิ่มรูปภาพสินค้าในหน้าเมนูคลังสินค้า (Inventory) หรืออัปโหลดเอกสารยืนยันตัวตนในหน้าลูกค้า ตรวจสอบรูปภาพใน Supabase Storage ว่ามีการบันทึกไฟล์ขนาดเล็กลงในนามสกุล `.webp` หรือไม่
-- หากทดสอบแล้วสมบูรณ์ สามารถ Commit โค้ดทั้งหมดเข้าโปรเจกต์ได้เลย
+The earlier central-Drive versions of these functions were deployed successfully and reported `ACTIVE`:
+
+- `google-drive-customer-documents-upload`
+- `google-drive-customer-documents-delete`
+- `google-drive-customer-document`
+
+The existing central integration was checked before deployment: its status was connected and it had a stored refresh token. Do not record the account email, token, integration identifier, or shop identifier in new artifacts.
+
+The review fixes in the current working tree are not deployed yet. Before redeploying, apply `0037_atomic_customer_drive_document_insert.sql` and set the backend-only `CENTRAL_GOOGLE_DRIVE_SHOP_ID` secret; otherwise uploads will fail because the RPC or secret is missing.
+
+## Key files
+
+- Backend credential, authorization, Drive API, and error handling: `supabase/functions/_shared/googleDrive.ts`
+- Atomic document-slot allocation: `supabase/migrations/0037_atomic_customer_drive_document_insert.sql`
+- Upload boundary and Drive folder allocation: `supabase/functions/google-drive-customer-documents-upload/index.ts`
+- Download/delete boundaries: `supabase/functions/google-drive-customer-document/index.ts`, `supabase/functions/google-drive-customer-documents-delete/index.ts`
+- Frontend document boundary: `src/features/customers/customerRemote.ts`
+- Removed connection UI: `src/App.tsx`, `src/features/profile/ProfilePage.tsx`
+- Setup references: `docs/google-oauth-setup.md`, `supabase/functions/README.md`, `README.md`
+
+## Verification completed
+
+- `npm run typecheck` passed.
+- Focused tests passed: `src/features/customers/customerRemote.test.ts`, `src/features/profile/ProfilePage.test.tsx`, `src/App.test.tsx` (41 tests).
+- Focused Edge Function lint passed.
+- `npm run build` passed; Vite still reports the pre-existing large main-chunk warning.
+- `graphify update .` was run after code changes.
+- `supabase db lint --local` could not run because no local Supabase/Postgres instance was available.
+- A prior full-suite run had two unrelated failures in `src/features/inventory/stockRemote.test.ts`: its R2 test doubles omit `supabase.functions.invoke`. Do not attribute those failures to this Drive change without rechecking.
+
+## Working tree / next steps
+
+- The change is uncommitted. Inspect `git diff` before staging; Graphify output and cache files were generated by the required graph update.
+- Apply migration `0037`, set `CENTRAL_GOOGLE_DRIVE_SHOP_ID`, and redeploy the three customer-document functions before runtime verification.
+- Perform one authenticated runtime upload from the customer screen, then verify the new file appears in the central Drive hierarchy and that its `customer_documents` row has `storage_provider = 'google_drive'`.
+- If the central Google connection is revoked later, reconnect it only for the designated central shop. The app should continue to have no per-user/per-shop connect action.
+
+## Suggested skills
+
+- `karpathy-guidelines` for any surgical follow-up code change.
+- `scrutinize` before changing the central credential or tenant authorization path.
+- `graphify` workflow (`graphify update .`) after modifying code files, per `AGENTS.md`.

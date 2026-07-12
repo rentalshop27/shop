@@ -65,19 +65,6 @@ Deno.serve(async (request) => {
       throw customerError ?? new Error('ไม่พบลูกค้าที่ต้องการอัปโหลดรูป')
     }
 
-    const { data: existingDocuments, error: existingDocumentsError } = await supabase
-      .from('customer_documents')
-      .select('id')
-      .eq('customer_id', customerId)
-      .order('sort_order', { ascending: true })
-
-    if (existingDocumentsError) throw existingDocumentsError
-
-    const existingCount = (existingDocuments ?? []).length
-    if (existingCount + files.length > 5) {
-      throw new Error('รูปเอกสารเต็ม 5 รูปต่อลูกค้าแล้ว')
-    }
-
     const { data: shop, error: shopError } = await supabase
       .from('shops')
       .select('id, name')
@@ -88,12 +75,12 @@ Deno.serve(async (request) => {
       throw shopError ?? new Error('ไม่พบข้อมูลร้าน')
     }
 
-    const accessToken = await getDriveAccessToken(supabase, shopId)
+    const accessToken = await getDriveAccessToken(supabase)
     const uploadedFileIds: string[] = []
 
     try {
       const rootFolder = await findOrCreateDriveFolder(accessToken, {
-        name: sanitizeDriveFolderName(`Precious Rental - ${shop.name} - Customer Documents`),
+        name: sanitizeDriveFolderName(`Precious Rental - ${shop.name} (${shopId}) - Customer Documents`),
         appProperties: {
           source: 'precious_customer_documents_root',
           shop_id: shopId,
@@ -111,7 +98,7 @@ Deno.serve(async (request) => {
       })
 
       const rows = []
-      for (const [index, file] of files.entries()) {
+      for (const file of files) {
         const safeName = sanitizeFileName(file.name)
         const driveFile = await uploadFileToDrive(accessToken, file, {
           name: `${customer.customer_code}-${Date.now()}-${safeName}`,
@@ -134,11 +121,14 @@ Deno.serve(async (request) => {
           external_file_id: driveFile.id,
           mime_type: file.type || driveFile.mimeType || '',
           original_file_name: file.name,
-          sort_order: existingCount + index + 1,
         })
       }
 
-      const { error: insertError } = await supabase.from('customer_documents').insert(rows)
+      const { error: insertError } = await supabase.rpc('insert_customer_drive_documents', {
+        p_shop_id: shopId,
+        p_customer_id: customerId,
+        p_documents: rows,
+      })
       if (insertError) throw insertError
 
       return new Response(JSON.stringify({ uploaded: rows.length }), {

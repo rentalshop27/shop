@@ -77,9 +77,7 @@ describe('ProfilePage', () => {
     expect(screen.queryByRole('button', { name: 'ออกจากระบบ' })).toBeNull()
   })
 
-  it('shows Google OAuth setup guidance for owners', () => {
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://abc123.supabase.co')
-
+  it('does not show a Google connection action', () => {
     render(
       <ProfilePage
         email="owner@example.com"
@@ -89,9 +87,8 @@ describe('ProfilePage', () => {
       />,
     )
 
-    expect(screen.getByText('เชื่อม Google Drive เพื่อ sync เอกสารของร้าน')).toBeTruthy()
-    expect(screen.getByText('ตั้งค่า env และ callback URL ให้ตรงกับ Google Cloud ก่อนใช้งาน')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'เชื่อม Google' })).toBeTruthy()
+    expect(screen.queryByText('Google OAuth')).toBeNull()
+    expect(screen.queryByRole('button', { name: /เชื่อม Google/ })).toBeNull()
   })
 
   it('requires the current password before submitting', () => {
@@ -157,69 +154,6 @@ describe('ProfilePage', () => {
 
     await waitFor(() => expect(onChangePassword).toHaveBeenCalledWith('old-secret', 'secret123'))
     expect(screen.getByText('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว กรุณาใช้รหัสใหม่ในการเข้าสู่ระบบครั้งถัดไป')).toBeTruthy()
-  })
-
-  it('shows the Google OAuth success message from the callback query string', () => {
-    window.history.replaceState({}, '', '/?tab=profile&google_oauth=success&google_email=owner%40gmail.com')
-
-    render(
-      <ProfilePage
-        email="owner@example.com"
-        availableShops={[shops[0]]}
-        selectedShopId="shop_1"
-        onShopChange={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('เชื่อม Google สำเร็จแล้ว: owner@gmail.com')).toBeTruthy()
-  })
-
-  it('shows the persisted Google connection status for owners', () => {
-    render(
-      <ProfilePage
-        email="owner@example.com"
-        availableShops={[shops[0]]}
-        selectedShopId="shop_1"
-        googleOAuthConnection={{ status: 'connected', googleEmail: 'owner@gmail.com' }}
-        onShopChange={vi.fn()}
-      />,
-    )
-
-    expect(screen.getByText('เชื่อมต่อแล้ว')).toBeTruthy()
-    expect(screen.getByText('บัญชีที่เชื่อมอยู่: owner@gmail.com')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'เชื่อม Google ใหม่' })).toBeTruthy()
-  })
-
-  it('hides the Google OAuth card from managers and staff', () => {
-    render(
-      <ProfilePage
-        email="manager@example.com"
-        availableShops={[{ id: 'shop_1', name: 'Precious Siam', role: 'manager' as const }]}
-        selectedShopId="shop_1"
-        onShopChange={vi.fn()}
-      />,
-    )
-
-    expect(screen.queryByText('Google OAuth')).toBeNull()
-  })
-
-  it('starts Google OAuth through the authenticated handler', async () => {
-    vi.stubEnv('VITE_SUPABASE_URL', 'https://abc123.supabase.co')
-    const onStartGoogleOAuth = vi.fn(async () => undefined)
-
-    render(
-      <ProfilePage
-        email="owner@example.com"
-        availableShops={[shops[0]]}
-        selectedShopId="shop_1"
-        onShopChange={vi.fn()}
-        onStartGoogleOAuth={onStartGoogleOAuth}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'เชื่อม Google' }))
-
-    await waitFor(() => expect(onStartGoogleOAuth).toHaveBeenCalledWith('shop_1'))
   })
 
   it('prevents repeated password changes while the request is pending', async () => {

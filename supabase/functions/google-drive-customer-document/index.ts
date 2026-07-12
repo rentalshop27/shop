@@ -52,8 +52,8 @@ Deno.serve(async (request) => {
       throw new Error('เอกสารนี้ไม่ได้เก็บใน Google Drive')
     }
 
-    const { supabase: authedClient } = await requireShopAccess(request, document.shop_id)
-    const accessToken = await getDriveAccessToken(authedClient, document.shop_id)
+    const { supabase } = await requireShopAccess(request, document.shop_id)
+    const accessToken = await getDriveAccessToken(supabase)
     const driveResponse = await downloadDriveFile(accessToken, document.external_file_id)
 
     return new Response(driveResponse.body, {
