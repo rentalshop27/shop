@@ -18,8 +18,6 @@ import {
   Sliders,
   Tag,
   Users,
-  Bell,
-  Link,
 } from 'lucide-react'
 import './index.css'
 import { MultiShopDashboardPage, type OverviewShopData } from './features/dashboard/MultiShopDashboardPage'
@@ -121,7 +119,7 @@ const emptyDraft: CustomerDraft = {
   heightCm: '',
 }
 
-export type SettingsSubTab = 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations'
+export type SettingsSubTab = 'general' | 'inventory' | 'staff'
 
 type ViewKey = 'dashboard' | 'inventory' | 'catalog' | 'customers' | 'rentals' | 'calendar' | 'settings' | 'audit' | 'reports' | 'profile'
 
@@ -2625,13 +2623,6 @@ function SideNav({
   if (permissions.canManageStaff) {
     settingsSubItems.push({ id: 'staff', label: 'สิทธิ์พนักงาน', icon: Users })
   }
-  if (permissions.canManageShopSettings) {
-    settingsSubItems.push(
-      { id: 'notifications', label: 'การแจ้งเตือน', icon: Bell, disabled: true },
-      { id: 'integrations', label: 'เชื่อมต่อระบบ', icon: Link, disabled: true },
-    )
-  }
-
   return (
     <aside className="side-nav" aria-label="เมนูหลัก">
       <div className="brand-logo" aria-label="Precious Rental">

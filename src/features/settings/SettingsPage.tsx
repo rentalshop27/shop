@@ -25,20 +25,14 @@ interface SettingsPageProps {
   onUpdateDefaultDeposit: (deposit: number) => void
   defaultLateFinePerDay: number
   onUpdateDefaultLateFinePerDay: (fine: number) => void
-  activeTab: 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations'
-  onTabChange: (tab: 'general' | 'inventory' | 'staff' | 'notifications' | 'integrations') => void
+  activeTab: 'general' | 'inventory' | 'staff'
+  onTabChange: (tab: 'general' | 'inventory' | 'staff') => void
   shopId: string | null
 }
 
 function cloneRentalTiers(tiers: {days: number; price: number}[]) {
   return tiers.map((tier) => ({ ...tier }))
 }
-
-const SETTINGS_COMING_SOON_TABS = [
-  { id: 'staff', label: 'สิทธิ์พนักงาน' },
-  { id: 'notifications', label: 'การแจ้งเตือน' },
-  { id: 'integrations', label: 'เชื่อมต่อระบบ' },
-] as const
 
 export function SettingsPage(props: SettingsPageProps) {
   // Form states kept in parent to prevent loss on unmount (Tab switching)
@@ -155,14 +149,6 @@ export function SettingsPage(props: SettingsPageProps) {
     ...(props.canManageStaff ? [{ id: 'staff' as const, label: 'สิทธิ์พนักงาน' }] : []),
   ]
 
-  const comingSoonTabs = SETTINGS_COMING_SOON_TABS.filter((tab) => {
-    if (tab.id === 'staff') return false
-    if (tab.id === 'notifications' || tab.id === 'integrations') {
-      return props.canManageShopSettings
-    }
-    return true
-  })
-
   const activeTab = readyTabs.some((tab) => tab.id === props.activeTab)
     ? props.activeTab
     : (readyTabs[0]?.id ?? 'general')
@@ -191,15 +177,6 @@ export function SettingsPage(props: SettingsPageProps) {
               className={`settings-tab-btn ${activeTab === id ? 'active' : ''}`}
             >
               {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="settings-mobile-coming-soon" aria-label="Settings sections coming soon">
-          {comingSoonTabs.map(({ id, label }) => (
-            <button key={id} type="button" disabled className="settings-tab-btn disabled">
-              {label}
-              <span className="settings-tab-badge">เร็ว ๆ นี้</span>
             </button>
           ))}
         </div>

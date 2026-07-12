@@ -6,6 +6,15 @@ import { formatProductColors, parseProductColors } from '../../lib/productColors
 const COSTUMES_BUCKET = 'costumes'
 const LEGACY_STOCK_IMAGES_BUCKET = 'stock-images'
 const PRODUCT_IMAGE_BUCKETS = [COSTUMES_BUCKET, LEGACY_STOCK_IMAGES_BUCKET] as const
+const R2_PUBLIC_BASE_URL = import.meta.env.VITE_R2_PUBLIC_BASE_URL?.replace(/\/+$/, '')
+
+function usesR2ImageStorage() {
+  return import.meta.env.VITE_IMAGE_STORAGE_PROVIDER === 'r2' && Boolean(R2_PUBLIC_BASE_URL)
+}
+
+function isR2ImageUrl(imageRef: string) {
+  return Boolean(R2_PUBLIC_BASE_URL && imageRef.startsWith(`${R2_PUBLIC_BASE_URL}/`))
+}
 
 type ProductImageBucket = typeof PRODUCT_IMAGE_BUCKETS[number]
 type ProductImageRef = {
@@ -173,19 +182,20 @@ function extractProductImageRef(imageRef: string | null | undefined): ProductIma
   return null
 }
 
-async function cleanupUploadedProductImagePaths(supabase: SupabaseClient, storagePaths: string[]) {
-  if (storagePaths.length === 0) return
-
-  const { error } = await supabase.storage.from(COSTUMES_BUCKET).remove(storagePaths)
-  if (error) {
-    console.warn('Failed to delete product images after upload error:', storagePaths, error)
-  }
+async function cleanupUploadedProductImagePaths(supabase: SupabaseClient, shopId: string, storagePaths: string[]) {
+  await cleanupDeletedProductImageRefs(supabase, shopId, storagePaths)
 }
 
-async function cleanupDeletedProductImageRefs(supabase: SupabaseClient, imageRefs: string[]) {
+async function cleanupDeletedProductImageRefs(supabase: SupabaseClient, shopId: string, imageRefs: string[]) {
   const pathsByBucket = new Map<ProductImageBucket, string[]>()
+  const r2ImageUrls: string[] = []
 
   for (const imageRef of imageRefs) {
+    if (isR2ImageUrl(imageRef)) {
+      r2ImageUrls.push(imageRef)
+      continue
+    }
+
     const storageRef = extractProductImageRef(imageRef)
     if (!storageRef) continue
 
@@ -199,6 +209,31 @@ async function cleanupDeletedProductImageRefs(supabase: SupabaseClient, imageRef
       console.warn('Failed to delete product images after metadata update:', paths, error)
     }
   }
+
+  if (r2ImageUrls.length > 0) {
+    const { error } = await supabase.functions.invoke('r2-images', {
+      body: { action: 'delete', shopId, imageUrls: r2ImageUrls },
+    })
+    if (error) {
+      console.warn('Failed to delete R2 product images after metadata update:', r2ImageUrls, error)
+    }
+  }
+}
+
+async function uploadR2Image(supabase: SupabaseClient, shopId: string, file: File) {
+  const body = new FormData()
+  body.set('shopId', shopId)
+  body.set('kind', 'product')
+  body.append('files', file)
+
+  const { data, error } = await supabase.functions.invoke('r2-images', { body })
+  if (error) throw error
+
+  const imageUrl = (data as { imageUrls?: string[] } | null)?.imageUrls?.[0]
+  if (typeof imageUrl !== 'string' || !imageUrl) {
+    throw new Error('R2 image upload returned no image URL')
+  }
+  return imageUrl
 }
 
 async function uploadProductImages(supabase: SupabaseClient, shopId: string, productId: string, imageRefs: string[]) {
@@ -216,6 +251,14 @@ async function uploadProductImages(supabase: SupabaseClient, shopId: string, pro
       const blob = await response.blob()
       const ext = blob.type === 'image/jpeg' ? 'jpg' : blob.type === 'image/webp' ? 'webp' : 'png'
       const filename = `${productId}-${index}-${Date.now()}.${ext}`
+
+      if (usesR2ImageStorage()) {
+        const imageUrl = await uploadR2Image(supabase, shopId, new File([blob], filename, { type: blob.type }))
+        uploadedPaths.push(imageUrl)
+        paths.push(imageUrl)
+        continue
+      }
+
       const storagePath = `${shopId}/${filename}`
       const { error } = await supabase.storage.from(COSTUMES_BUCKET).upload(storagePath, blob, { upsert: false })
       if (error) throw error
@@ -224,7 +267,7 @@ async function uploadProductImages(supabase: SupabaseClient, shopId: string, pro
       paths.push(storagePath)
     }
   } catch (error) {
-    await cleanupUploadedProductImagePaths(supabase, uploadedPaths)
+    await cleanupUploadedProductImagePaths(supabase, shopId, uploadedPaths)
     throw error
   }
 
@@ -259,7 +302,7 @@ export async function createProductWithVariants(supabase: SupabaseClient, shopId
   })
   
   if (rpcError) {
-    await cleanupUploadedProductImagePaths(supabase, uploadedPaths)
+    await cleanupUploadedProductImagePaths(supabase, shopId, uploadedPaths)
     throw rpcError
   }
 }
@@ -283,8 +326,8 @@ export async function updateRemoteProduct(
 ) {
   const { paths, uploadedPaths } = await uploadProductImages(supabase, shopId, productId, draft.imageUrls)
   const previousPaths = oldImageUrls
-    .map((imageUrl) => extractProductImageRef(imageUrl)?.path)
-    .filter((path): path is string => Boolean(path))
+    .map((imageUrl) => extractProductImageRef(imageUrl)?.path ?? imageUrl)
+    .filter(Boolean)
   const { error } = await supabase.from('products').update({
     product_name: draft.productName,
     brand: draft.brand,
@@ -301,15 +344,15 @@ export async function updateRemoteProduct(
     updated_at: new Date().toISOString()
   }).eq('id', productId).eq('shop_id', shopId)
   if (error) {
-    await cleanupUploadedProductImagePaths(supabase, uploadedPaths)
+    await cleanupUploadedProductImagePaths(supabase, shopId, uploadedPaths)
     throw error
   }
 
   const nextPathSet = new Set(paths)
   const deletedPaths = previousPaths.filter((path) => !nextPathSet.has(path))
-  await cleanupDeletedProductImageRefs(supabase, oldImageUrls.filter((imageUrl) => {
-    const storageRef = extractProductImageRef(imageUrl)
-    return Boolean(storageRef && deletedPaths.includes(storageRef.path))
+  await cleanupDeletedProductImageRefs(supabase, shopId, oldImageUrls.filter((imageUrl) => {
+    const path = extractProductImageRef(imageUrl)?.path ?? imageUrl
+    return deletedPaths.includes(path)
   }))
 }
 
@@ -317,7 +360,7 @@ export async function deleteRemoteProduct(supabase: SupabaseClient, shopId: stri
   const { error } = await supabase.from('products').delete().eq('id', productId).eq('shop_id', shopId)
   if (error) throw error
 
-  await cleanupDeletedProductImageRefs(supabase, imageUrls)
+  await cleanupDeletedProductImageRefs(supabase, shopId, imageUrls)
 }
 
 export async function deleteRemoteStockItem(supabase: SupabaseClient, shopId: string, stockItemId: string) {
@@ -410,7 +453,7 @@ export async function loadShopSettings(supabase: SupabaseClient, shopId: string)
   if (!data) return null
 
   // Since createSignedStorageUrl is missing in the new version, we can just get the public URL for now
-  const catalogHeroImageUrl = data.catalog_hero_image_path 
+  const catalogHeroImageUrl = data.catalog_hero_image_path
     ? supabase.storage.from(SHOP_HERO_BUCKET).getPublicUrl(data.catalog_hero_image_path).data.publicUrl
     : null
   const catalogMobileHeroImageUrl = data.catalog_mobile_hero_image_path

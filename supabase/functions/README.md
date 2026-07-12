@@ -7,6 +7,7 @@
 - `google-oauth-start`
 - `google-oauth-callback`
 - `google-drive-customer-documents-upload`
+- `r2-images` - private R2 upload/delete proxy for product images
 - `google-drive-customer-documents-delete`
 - `google-drive-customer-document`
 

@@ -82,3 +82,14 @@ npm run test
 npm run lint
 npm run build
 ```
+
+# Cloudflare R2 image storage (optional)
+
+Product photos use Supabase Storage by default. To move **new product-photo uploads** to Cloudflare R2 without changing old image records:
+
+1. Create an R2 bucket and attach a public/custom domain (the domain must serve the bucket root).
+2. Set these Edge Function secrets: `CLOUDFLARE_R2_ACCOUNT_ID`, `CLOUDFLARE_R2_ACCESS_KEY_ID`, `CLOUDFLARE_R2_SECRET_ACCESS_KEY`, `CLOUDFLARE_R2_BUCKET`, and `CLOUDFLARE_R2_PUBLIC_BASE_URL`.
+3. Deploy `r2-images`: `supabase functions deploy r2-images --no-verify-jwt`.
+4. In the frontend environment set `VITE_IMAGE_STORAGE_PROVIDER=r2` and set `VITE_R2_PUBLIC_BASE_URL` to the same public/custom domain, then redeploy the web app.
+
+R2 credentials are only used inside the Edge Function. Object keys are scoped as `shops/<shop_id>/...`, and the function checks the signed-in shop owner before upload or delete. Existing Supabase image references remain readable; no data migration is required to enable R2.
