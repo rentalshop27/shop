@@ -26,7 +26,7 @@ const emptyProductDraft: ProductDraft = {
   productName: '',
   brand: '',
   category: '',
-  primaryColor: 'น้ำเงินมิดไนต์',
+  primaryColor: '',
   publicDescription: '',
   rentalTiers: [{ days: 1, price: 0 }],
   lateFeeRule: '',

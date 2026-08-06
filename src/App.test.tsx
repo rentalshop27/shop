@@ -453,6 +453,21 @@ describe('App shop selection', () => {
     expect(screen.queryByDisplayValue('999')).toBeNull()
   })
 
+  it('starts a new inventory draft without a preselected color', async () => {
+    loadShopSettings.mockResolvedValue(makeShopSettings({}))
+
+    render(<App />)
+
+    const enterButtons = await screen.findAllByRole('button', { name: /เข้าร้านนี้/ })
+    fireEvent.click(enterButtons[0])
+    await screen.findByLabelText('ร้านที่กำลังใช้งาน')
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'คลังชุด' })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'เพิ่มชุดหลัก' }))
+
+    expect(screen.getByRole('button', { name: 'สีหลัก' }).textContent).toContain('-- เลือกสีหลัก --')
+  })
+
   it('prefills inventory late fine defaults as numbers without unit text', async () => {
     loadShopSettings.mockResolvedValue(makeShopSettings({ defaultLateFinePerDay: 200 }))
 
